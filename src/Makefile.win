@@ -3,7 +3,7 @@ BT2_DIR = nvbio
 .PHONY: clean all
 
 all:
-	(cd "../build" && cmake -G "Visual Studio 17 2022" "../src/"$(BT2_DIR) && cmake --build . --parallel 16 --config Release)
+	(cd "../build" && cmake -G "Visual Studio 17 2022" "../src/"$(BT2_DIR) && cmake --build . --parallel 4 --config Release)
 	cd "../build" && cp nvBWT/Release/nvBWT.exe ../inst
 	cd "../build" && cp nvBowtie/Release/nvBowtie.exe ../inst
 

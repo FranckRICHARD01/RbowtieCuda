@@ -1,5 +1,8 @@
 ** Additional Installation Instructions **
 
+
+__________________ Ubuntu 22.04 ________________
+
 It is essential to install the CUDA development suite in order to compile nvBowtie. 
 You will find a script in the 'inst' directory to facilitate the installation of 
 CUDA on Ubuntu 18.04 or higher. This script installs version 11.8, but it is possible 
@@ -9,6 +12,28 @@ to src/nvbio-1.1.00/CMakefile.txt.
 You just need to ensure that the version of the chosen architecture is compatible 
 with the version of the CUDA software suite that is installed on your machine 
 (https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards). 
+
+
+_____________________ Windows __________________
+
+** Cuda installation of Cuda on Windows **
+
+You must have a developer account on the NVidia site (https://developer.nvidia.com).
+If you don't have one, you must create one.
+
+Then download the Cuda toolkit 11.8 which you can find here :
+
+https://developer.nvidia.com/cuda-11-8-0-download-archive?target_os=Windows&target_arch=x86_64
+
+For more details about the installation of Cuda, you can consult this page:
+ 
+https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html
+
+** RTools on Windows ** 
+
+On Windows, it is also necessary to install RTools :
+
+https://cran.r-project.org/bin/windows/Rtools/
 
 The compilation of the package can be very lengthy on Windows (15 minutes) due to the 
 slowness of NVidia's nvcc compiler. 

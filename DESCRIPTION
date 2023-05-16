@@ -8,7 +8,7 @@ Authors@R:
             email = "jpantaleoni@nvidia.com"),
         person(given = "Nuno", family = "Subtil", role = c("aut"), 
             email = "nsubtil@nvidia.com"),
-        person(given = "Samuel Simon", family = "Sanchez", role = c("aut"), 
+        person(given = "Samuel", family = "Simon-Sanchez", role = c("aut"), 
             email = "samsimon@ucm.es"),
         person(given = "Franck", family = "RICHARD", role = c("aut","cre"), 
             email = "franck.richard@winstars.net"))
