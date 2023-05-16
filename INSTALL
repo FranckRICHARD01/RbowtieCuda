@@ -16,7 +16,7 @@ with the version of the CUDA software suite that is installed on your machine
 
 _____________________ Windows __________________
 
-** Cuda installation of Cuda on Windows **
+** Cuda installation on Windows **
 
 You must have a developer account on the NVidia site (https://developer.nvidia.com).
 If you don't have one, you must create one.

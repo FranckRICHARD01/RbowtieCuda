@@ -19,7 +19,11 @@ The main contributors of the original NVBIO are:
 
     Jacopo Pantaleoni - jpantaleoni@nvidia.com
     Nuno Subtil - nsubtil@nvidia.com
+
+RbowtieCuda developers:
+
     Samuel Simon Sanchez - samsimon@ucm.es
+    Franck RICHARD - franck.richard@winstars.net
 
 The maintainer of the RbowtieCuda package is [Franck RICHARD](mailto:franck.richard@winstars.net)
 
