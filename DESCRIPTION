@@ -1,0 +1,37 @@
+Package: RbowtieCuda
+Type: Package
+Title: An R Wrapper for nvBowtie and nvBWT, a rewritten version of Bowtie2 for cuda
+Version: 0.1.0
+Date: 2023-05-7
+Authors@R: 
+        c(person(given = "Jacopo", family = "Pantaleoni", role = c("aut"), 
+            email = "jpantaleoni@nvidia.com"),
+        person(given = "Nuno", family = "Subtil", role = c("aut"), 
+            email = "nsubtil@nvidia.com"),
+        person(given = "Samuel Simon", family = "Sanchez", role = c("aut"), 
+            email = "samsimon@ucm.es"),
+        person(given = "Franck", family = "RICHARD", role = c("aut","cre"), 
+            email = "franck.richard@winstars.net"))
+Description: This package provides an R wrapper for the popular bowtie2 sequencing 
+    read aligner optimised to run on NVidia graphics cards The package contains 
+    wrapper functions that allow for genome indexing and alignment to those 
+    indexes.
+License: BSD_3_clause + file LICENSE
+Depends: R (>= 4.3.0)
+Encoding: UTF-8
+Suggests: 
+    knitr,
+    testthat (>= 3.0.0),
+    rmarkdown
+SystemRequirements: C++17, GNU make
+Archs: x64
+RoxygenNote: 7.2.3
+biocViews: Sequencing, Alignment, Preprocessing
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+NeedsCompilation: yes
+Author: c(Jacopo Pantaleoni [aut],
+  Nuno Subtil  [aut],
+  Samuel Simon Sanchez [aut],
+  Franck RICHARD [aut, cre])
+Maintainer: Franck RICHARD <franck.richard@winstars.net>

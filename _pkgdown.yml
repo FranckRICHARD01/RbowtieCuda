@@ -1,0 +1,4 @@
+pkgdown::build_site()url: ~
+template:
+  bootstrap: 5
+
