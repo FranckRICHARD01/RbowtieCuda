@@ -32,6 +32,13 @@
 namespace nvbio {
 namespace io {
 
+// Avoid warning with strncpy
+char* mystrncpy(char* dest, const char*src, size_t n) {
+        memset(dest, 0, n);
+        memcpy(dest, src, strnlen(src, n-1));
+        return dest;
+}
+
 DebugOutput::DebugOutput(const char *file_name, AlignmentType alignment_type, BNT bnt)
     : OutputFile(file_name, alignment_type, bnt)
 {
@@ -41,7 +48,7 @@ DebugOutput::DebugOutput(const char *file_name, AlignmentType alignment_type, BN
         char *mate_number;
 
         NVBIO_CUDA_ASSERT(strlen(file_name) < sizeof(fname));
-        strncpy(fname, file_name, sizeof(fname));
+        mystrncpy(fname, file_name, sizeof(fname));
 
         mate_number = strstr(fname, "#");
         if (mate_number)
