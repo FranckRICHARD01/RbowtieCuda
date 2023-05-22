@@ -91,8 +91,10 @@ uint32 FASTA_inc_reader::read(const uint32 n_reads, Writer& writer)
                 writer.begin_read();
 
                 if (n == n_reads)
+                {
                     m_buffer_pos--;
                     return n;
+                }
             }
 
             n++;

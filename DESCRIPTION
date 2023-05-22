@@ -23,7 +23,7 @@ Suggests:
     knitr,
     testthat (>= 3.0.0),
     rmarkdown
-SystemRequirements: C++17, GNU make
+SystemRequirements: C++17, GNU make, CUDA Toolkit, MSVC
 Archs: x64
 RoxygenNote: 7.2.3
 biocViews: Sequencing, Alignment, Preprocessing

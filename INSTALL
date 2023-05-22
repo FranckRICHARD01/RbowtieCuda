@@ -35,5 +35,9 @@ On Windows, it is also necessary to install RTools :
 
 https://cran.r-project.org/bin/windows/Rtools/
 
+** Build Tools pour Visual Studio 2022 **
+
+https://visualstudio.microsoft.com/en/downloads/
+
 The compilation of the package can be very lengthy on Windows (15 minutes) due to the 
 slowness of NVidia's nvcc compiler. 
