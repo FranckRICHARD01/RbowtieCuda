@@ -364,7 +364,7 @@ int FMIndexDataHost::load(
     const char* sa_file_name   = sa_string.c_str();
     const char* rsa_file_name  = rsa_string.c_str();
 
-    uint32 seq_length;
+    uint32 seq_length = 0;
     uint32 seq_words;
 
     if (flags & FORWARD)

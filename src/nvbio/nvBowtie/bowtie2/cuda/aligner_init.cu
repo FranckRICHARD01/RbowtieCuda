@@ -330,7 +330,7 @@ void Aligner::keep_stats(const uint32 count, Stats& stats)
         nvbio::device_view( hit_deques.counts() ),
         hits_stats_dptr );
 
-    cudaThreadSynchronize();
+    cudaDeviceSynchronize();
     nvbio::cuda::check_error("hit stats kernel");
 
     nvbio::cuda::thrust_copy_vector(hits_stats_hvec, hits_stats_dvec);

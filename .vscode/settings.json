@@ -1,0 +1,13 @@
+{
+    "cmake.sourceDirectory": "/home/karlhal/Téléchargements/RbowtieCuda/src/nvbio",
+    "files.associations": {
+        "vector": "cpp",
+        "*.tcc": "cpp",
+        "future": "cpp",
+        "istream": "cpp",
+        "mutex": "cpp",
+        "ostream": "cpp",
+        "stop_token": "cpp",
+        "typeinfo": "cpp"
+    }
+}

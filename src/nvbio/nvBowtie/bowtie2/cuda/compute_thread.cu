@@ -250,7 +250,7 @@ void ComputeThreadSE::do_run()
         local_output_batch_host.read_data = &local_read_data_host;
 
         io::SequenceDataDevice read_data( local_read_data_host );
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
 
         timer.stop();
         stats.read_HtoD.add( read_data.size(), timer.seconds() );

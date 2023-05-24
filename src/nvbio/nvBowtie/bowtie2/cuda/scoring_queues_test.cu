@@ -283,7 +283,7 @@ void test_scoring_queues()
 
         setup_read_hits_index_kernel<<<1,128>>>( read_hits_index.device_view(), n_reads, device_view( error ) );
         check_read_hits_index_kernel<<<1,128>>>( read_hits_index.device_view(), n_reads, device_view( error ) );
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
 
         const uint32 error_code = error[0];
         if (error_code)
@@ -322,7 +322,7 @@ void test_scoring_queues()
 
         setup_hit_queues_kernel<<<1,128>>>( hit_queues.device_view(), n_hits, device_view( error ) );
         check_hit_queues_kernel<<<1,128>>>( hit_queues.device_view(), n_hits, device_view( error ) );
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
 
         const uint32 error_code = error[0];
         if (error_code)
@@ -341,7 +341,7 @@ void test_scoring_queues()
         thrust::device_vector<uint32> error(1,0);
 
         test_read_hits_ref_kernel<<<1,128>>>( queues.device_view(), n_reads, device_view( error ) );
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
 
         const uint32 error_code = error[0];
         if (error_code)
@@ -363,7 +363,7 @@ void test_scoring_queues()
         queues.clear_output();
 
         test_read_binder_kernel<<<1,128>>>( queues.device_view(), n_reads, device_view( error ) );
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
 
         const uint32 error_code = error[0];
         if (error_code)

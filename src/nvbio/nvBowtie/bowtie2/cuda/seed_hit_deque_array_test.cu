@@ -107,7 +107,7 @@ void test_seed_hit_deques()
 
     setup_deques_kernel<<<1,128>>>( seed_hit_deques.device_view(), n_reads, device_view( error ) );
     check_deques_kernel<<<1,128>>>( seed_hit_deques.device_view(), n_reads, device_view( error ) );
-    cudaThreadSynchronize();
+    cudaDeviceSynchronize();
 
     const uint32 error_code = error[0];
     if (error_code)

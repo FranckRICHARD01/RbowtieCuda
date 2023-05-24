@@ -1001,7 +1001,7 @@ struct copy_dispatch<
                 in_string_set,
                 out_string_set.offsets() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
 
         #if THRUST_VERSION <= 100503
             // perform an exclusive scan on the string lengths to get the offsets
@@ -1028,7 +1028,7 @@ struct copy_dispatch<
                 out_string_set.base_string(),
                 out_string_set.offsets() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1057,7 +1057,7 @@ struct copy_dispatch<
                 in_string_set,
                 out_string_set.offsets() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
 
         #if THRUST_VERSION <= 100503
             // perform an exclusive scan on the string lengths to get the offsets
@@ -1088,7 +1088,7 @@ struct copy_dispatch<
                     out_string_set.base_string(),
                     out_string_set.offsets() );
 
-                cudaThreadSynchronize();
+                cudaDeviceSynchronize();
             }
         }
     };
@@ -1144,7 +1144,7 @@ struct copy_dispatch<
                     in_string_set,
                     out_string_set.offsets() );
 
-                cudaThreadSynchronize();
+                cudaDeviceSynchronize();
             }
         #if THRUST_VERSION <= 100503
             // perform an exclusive scan on the string lengths to get the offsets
@@ -1172,7 +1172,7 @@ struct copy_dispatch<
                 out_string_set.offsets() + in_string_set.size(),
                 thrust::raw_pointer_cast( &d_total_length.front() ) );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
 
             const uint32 SYMBOLS_PER_WORD = (8u*sizeof(uint32)) / SYMBOL_SIZE_T;
             const uint32 N_symbols = d_total_length[0];
@@ -1187,7 +1187,7 @@ struct copy_dispatch<
                     out_string_set.base_string().stream(),
                     out_string_set.offsets() );
 
-                cudaThreadSynchronize();
+                cudaDeviceSynchronize();
             }
         }
     };
@@ -1224,7 +1224,7 @@ struct copy_dispatch<
                 in_string_set.offsets() + in_string_set.size(),
                 thrust::raw_pointer_cast( &d_total_length.front() ) );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
 
             const uint32 SYMBOLS_PER_WORD = (8u*sizeof(uint32)) / SYMBOL_SIZE_T;
             const uint32 N_symbols = d_total_length[0];
@@ -1239,7 +1239,7 @@ struct copy_dispatch<
                     out_string_set.base_string().stream(),
                     out_string_set.offsets() );
 
-                cudaThreadSynchronize();
+                cudaDeviceSynchronize();
             }
         }
     };
@@ -1290,7 +1290,7 @@ struct copy_dispatch<
                 out_string_set.base_string(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1338,7 +1338,7 @@ struct copy_dispatch<
                 out_string_set.base_string(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1386,7 +1386,7 @@ struct copy_dispatch<
                 out_string_set.base_string(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1452,7 +1452,7 @@ struct copy_dispatch<
                     out_string_set.lengths() );
             }
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1490,7 +1490,7 @@ struct copy_dispatch<
                 out_string_set.base_string(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1528,7 +1528,7 @@ struct copy_dispatch<
                 out_string_set.base_string(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1589,7 +1589,7 @@ struct copy_dispatch<
                     out_string_set.base_string(),
                     out_string_set.lengths() );
             }
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
     // strided-packed input set
@@ -1649,7 +1649,7 @@ struct copy_dispatch<
                     out_string_set.base_string(),
                     out_string_set.lengths() );
             }
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1697,7 +1697,7 @@ struct copy_dispatch<
                 out_string_set.base_string(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1745,7 +1745,7 @@ struct copy_dispatch<
                 out_string_set.base_string(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1805,7 +1805,7 @@ struct copy_dispatch<
                 out_string_set.base_stream(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1846,7 +1846,7 @@ struct copy_dispatch<
                 out_string_set.base_stream(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1887,7 +1887,7 @@ struct copy_dispatch<
                 out_string_set.base_stream(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1932,7 +1932,7 @@ struct copy_dispatch<
                 out_string_set.base_stream(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 
@@ -1977,7 +1977,7 @@ struct copy_dispatch<
                 out_string_set.base_stream(),
                 out_string_set.lengths() );
 
-            cudaThreadSynchronize();
+            cudaDeviceSynchronize();
         }
     };
 

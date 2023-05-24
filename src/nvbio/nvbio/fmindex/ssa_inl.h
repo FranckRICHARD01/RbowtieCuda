@@ -438,9 +438,9 @@ void SSA_index_multiple_device<K,index_type>::init(
             thrust::raw_pointer_cast(&m_ssa[0]),
             d_link );
 
-        cudaThreadSynchronize();
+        cudaDeviceSynchronize();
     }
-    //cudaThreadSynchronize();
+    //cudaDeviceSynchronize();
 
     // copy ssa & link to the host
     std::vector<index_type> h_link( n_items );
