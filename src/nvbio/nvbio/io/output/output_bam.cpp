@@ -58,6 +58,7 @@ BamOutput::~BamOutput()
 {
     if (fp)
     {
+        fflush(fp);
         fclose(fp);
         fp = NULL;
     }
@@ -692,6 +693,7 @@ void BamOutput::close()
 
     fwrite(magic, sizeof(magic), 1, fp);
 
+    fflush(fp);
     fclose(fp);
     fp = NULL;
 }

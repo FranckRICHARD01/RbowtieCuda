@@ -244,6 +244,7 @@ void save_wpac(const uint32 seq_length, const uint32* string_storage, const char
         exit(1);
     }
 
+    fflush( output_file );
     fclose( output_file );
     log_info(stderr, "writing \"%s\"... done\n", pac_name);
 }
@@ -293,6 +294,7 @@ void save_bpac(const uint32 seq_length, const uint32* string_storage, const char
         fwrite( &ct, 1, 1, output_file );
     }
 
+    fflush( output_file );
     fclose( output_file );
     log_info(stderr, "writing \"%s\"... done\n", pac_name);
 }
@@ -327,6 +329,7 @@ void save_bwt(const uint32 seq_length, const uint32 seq_words, const uint32 prim
         log_error(stderr, "  writing failed!\n");
         exit(1);
     }
+    fflush( output_file );
     fclose( output_file );
     log_info(stderr, "writing \"%s\"... done\n", bwt_name);
 }
@@ -349,6 +352,7 @@ void save_ssa(const uint32 seq_length, const uint32 sa_intv, const uint32 ssa_le
     fwrite( &sa_intv,       sizeof(uint32),     1u,         output_file );
     fwrite( &seq_length,    sizeof(uint32),     1u,         output_file );
     fwrite( &h_ssa[1],      sizeof(uint32),     ssa_len-1,  output_file );
+    fflush( output_file );
     fclose( output_file );
     log_info(stderr, "writing \"%s\"... done\n", sa_name);
 }

@@ -809,6 +809,7 @@ void test()
             }
         }
     }
+    fflush( output );
     fclose( output );
 }
 

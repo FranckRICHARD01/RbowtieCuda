@@ -158,6 +158,7 @@ local void make_crc_table()
         fprintf(out, "#endif\n");
 #  endif /* BYFOUR */
         fprintf(out, "  }\n};\n");
+        fflush(out);
         fclose(out);
     }
 #endif /* MAKECRCH */

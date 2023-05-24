@@ -78,7 +78,10 @@ inline
 FASTQ_file::~FASTQ_file()
 {
     if (m_file)
+    {
+        fflush( m_file );
         fclose( m_file );
+    }
 }
 
 // get the next character, or 255 if EOF

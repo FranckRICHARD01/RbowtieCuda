@@ -55,6 +55,7 @@ SamOutput::~SamOutput()
 {
     if (fp && fp != stdout)
     {
+        fflush(fp);
         fclose(fp);
         fp = NULL;
     }
@@ -574,6 +575,7 @@ void SamOutput::process(struct HostOutputBatchPE& batch)
 
 void SamOutput::close(void)
 {
+    fflush(fp);
     fclose(fp);
     fp = NULL;
 }

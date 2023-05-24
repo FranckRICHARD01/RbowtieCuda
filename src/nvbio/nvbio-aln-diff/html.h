@@ -739,6 +739,7 @@ void generate_table(const char*            file_name,
             }
         }
     }
+    fflush( html_output );
     fclose( html_output );
 }
 

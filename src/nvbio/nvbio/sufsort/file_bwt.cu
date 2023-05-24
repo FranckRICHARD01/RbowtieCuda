@@ -534,6 +534,8 @@ RawBWTWriter::RawBWTWriter() :
 //
 RawBWTWriter::~RawBWTWriter()
 {
+    fflush( output_file );
+    fflush( index_file );
     fclose( output_file );
     fclose( index_file );
 }

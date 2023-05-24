@@ -13,17 +13,12 @@ globalVariables(".")
 #' @details
 #' Available options:
 #'
-#'     --verbosity           select verbosity
-#'
-#'     -m | --max-length     clamp input to max_length
-#'
-#'     -b | --byte-packing   output byte packed .pac
-#'
-#'     -w | --word-packing   output word packed .wpac
-#'
-#'     -c | --crc            compute crcs
-#'
-#'     -d | --device         cuda device
+#'    -v       | --verbosity     int (0-6) [5]     // select the verbosity level
+#'    -m       | --max-length    int       [inf]   // clamp input length
+#'    -b       | --byte-packing  [default]         // output a byte-encoded .pac file
+#'    -w       | --word-packing                    // output a word-encoded .wpac file (more efficient)
+#'    -c       | --crc                             // compute CRCs
+#'    -d       | --device                          // select a cuda device
 #'
 #' @author Franck RICHARD
 #' @return An invisible \code{Integer} of call

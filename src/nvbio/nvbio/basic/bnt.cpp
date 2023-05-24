@@ -55,14 +55,23 @@ void save_bns(const BNTSeq& bns, const char *prefix)
             const BNTAnnData& ann_data = bns.anns_data[i];
             const BNTAnnInfo& ann_info = bns.anns_info[i];
 
+            //fprintf(stderr," %d %s", ann_data.gi, ann_info.name.c_str());
             fprintf(file, "%d %s", ann_data.gi, ann_info.name.c_str());
 			if (ann_info.anno.length())
+            {
+                //fprintf(stderr, " %s\n", ann_info.anno.c_str());
                 fprintf(file, " %s\n", ann_info.anno.c_str());
+            }
 			else
+            {
+                //fprintf(stderr, "\n");
                 fprintf(file, "\n");
+            }
 
+            //fprintf( stderr, "%lld %d %d\n", (long long)ann_data.offset, ann_data.len, ann_data.n_ambs );
             fprintf( file, "%lld %d %d\n", (long long)ann_data.offset, ann_data.len, ann_data.n_ambs );
 		}
+        fflush( file );
 		fclose( file );
 	}
 	{ // dump .amb
@@ -77,6 +86,7 @@ void save_bns(const BNTSeq& bns, const char *prefix)
             const BNTAmb& amb = bns.ambs[i];
 			fprintf( file, "%lld %d %c\n", (long long)amb.offset, amb.len, amb.amb );
 		}
+        fflush( file );
 		fclose( file );
 	}
 }

@@ -371,6 +371,7 @@ void gen_trees_header()
                 SEPARATOR(i, D_CODES-1, 10));
     }
 
+    fflush(header);
     fclose(header);
 }
 #endif /* GEN_TREES_H */

@@ -164,6 +164,7 @@ void ComputeThreadSE::do_run()
                 { html::body_object body( html_output ); }
             }
         }
+        fflush( html_output );
         fclose( html_output );
     }
 
@@ -498,6 +499,7 @@ void ComputeThreadPE::do_run()
                 { html::body_object body( html_output ); }
             }
         }
+        fflush( html_output );
         fclose( html_output );
     }
 

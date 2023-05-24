@@ -665,6 +665,7 @@ void generate_report_header(const uint32 n_reads, const Params& params, Alignmen
         }
     }
 
+    fflush( html_output );
     fclose( html_output );
 }
 
@@ -1092,6 +1093,7 @@ void generate_device_report(const uint32 id, Stats& stats, AlignmentStats& aln_s
             }
         }
     }
+    fflush( html_output );
     fclose( html_output );
 }
 
@@ -1311,6 +1313,7 @@ void generate_kernel_table(const uint32 id, const char* report, const KernelStat
             }
         }
     }
+    fflush( html_output );
     fclose( html_output );
 }
 

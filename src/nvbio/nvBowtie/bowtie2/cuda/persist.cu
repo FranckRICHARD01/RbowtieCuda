@@ -58,12 +58,12 @@ void persist_clear(const std::string& file_name)
     // clear mate 0
     {
         const std::string mate_file = mate_file_name( file_name, 0u );
-        FILE* file = fopen( mate_file.c_str(), "w" ); fclose( file );
+        FILE* file = fopen( mate_file.c_str(), "w" ); fflush( file); fclose( file );
     }
     // clear mate 1
     {
         const std::string mate_file = mate_file_name( file_name, 0u );
-        FILE* file = fopen( mate_file.c_str(), "w" ); fclose( file );
+        FILE* file = fopen( mate_file.c_str(), "w" ); fflush( file); fclose( file );
     }
 }
 
@@ -112,6 +112,7 @@ void persist_hits(
     }
     fprintf( file, "\n" );
 
+    fflush( file );
     fclose( file );
 }
 
@@ -145,6 +146,7 @@ void persist_reads(
         fprintf( file, "read[%u] = %u\n", i, hvec[i] );
     fprintf( file, "\n" );
 
+    fflush( file );
     fclose( file );
 }
 
@@ -261,6 +263,7 @@ void persist_selection(
             fprintf( file, "}\n" );
         }
     }
+    fflush( file );
     fclose( file );
 }
 
@@ -380,6 +383,7 @@ void persist_scores(
         }
         fprintf( file, "\n" );
     }
+    fflush( file );
     fclose( file );
 }
 

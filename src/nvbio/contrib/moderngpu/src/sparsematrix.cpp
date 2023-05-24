@@ -193,6 +193,7 @@ bool StoreBinaryMatrix(const char* filename, const SparseMatrix& m) {
 	fwrite(&m.cols[0], 4, m.nz, f);
 	fwrite(&m.matrix[0], 8, m.nz, f);
 
+	fflush(f);
 	fclose(f);
 	return true;
 }

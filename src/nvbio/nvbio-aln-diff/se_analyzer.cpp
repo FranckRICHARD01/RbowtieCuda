@@ -408,6 +408,7 @@ void SEAnalyzer::generate_report(const char* aln_file_name1, const char* aln_fil
             }
         }
     }
+    fflush( html_output );
     fclose( html_output );
 }
 

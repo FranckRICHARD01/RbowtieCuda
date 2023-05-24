@@ -556,6 +556,7 @@ BAMWriter::BAMWriter(const char *fname)
 BAMWriter::~BAMWriter()
 {
 	if (fp) {
+		fflush(fp);
 		fclose(fp);
 		fp = NULL;
 	}

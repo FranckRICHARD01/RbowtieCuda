@@ -70,6 +70,7 @@ struct Filter
     {
         if (m_file)
         {
+            fflush( m_file );
             fclose( m_file );
             log_verbose(stderr, "closing filter file... done\n");
         }

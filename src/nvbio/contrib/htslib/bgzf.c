@@ -972,7 +972,8 @@ int bgzf_index_dump(BGZF *fp, const char *bname, const char *suffix)
             fwrite(&fp->idx->offs[i].uaddr, 1, sizeof(fp->idx->offs[i].uaddr), idx);
         }
     }
-    fclose(idx);
+    fflush(idx);
+	fclose(idx);
     return 0;
 }
 

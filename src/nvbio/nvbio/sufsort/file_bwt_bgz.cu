@@ -278,6 +278,8 @@ BWTBGZWriter::~BWTBGZWriter()
     output_file_writer.close();
     index_file_writer.close();
 
+    fflush( output_file );
+    fflush( index_file );
     fclose( output_file );
     fclose( index_file );
 }
