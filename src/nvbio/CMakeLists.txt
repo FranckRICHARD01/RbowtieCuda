@@ -119,7 +119,7 @@ add_subdirectory(contrib/moderngpu)
 
 add_subdirectory(nvbio)
 add_subdirectory(nvBowtie)
-add_subdirectory(nvFM-server)
+#add_subdirectory(nvFM-server)
 add_subdirectory(nvBWT)
 #add_subdirectory(nvSetBWT)
 #add_subdirectory(nvSSA)

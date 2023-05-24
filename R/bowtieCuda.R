@@ -40,10 +40,12 @@ nvBWT <- function(myinput, output, options = NULL) {
 
     myinput <- file.path(tools::file_path_as_absolute(dirname(myinput)), basename(myinput))
     myinput <- trimws(as.character(myinput))
+    myinput <- shQuote(myinput)
     #print(paste("myinput: ", myinput))
 
     output <- file.path(tools::file_path_as_absolute(dirname(output)), basename(output))
     output <- trimws(as.character(output))
+    output <- shQuote(output)
     #print(paste("output: ", output))
 
     if (is.null(options))
@@ -102,10 +104,13 @@ nvBowtie <- function(index, output_file, options, seq1, seq2 = NULL) {
 
     index <- file.path(tools::file_path_as_absolute(dirname(index)), basename(index))
     index <- trimws(as.character(index))
+    index <- shQuote(index)
     #print(paste("index: ", index))
 
     output_file <- file.path(tools::file_path_as_absolute(dirname(output_file)), basename(output_file))
     output_file <- trimws(as.character(output_file))
+    output_file <- shQuote(output_file)
+    
     #print(paste("output_file: ", output_file))
 
 
@@ -122,10 +127,10 @@ nvBowtie <- function(index, output_file, options, seq1, seq2 = NULL) {
     }
 
     if (!is.null(seq2)) {
-      args1 <- paste(options, " -x ", index, " -1 ", seq1,
+      args1 <- paste(options, "--file-ref -x ", index, " -1 ", seq1,
       " -2 ", seq2, " -S ", output_file)
     } else {
-      args1 <- paste(options, " -x ", index, " -U ", seq1,
+      args1 <- paste(options, "--file-ref -x ", index, " -U ", seq1,
       " -S ", output_file)
     }
 

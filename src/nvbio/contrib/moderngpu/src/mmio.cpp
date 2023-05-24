@@ -505,7 +505,8 @@ char  *mm_typecode_to_str(MM_typecode matcode)
     else
         return NULL;
 
+    if (error == 1) fprintf(stderr, "error with mm_is_matrix(matcode)");
+
     sprintf(buffer,"%s %s %s %s", types[0], types[1], types[2], types[3]);
     return mm_strdup(buffer);
-
 }
