@@ -28,7 +28,7 @@
 // nvBWT.cu
 //
 
-#define NVBIO_CUDA_DEBUG
+//#define NVBIO_CUDA_DEBUG
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -3,7 +3,7 @@ project(nvBio)
 cmake_minimum_required(VERSION 3.22)
 #set(CMAKE_CXX_STANDARD 03)
 #set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#set(CMAKE_CXX_FLAGS "-std=c++17") # something may error caused by nvcc
+#set(CMAKE_CXX_FLAGS "-std=c++14") # something may error caused by nvcc
 
 # available options
 option(CUDA_VERBOSE_PTXAS
@@ -38,9 +38,9 @@ message(STATUS "Building ${CMAKE_BUILD_TYPE}")
 if (CMAKE_BUILD_TYPE MATCHES "Debug")
   add_definitions(-DTHRUST_DEBUG)
   add_definitions(-DCUDA_DEBUG)
-  set(CUDA_NVCC_DEBUG_FLAGS "-std=c++17 -g -lineinfo")
+  set(CUDA_NVCC_DEBUG_FLAGS "-std=c++14 -g -lineinfo")
 else()
-  set(CUDA_NVCC_DEBUG_FLAGS "-std=c++17 -Wno-deprecated-declarations")
+  set(CUDA_NVCC_DEBUG_FLAGS "-std=c++14 -Wno-deprecated-declarations")
 endif()
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "Intel" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86")

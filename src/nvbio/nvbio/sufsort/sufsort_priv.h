@@ -451,6 +451,7 @@ void extract_word_packed(
     const uint32 cache_end = uint32( (range_off + (word_end - word_begin)*SYMBOLS_PER_WORD) / STORAGE_SYMBOLS );
 
     __m128i sse_cache[8];
+    for (uint8 i = 0; i < 8; i++) sse_cache[i] = _mm_loadu_si128(0);
     for (uint32 w = cache_begin; w < cache_end; w += SSE_WORDS)
         sse_cache[ (w - cache_begin)/SSE_WORDS ] = _mm_loadu_si128( (const __m128i*)(base_words + w) );
 

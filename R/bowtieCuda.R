@@ -213,7 +213,7 @@ nvBowtie_usage <- function() {
     print("  --rf                               paired mates are reverse-forward")
     print("  --rr                               paired mates are reverse-reverse")
     print("  --minins            int [0]        minimum insert length")
-    print("  --minins            int [500]      maximum insert length")
+    print("  --maxins            int [500]      maximum insert length")
     print("  --overlap                          allow overlapping mates")
     print("  --dovetail                         allow dovetailing mates")
     print("  --no-mixed                         only report paired alignments")
