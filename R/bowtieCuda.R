@@ -45,6 +45,16 @@ nvBWT <- function(myinput, output, options = NULL) {
 
     output <- file.path(tools::file_path_as_absolute(dirname(output)), basename(output))
     output <- trimws(as.character(output))
+    
+    unlink(paste(output, ".amb", sep = ""))
+    unlink(paste(output, ".ann", sep = ""))
+    unlink(paste(output, ".bwt", sep = ""))
+    unlink(paste(output, ".rbwt", sep = ""))
+    unlink(paste(output, ".pac", sep = ""))
+    unlink(paste(output, ".rpac", sep = ""))
+    unlink(paste(output, ".rsa", sep = ""))
+    unlink(paste(output, ".sa", sep = ""))
+
     output <- shQuote(output)
     #print(paste("output: ", output))
 
@@ -109,10 +119,10 @@ nvBowtie <- function(index, output_file, options, seq1, seq2 = NULL) {
 
     output_file <- file.path(tools::file_path_as_absolute(dirname(output_file)), basename(output_file))
     output_file <- trimws(as.character(output_file))
-    output_file <- shQuote(output_file)
-    
+    output_file <- shQuote(output_file)    
     #print(paste("output_file: ", output_file))
 
+    unlink(output_file)
 
     if (!is.null(seq1))
       seq1 <- trimws(as.character(seq1))

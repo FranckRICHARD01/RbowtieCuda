@@ -381,10 +381,12 @@ struct GotohSubmatrixContext
     {
         typedef typename std::iterator_traits<column_type>::value_type value_type;
 
+        const uint32 r = m_checkpoint_id * N ;
+
         // restore the checkpoint
         for (uint32 i = 0; i < N; ++i)
         {
-            const value_type f = m_checkpoints[ m_checkpoint_id*N + i ];
+            const value_type f = m_checkpoints[ r + i ];
             column[i].x = f.x;
             column[i].y = f.y;
         }

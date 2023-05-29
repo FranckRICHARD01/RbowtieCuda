@@ -233,8 +233,9 @@ struct GotohCheckpointContext
         {
             const short infimum = Field_traits<short>::min() + 32;
 
+            const uint32 r = BAND_LEN*(i/CHECKPOINTS);
             for (uint32 j = 0; j < BAND_LEN; ++j)
-                m_checkpoints[BAND_LEN*(i/CHECKPOINTS) + j] = make_short2(
+                m_checkpoints[r + j] = make_short2(
                     nvbio::max( H_band[j], infimum ),
                     nvbio::max( F_band[j], infimum ) );
         }
@@ -250,9 +251,9 @@ struct GotohCheckpointContext
         const short infimum = Field_traits<short>::min() + 32;
 
         // save the last row
-        const uint32 checkpoint_row = (i+CHECKPOINTS-1)/CHECKPOINTS;
+        const uint32 checkpoint_row = BAND_LEN*(i+CHECKPOINTS-1)/CHECKPOINTS;
         for (uint32 j = 0; j < BAND_LEN; ++j)
-            m_checkpoints[BAND_LEN*checkpoint_row + j] = make_short2(
+            m_checkpoints[checkpoint_row + j] = make_short2(
                 nvbio::max( H_band[j], infimum ),
                 nvbio::max( F_band[j], infimum ) );
     }
@@ -296,11 +297,13 @@ struct GotohSubmatrixContext
         const scoring_type& scoring,
         const score_type    infimum)
     {
+        const uint32 r = m_checkpoint_id*BAND_LEN;
+
         // restore the checkpoint
         #pragma unroll
         for (uint32 j = 0; j < BAND_LEN; ++j)
         {
-            const short2 f = m_checkpoints[m_checkpoint_id*BAND_LEN + j];
+            const short2 f = m_checkpoints[r + j];
             H_band[j] = f.x;
             F_band[j] = f.y;
         }
