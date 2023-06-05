@@ -43,7 +43,10 @@
 
 #ifdef _MSC_VER
 #define INLINESYMBOL __forceinline__
-#if _MSC_VER >= 1910
+
+// Problematic ?
+
+/*#if _MSC_VER >= 1910
 namespace std {
 	template <class Arg1, class Arg2, class Result>
 	struct binary_function
@@ -53,7 +56,7 @@ namespace std {
 		typedef Result result_type;
 	};
 };
-#endif
+#endif*/
 #else
 #define INLINESYMBOL inline
 #endif

@@ -25,11 +25,58 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+// fmindex_test.cpp
+//
 
-#define NVBIO_VERSION           100170                       // 1.1.50
-#define NVBIO_MAJOR_VERSION     (NVBIO_VERSION / 100000)
-#define NVBIO_MINOR_VERSION     (NVBIO_VERSION / 100 % 1000)
-#define NVBIO_SUBMINOR_VERSION  (NVBIO_VERSION % 100)
+#include <stdio.h>
+#include <stdlib.h>
+#include <vector>
+#include <algorithm>
+#include <nvbio/basic/timer.h>
+#include <nvbio/basic/dna.h>
+#include <nvbio/basic/packedstream.h>
+#include <nvbio/fmindex/bwt.h>
 
-#define NVBIO_VERSION_STRING    "1.1.70"
+using namespace nvbio;
+
+int bwt_test()
+{
+    fprintf(stderr, "bwt test... started\n");
+    const int32  LEN = 10000000;
+    const uint32 WORDS = (LEN+16)/16;
+
+    const uint64 memory_footprint =
+        sizeof(uint32)*uint64(WORDS) +
+        sizeof(uint32)*uint64(LEN);
+
+    fprintf(stderr, "  arch    : %lu bit\n", sizeof(void*)*8u);
+    fprintf(stderr, "  length  : %.2f M bps\n", float(LEN)/1.0e6f);
+    fprintf(stderr, "  memory  : %.1f MB\n", float(memory_footprint)/float(1024*1024));
+
+    std::vector<int32> buffer( LEN+1 + WORDS, 0u );
+    int32*  bwt_temp    = &buffer[0];
+    uint32* base_stream = (uint32*)&buffer[0] + LEN+1;
+
+    typedef PackedStream<uint32*,uint8,2,true> stream_type;
+    stream_type stream( base_stream );
+
+    srand(0);
+    for (int32 i = 0; i < LEN; ++i)
+    {
+        const uint32 s = rand() % 4;
+        stream[i] = s;
+    }
+
+    fprintf(stderr, "  construction... started\n");
+
+    Timer timer;
+    timer.start();
+
+    gen_bwt( LEN, stream.begin(), &bwt_temp[0], stream.begin() );
+
+    timer.stop();
+    fprintf(stderr, "  construction... done: %um:%us\n", uint32(timer.seconds()/60), uint32(timer.seconds())%60);
+
+    fprintf(stderr, "bwt test... done\n");
+    return 0;
+}

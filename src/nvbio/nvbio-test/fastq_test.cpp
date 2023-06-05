@@ -25,11 +25,66 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <nvbio/fastq/fastq.h>
 
-#define NVBIO_VERSION           100170                       // 1.1.50
-#define NVBIO_MAJOR_VERSION     (NVBIO_VERSION / 100000)
-#define NVBIO_MINOR_VERSION     (NVBIO_VERSION / 100 % 1000)
-#define NVBIO_SUBMINOR_VERSION  (NVBIO_VERSION % 100)
+using namespace nvbio;
 
-#define NVBIO_VERSION_STRING    "1.1.70"
+namespace {
+
+struct Writer
+{
+    Writer() : n(0) {}
+
+    void push_back(const uint32 read_len, const char* name, const uint8* bp, const uint8* q)
+    {
+#if 0
+        if ((n & 0x00FF) == 0)
+        {
+            char read[16*1024];
+            for (uint32 i = 0; i < read_len; ++i)
+                read[i] = bp[i];
+            read[read_len] = '\0';
+
+            fprintf( stderr, "  len: %u, read: %s\n", read_len, read );
+        }
+#endif
+        n++;
+    }
+
+    uint32 n;
+};
+
+} // anonymous namespace
+
+int fastq_test(const char* filename)
+{
+    fprintf(stderr, "FASTQ test... started\n");
+
+    FASTQ_file fastq_file( filename );
+    if (fastq_file.valid() == false)
+    {
+        fprintf(stderr, "*** error *** : file \"%s\" not found\n", filename);
+        return 1;
+    }
+
+    FASTQ_reader<FASTQ_file> fastq( fastq_file );
+
+    Writer writer;
+
+    int n;
+
+    while ((n = fastq.read( 100u, writer )))
+    {
+        if (n < 0)
+        {
+            fprintf(stderr, "*** parsing error ***\n");
+            char error[1024];
+            fastq.error_string( error );
+            fprintf(stderr, "  %s\n", error);
+            return 1;
+        }
+    }
+
+    fprintf(stderr, "FASTQ test... done: %u reads\n", writer.n);
+    return 0;
+}

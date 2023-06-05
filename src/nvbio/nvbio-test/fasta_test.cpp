@@ -25,11 +25,61 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include <nvbio/fasta/fasta.h>
 
-#define NVBIO_VERSION           100170                       // 1.1.50
-#define NVBIO_MAJOR_VERSION     (NVBIO_VERSION / 100000)
-#define NVBIO_MINOR_VERSION     (NVBIO_VERSION / 100 % 1000)
-#define NVBIO_SUBMINOR_VERSION  (NVBIO_VERSION % 100)
+using namespace nvbio;
 
-#define NVBIO_VERSION_STRING    "1.1.70"
+namespace {
+
+struct Writer
+{
+    Writer() : n(0) {}
+
+    void push_back(const char* id, const uint32 read_len, const uint8* bp)
+    {
+#if 0
+        if ((n & 0x00FF) == 0)
+        {
+            char read[16*1024];
+            for (uint32 i = 0; i < read_len; ++i)
+                read[i] = bp[i];
+            read[read_len] = '\0';
+
+            fprintf( stderr, "  len: %u, read: %s\n", read_len, read );
+        }
+#endif
+        n++;
+    }
+
+    uint32 n;
+};
+
+} // anonymous namespace
+
+int fasta_test(const char* filename)
+{
+    fprintf(stderr, "FASTA test... started\n");
+
+    FASTA_reader fasta( filename );
+    if (fasta.valid() == false)
+    {
+        fprintf(stderr, "*** error *** : file \"%s\" not found\n", filename);
+        return 1;
+    }
+
+    Writer writer;
+
+    int n;
+
+    while ((n = fasta.read( 100u, writer )))
+    {
+        if (n < 0)
+        {
+            fprintf(stderr, "*** parsing error ***\n");
+            return 1;
+        }
+    }
+
+    fprintf(stderr, "FASTA test... done: %u reads\n", writer.n);
+    return 0;
+}

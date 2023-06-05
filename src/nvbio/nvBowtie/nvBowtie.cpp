@@ -113,6 +113,19 @@ void log_mapq(nvbio::bowtie2::cuda::AlignmentStats& stats)
     log_stats_cont(stderr,"\n");
 }
 
+bool isNaturalNumber(const char *string) {
+    char *endptr;
+    errno = 0;  
+    long num = strtol(string, &endptr, 10);
+
+    if (errno == ERANGE || num < 0 || *endptr != '\0' || string == endptr) {
+        return false;
+    }
+    
+    return true;
+}
+
+
 int main(int argc, char* argv[])
 {
     //cudaSetDeviceFlags( cudaDeviceMapHost | cudaDeviceLmemResizeToMax );
@@ -126,69 +139,74 @@ int main(int argc, char* argv[])
         log_info(stderr,"nvBowtie [options]\n");
         log_info(stderr,"options:\n");
         log_info(stderr,"  General:\n");
-        log_info(stderr,"    -U                  file-name      unpaired reads\n");
-        log_info(stderr,"    -1                  file-name      first mate reads\n");
-        log_info(stderr,"    -2                  file-name      second mate reads\n");
-        log_info(stderr,"    -S                  file-name      output file (.sam|.bam)\n");
-        log_info(stderr,"    -x                  file-name      reference index\n");
-        log_info(stderr,"    --verbosity         int [5]        verbosity level\n");
-        log_info(stderr,"    --upto       | -u   int [-1]       maximum number of reads to process\n");
-        log_info(stderr,"    --trim3      | -3   int [0]        trim the first N bases of 3'\n");
-        log_info(stderr,"    --trim5      | -5   int [0]        trim the first N bases of 5'\n");
-        log_info(stderr,"    --nofw                             do not align the forward strand\n");
-        log_info(stderr,"    --norc                             do not align the reverse-complemented strand\n");
-        log_info(stderr,"    --device            int [0]        select the given cuda device(s) (e.g. --device 0 --device 1 ...)\n");
-        log_info(stderr,"    --file-ref                         load reference from file\n");
-        log_info(stderr,"    --server-ref                       load reference from server\n");
-        log_info(stderr,"    --phred33                          qualities are ASCII characters equal to Phred quality + 33\n");
-        log_info(stderr,"    --phred64                          qualities are ASCII characters equal to Phred quality + 64\n");
-        log_info(stderr,"    --solexa-quals                     qualities are in the Solexa format\n");
-        log_info(stderr,"    --rg-id             string         add the RG-ID field of the SAM output header\n");
-        log_info(stderr,"    --rg                string,val     add an RG-TAG field of the SAM output header\n");
+        log_info(stderr,"    -U                  filename             unpaired reads\n");
+        log_info(stderr,"    -1                  filename             first mate reads\n");
+        log_info(stderr,"    -2                  filename             second mate reads\n");
+        log_info(stderr,"    -S                  filename             output file (.sam|.bam)\n");
+        log_info(stderr,"    -x                  filename             reference index\n");
+        log_info(stderr,"    --verbosity         int       [5]        verbosity level\n");
+        log_info(stderr,"    --upto       | -u   int       [-1]       maximum number of reads to process\n");
+        log_info(stderr,"    --trim3      | -3   int       [0]        trim the first N bases of 3'\n");
+        log_info(stderr,"    --trim5      | -5   int       [0]        trim the first N bases of 5'\n");
+        log_info(stderr,"    --nofw                        [false]    do not align the forward strand\n");
+        log_info(stderr,"    --norc                        [false]    do not align the reverse-complemented strand\n");
+        log_info(stderr,"    --device            int       [0]        select the given cuda device(s) (e.g. --device 0 --device 1 ...)\n");
+        log_info(stderr,"    --file-ref                    [false]    load reference from file\n");
+        log_info(stderr,"    --server-ref                  [false]    load reference from server\n");
+        log_info(stderr,"    --phred33                     [true]     qualities are ASCII characters equal to Phred quality + 33\n");
+        log_info(stderr,"    --phred64                     [false]    qualities are ASCII characters equal to Phred quality + 64\n");
+        log_info(stderr,"    --solexa-quals                [false]    qualities are in the Solexa format\n");
+        log_info(stderr,"    --rg-id             string               add the RG-ID field of the SAM output header\n");
+        log_info(stderr,"    --rg                string,val           add an RG-TAG field of the SAM output header\n");
         log_info(stderr,"  Paired-End:\n");
-        log_info(stderr,"    --ff                               paired mates are forward-forward\n");
-        log_info(stderr,"    --fr                               paired mates are forward-reverse\n");
-        log_info(stderr,"    --rf                               paired mates are reverse-forward\n");
-        log_info(stderr,"    --rr                               paired mates are reverse-reverse\n");
-        log_info(stderr,"    --minins            int [0]        minimum insert length\n");
-        log_info(stderr,"    --maxins            int [500]      maximum insert length\n");
-        log_info(stderr,"    --overlap                          allow overlapping mates\n");
-        log_info(stderr,"    --dovetail                         allow dovetailing mates\n");
-        log_info(stderr,"    --no-mixed                         only report paired alignments\n");
-        log_info(stderr,"    --ungapped-mates | -ug             perform ungapped mate alignment\n");
+        log_info(stderr,"    --ff                          [false]    paired mates are forward-forward\n");
+        log_info(stderr,"    --fr                          [true]     paired mates are forward-reverse\n");
+        log_info(stderr,"    --rf                          [false]    paired mates are reverse-forward\n");
+        log_info(stderr,"    --rr                          [false]    paired mates are reverse-reverse\n");
+        log_info(stderr,"    --minins            int       [0]        minimum insert length\n");
+        log_info(stderr,"    --maxins            int       [500]      maximum insert length\n");
+        log_info(stderr,"    --overlap                     [true]     allow overlapping mates\n");
+        //log_info(stderr,"    --dovetail                    [false]    allow dovetailing mates\n");
+        log_info(stderr,"    --no-discordant               [false]    do not allow discordant mates\n");
+        log_info(stderr,"    --no-mixed                    [false]    only report paired alignments\n");
+        log_info(stderr,"    --ungapped-mates | -ug                   perform ungapped mate alignment\n");
         log_info(stderr,"  Seeding:\n");
-        log_info(stderr,"    --seed-len   | -L   int   [22]     seed lengths\n");
-        log_info(stderr,"    --seed-freq  | -i   {G|L|S},x,y    seed interval, as x + y*func(read-len) (G=log,L=linear,S=sqrt)\n");
-        log_info(stderr,"    --max-hits          int   [100]    maximum amount of seed hits\n");
-        log_info(stderr,"    --max-reseed | -R   int   [2]      number of reseeding rounds\n");
+        log_info(stderr,"    --seed-len   | -L   int       [22]       seed lengths\n");
+        log_info(stderr,"    --seed-freq  | -i   {G|L|S},x,y          seed interval, as x + y*func(read-len) (G=log,L=linear,S=sqrt)\n");
+        log_info(stderr,"    --max-hits          int       [100]      maximum amount of seed hits\n");
+        log_info(stderr,"    --max-reseed | -R   int       [2]        number of reseeding rounds\n");
+        log_info(stderr,"    --top               bool      [false]    explore top seed entirely\n");
+        log_info(stderr,"    --N                 bool      [false]    allow substitution in seed\n");
         log_info(stderr,"  Extension:\n");
-        log_info(stderr,"    --all        | -a                  perform all-mapping (i.e. find and report all alignments)\n");
-        log_info(stderr,"    --local                            perform local alignment\n");
-        log_info(stderr,"    --rand                             randomized seed selection\n");
-        log_info(stderr,"    --no-rand                          do not randomize seed hit selection\n");
-        log_info(stderr,"    --max-dist          int [15]       maximum edit distance\n");
-        log_info(stderr,"    --max-effort-init   int [15]       initial maximum number of consecutive extension failures\n");
-        log_info(stderr,"    --max-effort | -D   int [15]       maximum number of consecutive extension failures\n");
-        log_info(stderr,"    --min-ext           int [30]       minimum number of extensions per read\n");
-        log_info(stderr,"    --max-ext           int [400]      maximum number of extensions per read\n");
-        log_info(stderr,"    --fast                             apply the fast presets\n");
-        log_info(stderr,"    --very-fast                        apply the very-fast presets\n");
-        log_info(stderr,"    --sensitive                        apply the sensitive presets\n");
-        log_info(stderr,"    --very-sensitive                   apply the very-sensitive presets\n");
-        log_info(stderr,"    --fast-local                       apply the fast presets\n");
-        log_info(stderr,"    --very-fast-local                  apply the very-fast presets\n");
-        log_info(stderr,"    --sensitive-local                  apply the sensitive presets\n");
-        log_info(stderr,"    --very-sensitive-local             apply the very-sensitive presets\n");
+        log_info(stderr,"    --all        | -a             [false]    perform all-mapping (i.e. find and report all alignments)\n");
+        log_info(stderr,"    --local                       [false]    perform local alignment\n");
+        log_info(stderr,"    --rand                        [true]     randomized seed hit selection\n");
+        log_info(stderr,"    --no-rand                     [false]    do not randomize seed hit selection\n");
+        log_info(stderr,"    --max-dist          int       [15]       maximum edit distance\n");
+        log_info(stderr,"    --max-effort-init   int       [15]       initial maximum number of consecutive extension failures\n");
+        log_info(stderr,"    --max-effort | -D   int       [15]       maximum number of consecutive extension failures\n");
+        log_info(stderr,"    --min-ext           int       [30]       minimum number of extensions per read\n");
+        log_info(stderr,"    --max-ext           int       [400]      maximum number of extensions per read\n");
+        log_info(stderr,"    --very-fast                              apply the very-fast presets\n");
+        log_info(stderr,"    --fast                                   apply the fast presets\n");        
+        log_info(stderr,"    --sensitive                              apply the sensitive presets\n");
+        log_info(stderr,"    --very-sensitive                         apply the very-sensitive presets\n");
+        log_info(stderr,"    --very-fast-local                        apply the very-fast presets\n");
+        log_info(stderr,"    --fast-local                             apply the fast presets\n");       
+        log_info(stderr,"    --sensitive-local                        apply the sensitive presets\n");
+        log_info(stderr,"    --very-sensitive-local                   apply the very-sensitive presets\n");
         log_info(stderr,"  Scoring:\n");
-        log_info(stderr,"    --scoring           {sw|ed}        Smith-Waterman / Edit-Distance scoring\n");
-        log_info(stderr,"    --score-min         {G|L|S},x,y    minimum score function, as x + y*func(read-len)\n");
-        log_info(stderr,"    --ma                int            match bonus\n");
-        log_info(stderr,"    --mp                int,int        mismatch min/max penalties\n");
-        log_info(stderr,"    --np                int            N penalty\n");
-        log_info(stderr,"    --rdg               int,int        read open/extension gap penalties\n");
-        log_info(stderr,"    --rfg               int,int        reference open/extension gap penalties\n");
+        log_info(stderr,"    --scoring           {sw|ed}  [ed]        Smith-Waterman / Edit-Distance scoring\n");
+        log_info(stderr,"    --score-min         {G|L|S},x,y          minimum score function, as x + y*func(read-len)\n");
+        log_info(stderr,"    --ma                int                  match bonus\n");
+        log_info(stderr,"    --mp                int,int              mismatch min/max penalties\n");
+        log_info(stderr,"    --np                int                  N penalty\n");
+        log_info(stderr,"    --rdg               int,int              read open/extension gap penalties\n");
+        log_info(stderr,"    --rfg               int,int              reference open/extension gap penalties\n");
         log_info(stderr,"  Reporting:\n");
-        log_info(stderr,"    --mapQ-filter | -Q  int [0]        minimum mapQ threshold\n");
+        log_info(stderr,"    --mapQ-filter | -Q  int       [0]        minimum mapQ threshold\n\n\n\n");
+        log_info(stderr,"Default values are indicated in brackets [].\n\n");
+
         exit(0);
     }
     else if (argc == 2 && strcmp( argv[1], "-test" ) == 0)
@@ -256,16 +274,56 @@ int main(int argc, char* argv[])
                  strcmp( argv[i], "--max-reads" ) == 0 ||
                  strcmp( argv[i], "-u" )          == 0 ||
                  strcmp( argv[i], "--upto" )      == 0)
-            max_reads = (uint32)atoi( argv[++i] );
+                 {
+                    if (i < argc - 1 && isNaturalNumber(argv[++i]))
+                    {
+                        max_reads = (uint32)atoi( argv[++i] );
+                    }
+                    else
+                    {
+                        log_error(stderr, "--max-reads needs a natural number\n");
+                        return 1;
+                    }
+                 }            
         else if (strcmp( argv[i], "-max-read-len" )  == 0 ||
                  strcmp( argv[i], "--max-read-len" ) == 0)
-            max_read_len = (uint32)atoi( argv[++i] );
+                 {
+                    if (i < argc - 1 && isNaturalNumber(argv[++i]))
+                    {
+                        max_read_len = (uint32)atoi( argv[++i] );
+                    }
+                    else
+                    {
+                        log_error(stderr, "--max-read-len needs a natural number\n");
+                        return 1;
+                    }
+                 } 
         else if (strcmp( argv[i], "-3") == 0 ||
                  strcmp( argv[i], "--trim3") == 0)
-            trim3 = (uint32)atoi( argv[++i] );
+                  {
+                    if (i < argc - 1 && isNaturalNumber(argv[++i]))
+                    {
+                        trim3 = (uint32)atoi( argv[++i] );
+                    }
+                    else
+                    {
+                        log_error(stderr, "--trim3 needs a natural number\n");
+                        return 1;
+                    }
+                 }             
         else if (strcmp( argv[i], "-5") == 0 ||
                  strcmp( argv[i], "--trim5") == 0)
-            trim5 = (uint32)atoi( argv[++i] );
+                  {
+                    if (i < argc - 1 && isNaturalNumber(argv[++i]))
+                    {
+                        trim5 = (uint32)atoi( argv[++i] );
+                    }
+                    else
+                    {
+                        log_error(stderr, "--trim5 needs a natural number\n");
+                        return 1;
+                    }
+                  }            
         else if (strcmp( argv[i], "-file-ref" )  == 0 ||
                  strcmp( argv[i], "--file-ref" ) == 0)
             from_file = true;
@@ -295,46 +353,124 @@ int main(int argc, char* argv[])
             qencoding = io::Solexa;
         else if (strcmp( argv[i], "-device" ) == 0 ||
                  strcmp( argv[i], "--device" ) == 0)
-            cuda_devices.push_back( atoi( argv[++i] ) );
+                {
+                    if (i < argc - 1 && isNaturalNumber(argv[++i]))
+                    {
+                        cuda_devices.push_back( atoi( argv[++i] ) );
+                    }
+                    else
+                    {
+                        log_error(stderr, "--device needs a natural number\n");
+                        return 1;
+                    }
+                } 
         else if (strcmp( argv[i], "-verbosity" ) == 0 ||
                  strcmp( argv[i], "--verbosity" ) == 0)
-            set_verbosity( Verbosity( atoi( argv[++i] ) ) );
+                 {
+                    if (i < argc - 1 && isNaturalNumber(argv[++i]))
+                    {
+                        set_verbosity( Verbosity( atoi( argv[++i] ) ) );
+                    }
+                    else
+                    {
+                        log_error(stderr, "--verbosity needs a natural number\n");
+                        return 1;
+                    }
+                 }             
         else if (strcmp( argv[i], "-rg-id" )  == 0 ||
                  strcmp( argv[i], "--rg-id" ) == 0)
-            rg_id = argv[++i];
+                 {
+                    if (i < argc - 1)
+                    {
+                        rg_id = argv[++i];
+                    }
+                    else
+                    {
+                        log_error(stderr, "--rg_id needs a string\n");
+                        return 1;
+                    }
+                 }
         else if (strcmp( argv[i], "-rg" )  == 0 ||
                  strcmp( argv[i], "--rg" ) == 0)
-        {
-            rg_string += "\t";
-            rg_string += argv[++i];
-        }
+                 {
+                    if (i < argc - 1)
+                    {
+                        rg_string += "\t";
+                        rg_string += argv[++i];
+                    }
+                    else
+                    {
+                        log_error(stderr, "--rg needs a string\n");
+                        return 1;
+                    }
+                 }       
         else if (strcmp( argv[i], "-1") == 0)
         {
-            legacy_cmdline = false;
-            paired_end     = true;
-            read_name1     = argv[++i];
+            if (i < argc - 1)
+            {
+                legacy_cmdline = false;
+                paired_end     = true;
+                read_name1     = argv[++i];
+            }
+            else
+            {
+                log_error(stderr, "-1 needs a filename\n");
+                return 1;
+            }
         }
         else if (strcmp( argv[i], "-2") == 0)
         {
-            legacy_cmdline = false;
-            paired_end     = true;
-            read_name2     = argv[++i];
-        }
+            if (i < argc - 1)
+            {
+                legacy_cmdline = false;
+                paired_end     = true;
+                read_name2     = argv[++i];
+            }
+            else
+            {
+                log_error(stderr, "-2 needs a filename\n");
+                return 1;
+            }
+        }      
         else if (strcmp( argv[i], "-U") == 0)
         {
-            legacy_cmdline = false;
-            paired_end     = false;
-            read_name1     = argv[++i];
+            if (i < argc - 1)
+            {
+               legacy_cmdline = false;
+               paired_end     = false;
+               read_name1     = argv[++i];
+            }
+            else
+            {
+                log_error(stderr, "-U needs a filename\n");
+                return 1;
+            }
         }
         else if (strcmp( argv[i], "-S") == 0)
         {
-            legacy_cmdline = false;
-            output_name    = argv[++i];
-        }
+            if (i < argc - 1)
+            {
+               legacy_cmdline = false;
+               output_name    = argv[++i];
+            }
+            else
+            {
+                log_error(stderr, "-S needs a filename\n");
+                return 1;
+            }
+        }        
         else if (strcmp( argv[i], "-x") == 0)
         {
-            legacy_cmdline = false;
-            reference_name = argv[++i];
+            if (i < argc - 1)
+            {
+                legacy_cmdline = false;
+                reference_name = argv[++i];
+            }
+            else
+            {
+                log_error(stderr, "-x needs a filename\n");
+                return 1;
+            }
         }
         else if (argv[i][0] == '-')
         {
@@ -342,13 +478,16 @@ int main(int argc, char* argv[])
             const std::string key = std::string( argv[i][1] == '-' ? argv[i] + 2 : argv[i] + 1 );
             const char* next = argv[i+1];
 
-            if (is_number(next) || next[0] != '-')
+            if (next)
             {
-                const std::string val = std::string( next ); ++i;
-                string_options.insert( std::make_pair( key, val ) );
+                 if (is_number(next) || next[0] != '-')
+                 {
+                    const std::string val = std::string( next ); ++i;
+                    string_options.insert( std::make_pair( key, val ) );
+                 }
+                else
+                    string_options.insert( std::make_pair( key, "1" ) );
             }
-            else
-                string_options.insert( std::make_pair( key, "1" ) );
         }
     }
 
@@ -632,6 +771,10 @@ int main(int argc, char* argv[])
                 log_verbose(stderr, "  randomized     = %s\n", params.randomized ? "yes" : "no");
                 if (params.allow_sub)
                     log_verbose(stderr, "  subseed length = %u\n", params.subseed_len);
+                log_verbose(stderr, "  overlap        = %s\n", params.pe_overlap ? "yes" : "no");
+                //log_verbose(stderr, "  dovetail       = %s\n", params.pe_dovetail ? "yes" : "no");
+                log_verbose(stderr, "  no-mixed       = %s\n", !params.pe_unpaired ? "yes" : "no");
+                log_verbose(stderr, "  discordant     = %s\n", params.pe_discordant ? "yes" : "no");
             }
 
             //

@@ -25,11 +25,75 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+// packedstream_test.cpp
+//
 
-#define NVBIO_VERSION           100170                       // 1.1.50
-#define NVBIO_MAJOR_VERSION     (NVBIO_VERSION / 100000)
-#define NVBIO_MINOR_VERSION     (NVBIO_VERSION / 100 % 1000)
-#define NVBIO_SUBMINOR_VERSION  (NVBIO_VERSION % 100)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <nvbio/basic/types.h>
+#include <nvbio/basic/cache.h>
 
-#define NVBIO_VERSION_STRING    "1.1.70"
+using namespace nvbio;
+
+struct CacheManager
+{
+    // constructor
+    CacheManager() : m_size(0) {}
+
+    // acquire element i
+    bool acquire(const uint32 i)
+    {
+        if (m_size >= 100u)
+            return false;
+
+        ++m_size;
+        return true;
+    }
+
+    // release element i
+    void release(const uint32 i)
+    {
+        --m_size;
+    }
+
+    // is cache usage below the low-watermark?
+    bool low_watermark() const
+    {
+        return (m_size < 75u);
+    }
+
+    uint32 m_size;
+};
+
+int cache_test()
+{
+    printf("cache test... started\n");
+    CacheManager manager;
+
+    LRU<CacheManager> cache( manager );
+    for (uint32 i = 0; i < 1000; ++i)
+    {
+        cache.pin(i);
+        cache.unpin(i);
+    }
+
+    printf("  test overflow... started\n");
+    bool overflow = false;
+
+    try
+    {
+        for (uint32 i = 0; i < 200; ++i)
+            cache.pin(i);
+    }
+    catch (cache_overflow)
+    {
+        overflow = true;
+    }
+    if (overflow == false)
+        printf("  error: overflow was expected, but did not occurr!\n");
+    else
+        printf("  test overflow... done\n");
+    printf("cache test... done\n");
+    return 0u;
+}
