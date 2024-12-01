@@ -13,7 +13,7 @@ nvBWT(myinput, output, options = NULL)
 used for the alignment output.}
 
 \item{options}{\code{Character} vector. Options
-Example: " --verbosity  "}
+Example: \code{--verbosity}}
 }
 \value{
 An invisible \code{Integer} of call
@@ -27,22 +27,20 @@ binary.
 \details{
 Available options:
 
-    --verbosity           select verbosity
-
-    -m | --max-length     clamp input to max_length
-
-    -b | --byte-packing   output byte packed .pac
-
-    -w | --word-packing   output word packed .wpac
-
-    -c | --crc            compute crcs
-
-    -d | --device         cuda device
+\preformatted{
+-v       | --verbosity     int (0-6) [5]     // select the verbosity level
+-m       | --max-length    int       [inf]   // clamp input length
+-b       | --byte-packing  [default]         // output a byte-encoded .pac file
+-w       | --word-packing                    // output a word-encoded .wpac file
+                                             // (more efficient)
+-c       | --crc                             // compute CRCs
+-d       | --device                          // select a cuda device
+}
 }
 \examples{
 td <- tempdir()
-fa_file <- system.file(package="RbowtieCuda", "extdata", "bt2", "refs", "lambda_virus.fa")
-nvBWT(myinput=fa_file, output=file.path(td, "index"), options="")
+fa_file <- system.file(package='RbowtieCuda', 'extdata', 'bt2', 'refs', 'lambda_virus.fa')
+nvBWT(myinput=fa_file, output=file.path(td, 'index'), options='')
 }
 \references{
 Langmead, B., & Salzberg, S. L. (2012).

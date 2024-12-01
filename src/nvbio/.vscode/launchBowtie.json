@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+           
+        {
+            "cwd": "/home/karlhal/Documents/essai 1",
+            "type": "cuda-gdb",
+            "request": "launch",
+            "name": "Lancer le programme",           
+            "args": "--wfa --verbosity 6 --batch-size 1  -x '/home/karlhal/Documents/essai 1/chromosomes/index_rbowtieCuda' -1 '/home/karlhal/Documents/essai 1/fastq/1M_SRR9336468_1.fastq' -2 '/home/karlhal/Documents/essai 1/fastq/1M_SRR9336468_2.fastq' -S '/home/karlhal/Documents/essai 1/test.sam'",
+            "program": "/home/karlhal/bioinformatic2/code/RbowtieCuda/src/nvbio/build_deb/nvBowtie/nvBowtie"
+        }
+    ]
+}

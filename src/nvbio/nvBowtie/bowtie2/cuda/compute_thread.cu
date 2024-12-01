@@ -43,6 +43,7 @@
 #include <nvBowtie/bowtie2/cuda/aligner.h>
 #include <nvBowtie/bowtie2/cuda/aligner_inst.h>
 #include <nvBowtie/bowtie2/cuda/input_thread.h>
+#include <nvBowtie/bowtie2/cuda/output_thread.h>
 #include <nvbio/basic/cuda/arch.h>
 #include <nvbio/basic/timer.h>
 #include <nvbio/basic/console.h>
@@ -191,6 +192,10 @@ void ComputeThreadSE::do_run()
     // setup the output file
     aligner->output_file = output_file;
 
+    // setup the output pointer thread
+    if (params.cache_writes)
+        aligner->output_threadSE = output_threadSE;
+
     // initialize the aligner
     if (aligner->init( thread_id, BATCH_SIZE, params, kSingleEnd ) == false)
         return;
@@ -209,6 +214,9 @@ void ComputeThreadSE::do_run()
 
     io::SequenceDataHost   local_read_data_host;
     io::HostOutputBatchSE  local_output_batch_host;
+
+    if (params.cache_writes)
+        output_threadSE->createCache();
 
     // loop through the batches of reads
     while (1)
@@ -308,9 +316,23 @@ void ComputeThreadSE::do_run()
                     local_output_batch_host,
                     stats );
             }
-            else
+            else if (params.scoring_mode == SmithWatermanMode)
             {
                 best_approx_sw(
+                    *aligner,
+                    params,
+                    fmi,
+                    rfmi,
+                    scoring_scheme,
+                    reference_data,
+                    driver_data,
+                    read_data,
+                    local_output_batch_host,
+                    stats );
+            }
+            else if (params.scoring_mode == WfaMode)
+            {
+                best_approx_wfa(
                     *aligner,
                     params,
                     fmi,
@@ -335,6 +357,9 @@ void ComputeThreadSE::do_run()
 
         log_verbose(stderr, "[%u]   %.1f K reads/s\n", thread_id, 1.0e-3f * float(n_reads) / stats.global_time);
     }
+
+    if (params.cache_writes)
+        output_threadSE->stop_thread = true;
 
     global_timer.stop();
     stats.global_time += global_timer.seconds();
@@ -524,6 +549,10 @@ void ComputeThreadPE::do_run()
     // setup the output file
     aligner->output_file = output_file;
 
+    // setup the output pointer thread
+    if (params.cache_writes)
+        aligner->output_threadPE = output_threadPE;
+
     // initialize the aligner
     if (aligner->init( thread_id, BATCH_SIZE, params, kPairedEnds ) == false)
         return;
@@ -547,6 +576,9 @@ void ComputeThreadPE::do_run()
     io::SequenceDataHost    local_read_data_host1;
     io::SequenceDataHost    local_read_data_host2;
     io::HostOutputBatchPE   local_output_batch_host;
+
+    if (params.cache_writes)
+        output_threadPE->createCache();
 
     // loop through the batches of reads
     while (1)
@@ -635,9 +667,24 @@ void ComputeThreadPE::do_run()
                     local_output_batch_host,
                     stats );
             }
-            else
+            else if (params.scoring_mode == SmithWatermanMode)
             {
                 best_approx_sw(
+                    *aligner,
+                    params,
+                    fmi,
+                    rfmi,
+                    scoring_scheme,
+                    reference_data,
+                    driver_data,
+                    read_data1,
+                    read_data2,
+                    local_output_batch_host,
+                    stats );
+            }
+            else if (params.scoring_mode == WfaMode)
+            {
+                best_approx_wfa(
                     *aligner,
                     params,
                     fmi,
@@ -663,6 +710,9 @@ void ComputeThreadPE::do_run()
 
         log_verbose(stderr, "[%u]   %.1f K reads/s\n", thread_id, 1.0e-3f * float(n_reads) / stats.global_time);
     }
+
+    if (params.cache_writes)
+        output_threadPE->stop_thread = true;
 
     global_timer.stop();
     stats.global_time += global_timer.seconds();

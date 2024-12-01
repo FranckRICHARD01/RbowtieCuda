@@ -1,4 +1,4 @@
-pkgdown::build_site()url: ~
+url: https://github.com/FranckRICHARD01/RbowtieCuda
 template:
   bootstrap: 5
 

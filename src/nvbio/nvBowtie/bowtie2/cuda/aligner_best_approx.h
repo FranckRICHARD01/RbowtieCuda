@@ -114,7 +114,11 @@ void Aligner::best_approx(
     nvbio::cuda::Timer device_timer;
 
     const uint32 count = read_data.size();
-    const uint32 band_len = band_length( params.max_dist );
+    /*const*/ uint32 band_len = band_length( params.max_dist );
+
+    // wfa
+    //if (params.scoring_mode == WfaMode)
+      // band_len = 1u;
 
     // create a device-side read batch
     const read_view_type  reads_view = plain_view( read_data );
@@ -387,8 +391,30 @@ void Aligner::best_approx(
 
         timer.start();
 
-        log_debug(stderr, "[%u]     output\n", ID);
-        output_file->process( cpu_batch );
+        if (params.cache_writes)
+        {
+             output_file->reset_data_file();
+
+             output_file->processCacheWrites( cpu_batch );            
+
+             char *dat = output_file->get_write_thread_data();      
+                          
+             if (dat)
+             {
+                 int32 size = output_file->outfile_size();
+                 output_threadSE->write_thread_data_size = size;
+                 #pragma omp parallel for
+                 for (int32 i = 1; i < size; i++)
+                     output_threadSE->write_thread_data[i] = dat[i];
+                 
+                 output_threadSE->write_thread_data[size] = 0;
+                 output_threadSE->write_thread_data[0] = dat[0];
+             }
+        }
+        else
+        {
+             output_file->process( cpu_batch );
+        }
 
         timer.stop();
         stats.io.add( count, timer.seconds() );
@@ -546,7 +572,11 @@ void Aligner::best_approx_score(
     nvbio::cuda::Timer device_timer;
 
 //    const uint32 count    = read_data.size();
-    const uint32 band_len = band_length( params.max_dist );
+    /*const*/ uint32 band_len = band_length( params.max_dist );
+
+    // wfa
+    //if (params.scoring_mode == WfaMode)
+     // band_len = 1u;
 
     // cast the reads to use proper iterators
     const read_view_type  reads_view = plain_view( read_data );
@@ -664,6 +694,8 @@ void Aligner::best_approx_score(
             pipeline.n_hits_per_read = std::min(
                 BATCH_SIZE / active_read_queues.in_size,
                 max_ext );
+
+            log_debug(stderr, "[%u]     multiple hits (%u n hits per read)\n", ID, pipeline.n_hits_per_read);
         }
         // else
         //

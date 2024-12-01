@@ -203,6 +203,66 @@ uint32 max_text_gaps(
 	return n-1;
 }
 
+//
+// Calculate the maximum possible number of pattern gaps that could occur in a
+// given score boundary
+//
+template <AlignmentType TYPE, typename scoring_scheme_type, typename algorithm_tag>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE 
+uint32 max_pattern_gaps(
+    const WfahAligner<TYPE,scoring_scheme_type,algorithm_tag>& scoring,
+	int32                                                       min_score,
+	int32                                                       pattern_len)
+{
+	// compute the optimal score
+	int32 score = pattern_len * scoring.scheme.match(30);
+	if (score < min_score)
+        return 0u;
+
+    // subtract the gap open penalty
+	score += scoring.scheme.pattern_gap_open();
+
+    uint32 n = 0;
+	while (score >= min_score && n < pattern_len)
+    {
+		// subtract just the extension penalty
+		score += scoring.scheme.pattern_gap_extension();
+
+		++n;
+	}
+	return n-1;
+}
+
+//
+// Calculate the maximum possible number of reference gaps that could occur in a
+// given score boundary
+//
+template <AlignmentType TYPE, typename scoring_scheme_type, typename algorithm_tag>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE 
+uint32 max_text_gaps(
+    const WfahAligner<TYPE,scoring_scheme_type,algorithm_tag>& scoring,
+	int32                                                       min_score,
+	int32                                                       pattern_len)
+{
+	// compute the optimal score
+	int32 score = pattern_len * scoring.scheme.match(30);
+	if (score < min_score)
+        return 0u;
+
+    // subtract the gap open penalty
+	score += scoring.scheme.text_gap_open();
+
+    uint32 n = 0;
+	while (score >= min_score && n < pattern_len)
+    {
+		// subtract just the extension penalty
+		score += scoring.scheme.text_gap_extension();
+
+		++n;
+	}
+	return n-1;
+}
+
 template <uint32 BAND_LEN, typename score_type>
 struct select_dispatch
 {

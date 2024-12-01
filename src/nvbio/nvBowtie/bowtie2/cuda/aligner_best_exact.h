@@ -63,7 +63,11 @@ void Aligner::best_exact(
     Timer global_timer;
 
     const uint32 count = read_data.size();
-    const uint32 band_len = band_length( params.max_dist );
+    /*const*/ uint32 band_len = band_length( params.max_dist );
+
+    // wfa
+    //if (params.scoring_mode == WfaMode)
+      //band_len = 1u;
 
     //// make sure the current output set is not currently being flushed
     //ScopedLock lock( &output_thread.m_lock[ output_set ] );

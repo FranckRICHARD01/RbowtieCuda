@@ -30,19 +30,37 @@
 #include <nvbio/io/output/output_bam.h>
 #include <nvbio/io/output/output_debug.h>
 
+
+
 namespace nvbio {
 namespace io {
 
-OutputFile::OutputFile(const char *_file_name, AlignmentType _alignment_type, BNT _bnt)
+OutputFile::OutputFile(const char *_file_name, AlignmentType _alignment_type, BNT _bnt, bool cache_writes_enabled_init)
     : file_name(_file_name),
       alignment_type(_alignment_type),
-      bnt(_bnt),
-      mapq_filter(-1)
+      bnt(_bnt),     
+      cache_writes_enabled(cache_writes_enabled_init),
+      mapq_filter(-1)    
 {
+    write_thread_data = nullptr;
+
+    if (cache_writes_enabled)
+    {
+        log_debug(stderr, "write thread: create cache memory\n");
+        write_thread_data = new char[MAX_CHAR];
+
+        for(uint32 i = 0; i < MAX_CHAR; i++) write_thread_data[i]=0;
+    }       
 }
 
 OutputFile::~OutputFile()
 {
+    if (write_thread_data)
+    {          
+        log_debug(stderr, "write thread: delete cache memory\n");
+        delete [] write_thread_data; 
+        write_thread_data = nullptr;
+    }
 }
 
 void OutputFile::configure_mapq_evaluator(int mapq_filter)
@@ -59,7 +77,7 @@ IOStats& OutputFile::get_aggregate_statistics(void)
     return iostats;
 }
 
-OutputFile *OutputFile::open(const char *file_name, AlignmentType aln_type, BNT bnt)
+OutputFile *OutputFile::open(const char *file_name, AlignmentType aln_type, BNT bnt, bool cache_writes_enabled)
 {
     // parse out file extension; look for .sam, .bam suffixes
     uint32 len = uint32(strlen(file_name));
@@ -67,19 +85,19 @@ OutputFile *OutputFile::open(const char *file_name, AlignmentType aln_type, BNT 
     if (len == 0)
     {
         // dump SAM to stdout
-        return new SamOutput(NULL, aln_type, bnt);
+        return new SamOutput(NULL, aln_type, bnt, cache_writes_enabled);
     }
 
     if (strcmp(file_name, "/dev/null") == 0)
     {
-        return new OutputFile(file_name, aln_type, bnt);
+        return new OutputFile(file_name, aln_type, bnt, cache_writes_enabled);
     }
 
     if (len >= strlen(".sam"))
     {
         if (strcmp(&file_name[len - strlen(".sam")], ".sam") == 0)
         {
-            return new SamOutput(file_name, aln_type, bnt);
+            return new SamOutput(file_name, aln_type, bnt, cache_writes_enabled);
         }
     }
 
@@ -87,7 +105,7 @@ OutputFile *OutputFile::open(const char *file_name, AlignmentType aln_type, BNT 
     {
         if (strcmp(&file_name[len - strlen(".bam")], ".bam") == 0)
         {
-            return new BamOutput(file_name, aln_type, bnt);
+            return new BamOutput(file_name, aln_type, bnt, cache_writes_enabled);
         }
     }
 
@@ -95,12 +113,12 @@ OutputFile *OutputFile::open(const char *file_name, AlignmentType aln_type, BNT 
     {
         if (strcmp(&file_name[len - strlen(".dbg")], ".dbg") == 0)
         {
-            return new DebugOutput(file_name, aln_type, bnt);
+            return new DebugOutput(file_name, aln_type, bnt, cache_writes_enabled);
         }
     }
 
     log_warning(stderr, "could not determine file type for %s; guessing SAM\n", file_name);
-    return new SamOutput(file_name, aln_type, bnt);
+    return new SamOutput(file_name, aln_type, bnt, cache_writes_enabled);
 }
 
 } // namespace io

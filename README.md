@@ -1,21 +1,20 @@
-# RbowtieCuda
-Bioconductor package: an R wrapper for mvBowtie, a fork version of [NVBIO](https://nvlabs.github.io/nvbio). 
+# RbowtieCuda package: an R wrapper for nvBowtie, a fork version of the [NVBIO](https://nvlabs.github.io/nvbio) library. 
 
-The `RbowtieCuda` package provides an R interface to the [nvBowtie](https://github.com/NVlabs/nvbio)[1] short read aligner adaptation of bowtie2 unning under Cuda proposed by Jacopo Pantaleoni and al. The `RbowtiCuda` package allows users to build indexes and to create alignment files (.sam or .bam) but with a higher processing speed thanks to the computing power of modern video cards. nvBowtie is a part of the NVBIO library.
+The `RbowtieCuda` package provides an R interface to [nvBowtie](https://github.com/NVlabs/nvbio)^[Langmead, B., & Salzberg, S. L. (2012). Fast gapped-read alignment with Bowtie 2. Nature methods, 9(4), 357-359.], a CUDA-based adaptation of the popular Bowtie2 short-read aligner, originally developed by Jacopo Pantaleoni and collaborators. This package allows users to build genome indexes and create alignment files in .sam or .bam formats, leveraging the computational power of modern NVIDIA GPUs for significantly faster processing speeds. nvBowtie is part of the `NVBIO` library, and the package also includes an experimental implementation of the `Wavefront Alignment (WFA)` method ^[Marco-Sola S, Moure JC, Moreto M et al. Fast gap-affine pairwise alignment using the wavefront algorithm. Bioinformatics 2021;37: 456–63.].
 
-## BowtieCuda Source Package Information
+## Source Package Information
 
-The `RbowtieCuda` package uses a modificated version of the nvBio v1.1.50 source code which was obtained from https://github.com/NVlabs/nvbio. 
+The `RbowtieCuda` is built on a modified version of the nvBIO v1.1.50 source code, which can be accessed at https://github.com/NVlabs/nvbio. 
 
 
-## Acknowledgement
+## Acknowledgements
 
 We would like to thank Ismael Galve Roperh for his assistance.
 
 
-## Credits
+## Contributors
 
-The main contributors of the original NVBIO are:
+Original NVBIO developers:
 
     Jacopo Pantaleoni - jpantaleoni@nvidia.com
     Nuno Subtil - nsubtil@nvidia.com
@@ -25,9 +24,11 @@ RbowtieCuda developers:
     Samuel Simon Sanchez - samsimon@ucm.es
     Franck RICHARD - franck.richard@winstars.net
 
-The maintainer of the RbowtieCuda package is [Franck RICHARD](mailto:franck.richard@winstars.net)
+Maintainer: [Franck RICHARD](mailto:franck.richard@winstars.net)
 
 
 ## References
 
 [1] Langmead, B., & Salzberg, S. L. (2012). Fast gapped-read alignment with Bowtie 2. Nature methods, 9(4), 357-359.
+
+[2] Marco-Sola S, Moure JC, Moreto M et al. Fast gap-affine pairwise alignment using the wavefront algorithm. Bioinformatics 2021;37: 456–63.

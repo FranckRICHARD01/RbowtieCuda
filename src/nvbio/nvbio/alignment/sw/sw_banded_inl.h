@@ -193,7 +193,7 @@ struct SmithWatermanCheckpointContext
             const short infimum = Field_traits<short>::min() + 32;
 
             for (uint32 j = 0; j < BAND_LEN; ++j)
-                m_checkpoints[BAND_LEN*(i/CHECKPOINTS) + j] = nvbio::max( band[j], infimum );
+                m_checkpoints[BAND_LEN*(i/CHECKPOINTS) + j] = nvbio::max( band[j], infimum );           
         }
     }
 
@@ -343,7 +343,8 @@ struct sw_alignment_score_dispatch
         typename text_type,
         typename scoring_type,
         typename context_type,
-        typename sink_type>
+        typename sink_type,
+        typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static
     bool run(
@@ -356,7 +357,8 @@ struct sw_alignment_score_dispatch
         const uint32        pos,
         const int32         min_score,
         context_type&       context,
-        sink_type&          sink)
+        sink_type&          sink,
+        wfa_type&           wfa)
     {
         const uint32 pattern_len = pattern.length();
         const uint32 text_len = text.length();
@@ -539,7 +541,8 @@ template <
     typename pattern_type,
     typename qual_type,
     typename text_type,
-    typename sink_type>
+    typename sink_type,
+    typename wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_score(
     const SmithWatermanAligner<TYPE,scoring_type>&  aligner,
@@ -547,11 +550,12 @@ bool banded_alignment_score(
     qual_type                                       quals,
     text_type                                       text,
     const int32                                     min_score,
-    sink_type&                                      sink)
+    sink_type&                                      sink,
+    wfa_type&                                       wfa)
 {
     priv::banded::SmithWatermanScoringContext<BAND_LEN,TYPE> context;
 
-    return priv::banded::sw_alignment_score_dispatch<BAND_LEN,TYPE>::run( aligner.scheme, pattern, quals, text, 0u, pattern.length(), 0u, min_score, context, sink );
+    return priv::banded::sw_alignment_score_dispatch<BAND_LEN,TYPE>::run( aligner.scheme, pattern, quals, text, 0u, pattern.length(), 0u, min_score, context, sink, wfa );
 }
 
 ///
@@ -575,7 +579,8 @@ template <
     typename qual_type,
     typename text_type,
     typename sink_type,
-    typename checkpoint_type>
+    typename checkpoint_type,
+    typename wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_score(
     const SmithWatermanAligner<TYPE,scoring_type>&  aligner,
@@ -586,11 +591,12 @@ bool banded_alignment_score(
     const uint32                                    window_begin,
     const uint32                                    window_end,
     sink_type&                                      sink,
-    checkpoint_type                                 checkpoint)
+    checkpoint_type                                 checkpoint,
+    wfa_type&                                       wfa)
 {
     priv::banded::SmithWatermanCheckpointedScoringContext<BAND_LEN,TYPE,checkpoint_type> context( checkpoint );
 
-    return priv::banded::sw_alignment_score_dispatch<BAND_LEN,TYPE>::run( aligner.scheme, pattern, quals, text, window_begin, window_end, 0u, min_score, context, sink );
+    return priv::banded::sw_alignment_score_dispatch<BAND_LEN,TYPE>::run( aligner.scheme, pattern, quals, text, window_begin, window_end, 0u, min_score, context, sink, wfa );
 }
 
 ///
@@ -624,7 +630,8 @@ template <
     typename        qual_type,
     typename        text_type,
     typename        sink_type,
-    typename        checkpoint_type>
+    typename        checkpoint_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_checkpoints(
     const SmithWatermanAligner<TYPE,scoring_type>&  aligner,
@@ -633,11 +640,12 @@ bool banded_alignment_checkpoints(
     text_type                                       text,
     const int32                                     min_score,
     sink_type&                                      sink,
-    checkpoint_type                                 checkpoints)
+    checkpoint_type                                 checkpoints,
+    wfa_type&                                       wfa)
 {
     priv::banded::SmithWatermanCheckpointContext<BAND_LEN,TYPE,CHECKPOINTS,checkpoint_type> context( checkpoints );
 
-    return priv::banded::sw_alignment_score_dispatch<BAND_LEN,TYPE>::run( aligner.scheme, pattern, quals, text, 0u, pattern.length(), 0u, min_score, context, sink );
+    return priv::banded::sw_alignment_score_dispatch<BAND_LEN,TYPE>::run( aligner.scheme, pattern, quals, text, 0u, pattern.length(), 0u, min_score, context, sink, wfa );
 }
 
 ///
@@ -681,7 +689,8 @@ template <
     typename        qual_string,
     typename        text_string,
     typename        checkpoint_type,
-    typename        submatrix_type>
+    typename        submatrix_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 uint32 banded_alignment_submatrix(
     const SmithWatermanAligner<TYPE,scoring_type>&  aligner,
@@ -691,14 +700,15 @@ uint32 banded_alignment_submatrix(
     const int32                                     min_score,
     checkpoint_type                                 checkpoints,
     const uint32                                    checkpoint_id,
-    submatrix_type                                  submatrix)
+    submatrix_type                                  submatrix,
+    wfa_type&                                       wfa)
 {
     priv::banded::SmithWatermanSubmatrixContext<BAND_LEN,TYPE,CHECKPOINTS,checkpoint_type,submatrix_type> context( checkpoints, checkpoint_id, submatrix );
     const uint32 window_begin = checkpoint_id * CHECKPOINTS;
     const uint32 window_end   = nvbio::min( window_begin + CHECKPOINTS, uint32(pattern.length()) );
     NullSink sink;
 
-    priv::banded::sw_alignment_score_dispatch<BAND_LEN,TYPE>::run( aligner.scheme, pattern, quals, text, window_begin, window_end, 0u, min_score, context, sink );
+    priv::banded::sw_alignment_score_dispatch<BAND_LEN,TYPE>::run( aligner.scheme, pattern, quals, text, window_begin, window_end, 0u, min_score, context, sink, wfa );
 
     return window_end - window_begin;
 }
@@ -744,7 +754,8 @@ template <
     typename        scoring_type,
     typename        checkpoint_type,
     typename        submatrix_type,
-    typename        backtracer_type>
+    typename        backtracer_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_traceback(
     const SmithWatermanAligner<TYPE,scoring_type>&  aligner,
@@ -754,7 +765,8 @@ bool banded_alignment_traceback(
     const uint32                                    submatrix_height,
           uint8&                                    state,
           uint2&                                    sink,
-    backtracer_type&                                backtracer)
+    backtracer_type&                                backtracer,
+    wfa_type&                                       wfa)
 {
     // Backtrack from the second checkpoint to the first looking up the flow submatrices
 
@@ -762,9 +774,9 @@ bool banded_alignment_traceback(
     int32 current_row   = sink.y - checkpoint_id*CHECKPOINTS - 1u;
 
     NVBIO_CUDA_DEBUG_ASSERT( current_entry >= 0 &&
-                       current_entry < BAND_LEN, "sw::banded_alignment_backtrack(): sink (%u,%u) -> local x coordinate %d not in [0,%d[\n", sink.x, sink.y, current_entry, BAND_LEN );
+                       current_entry < (int32)BAND_LEN, "sw::banded_alignment_backtrack(): sink (%u,%u) -> local x coordinate %d not in [0,%d[\n", sink.x, sink.y, current_entry, BAND_LEN );
     NVBIO_CUDA_DEBUG_ASSERT( current_row >= 0,                   "sw::banded_alignment_backtrack(): sink (%u,%u) -> local y coordinate %d not in [0,%u[\n", sink.x, sink.y, current_row, submatrix_height );
-    NVBIO_CUDA_DEBUG_ASSERT( current_row <  submatrix_height,    "sw::banded_alignment_backtrack(): sink (%u,%u) -> local y coordinate %d not in [0,%u[\n", sink.x, sink.y, current_row, submatrix_height );
+    NVBIO_CUDA_DEBUG_ASSERT( current_row <  (int32)submatrix_height,    "sw::banded_alignment_backtrack(): sink (%u,%u) -> local y coordinate %d not in [0,%u[\n", sink.x, sink.y, current_row, submatrix_height );
 
     while (current_row >= 0)
     {

@@ -196,6 +196,171 @@ NCost SmithWatermanScoringScheme<MMCost,NCost>::n_cost(const std::map<std::strin
     return NCost( np_min, np_max );
 }
 
+
+inline
+WfaScoringScheme<> load_scoring_scheme_wfa(const char* name, const AlignmentType type)
+{
+    FILE* file = fopen( name, "r" );
+    if (file == NULL)
+        return WfaScoringScheme<>();
+
+    std::map<std::string,std::string> options;
+    char key[1024];
+    char value[1024];
+
+    while (fscanf( file, "%s %s", key, value ) == 2)
+        options[ key ] = std::string( value );
+
+    fclose( file );
+
+    return WfaScoringScheme<>( options, type );
+}
+
+template <
+    typename MMCost,
+    typename NCost>
+WfaScoringScheme<MMCost,NCost> WfaScoringScheme<MMCost,NCost>::base1()
+{
+    std::map<std::string,std::string> options;
+    options["match"]            = std::string("0");
+    options["mm-penalty-min"]   = std::string("3");
+    options["mm-penalty-max"]   = std::string("3");
+    options["N-penalty-min"]    = std::string("3");
+    options["N-penalty-max"]    = std::string("3");
+    options["score-min-const"]  = std::string("37.0f");
+    options["score-min-coeff"]  = std::string("0.3f");
+    options["N-ceil-const"]     = std::string("2.0f");
+    options["N-ceil-coeff"]     = std::string("0.1f");
+    options["read-gap-const"]   = std::string("0");
+    options["read-gap-coeff"]   = std::string("1");
+    options["ref-gap-const"]    = std::string("0");
+    options["ref-gap-coeff"]    = std::string("1");
+    options["gap-free"]         = std::string("5");
+    return WfaScoringScheme<MMCost,NCost>( options );
+}
+
+template <
+    typename MMCost,
+    typename NCost>
+WfaScoringScheme<MMCost,NCost> WfaScoringScheme<MMCost,NCost>::local()
+{
+    std::map<std::string,std::string> options;
+    options["match"]            = std::string("0");
+    options["mm-penalty-min"]   = std::string("2");
+    options["mm-penalty-max"]   = std::string("6");
+    options["N-penalty-min"]    = std::string("1");
+    options["N-penalty-max"]    = std::string("1");
+    options["score-min-const"]  = std::string("0.0f");
+    options["score-min-coeff"]  = std::string("10.0f");
+    options["score-min-type"]   = std::string("log");
+    options["N-ceil-const"]     = std::string("0.0f");
+    options["N-ceil-coeff"]     = std::string("0.15f");
+    options["read-gap-const"]   = std::string("0");
+    options["read-gap-coeff"]   = std::string("1");
+    options["ref-gap-const"]    = std::string("0");
+    options["ref-gap-coeff"]    = std::string("1");
+    options["gap-free"]         = std::string("5");
+    return WfaScoringScheme<MMCost,NCost>( options, LocalAlignment );
+}
+
+// default constructor
+//
+template <
+    typename MMCost,
+    typename NCost>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+WfaScoringScheme<MMCost,NCost>::WfaScoringScheme() :
+    m_score_min( SimpleFunc::LinearFunc, -15.0f, 0.0f ),
+    m_n_ceil_const( 0.0f ),
+    m_n_ceil_coeff( 0.15f ),
+    m_read_gap_const( 0 ),
+    m_read_gap_coeff( 1 ),
+    m_ref_gap_const( 0 ),
+    m_ref_gap_coeff( 1 ),
+    m_gap_free( 0 ),
+    m_match( 0, 0 ),
+    m_mmp( 1, 6 ),
+    m_np( 1, 1 ),
+    m_monotone( true ),
+    m_local( false )
+{}
+
+// constructor
+//
+// \param options          key/value string options
+template <
+    typename MMCost,
+    typename NCost>
+WfaScoringScheme<MMCost,NCost>::WfaScoringScheme(
+    const std::map<std::string,std::string>& options,
+    const AlignmentType                      type) :
+    m_score_min( min_score_function(options) ),
+    m_n_ceil_const( float_option( options, "N-ceil-const", 0.0f ) ),
+    m_n_ceil_coeff( float_option( options, "N-ceil-coeff", 0.15f ) ),
+    m_read_gap_const( int_option( options, "read-gap-const", 0 ) ),
+    m_read_gap_coeff( int_option( options, "read-gap-coeff", 1 ) ),
+    m_ref_gap_const( int_option( options, "ref-gap-const", 0) ),
+    m_ref_gap_coeff( int_option( options, "ref-gap-coeff", 1 ) ),
+    m_gap_free( int_option( options, "gap-free", 0 ) ),
+    m_match( match_cost(options) ),
+    m_mmp( mm_cost(options) ),
+    m_np( n_cost(options) ),
+    m_monotone( m_match(0) == 0 ),
+    m_local( type == LocalAlignment ? true : false )
+{}
+
+
+template <
+    typename MMCost,
+    typename NCost>
+SimpleFunc::Type WfaScoringScheme<MMCost,NCost>::func_type(const std::string& type)
+{
+    if (strcmp( type.c_str(), "log" ) == 0)
+        return SimpleFunc::LogFunc;
+    else if (strcmp( type.c_str(), "sqrt" ) == 0)
+        return SimpleFunc::SqrtFunc;
+
+    return SimpleFunc::LinearFunc;
+}
+
+template <
+    typename MMCost,
+    typename NCost>
+SimpleFunc WfaScoringScheme<MMCost,NCost>::min_score_function(const std::map<std::string,std::string>& options)
+{
+    return SimpleFunc(
+        func_type( string_option( options, "score-min-type", "linear" ) ),
+        float_option( options, "score-min-const", -15.0f ), // 37.0f
+        float_option( options, "score-min-coeff", 0.0f ) ); // 0.3f
+}
+template <
+    typename MMCost,
+    typename NCost>
+typename WfaScoringScheme<MMCost,NCost>::MatchCost WfaScoringScheme<MMCost,NCost>::match_cost(const std::map<std::string,std::string>& options)
+{
+    const int match_cost = int_option( options, "match", 0 );
+    return MatchCost( match_cost, match_cost );
+}
+template <
+    typename MMCost,
+    typename NCost>
+MMCost WfaScoringScheme<MMCost,NCost>::mm_cost(const std::map<std::string,std::string>& options)
+{
+    const int mmp_min = int_option( options, "mm-penalty-min", 1 );
+    const int mmp_max = int_option( options, "mm-penalty-max", 6 );
+    return MMCost( mmp_min, mmp_max );
+}
+template <
+    typename MMCost,
+    typename NCost>
+NCost WfaScoringScheme<MMCost,NCost>::n_cost(const std::map<std::string,std::string>& options)
+{
+    const int np_min = int_option( options, "N-penalty-min", 1 );
+    const int np_max = int_option( options, "N-penalty-max", 1 );
+    return NCost( np_min, np_max );
+}
+
+
 } // namespace cuda
 } // namespace bowtie2
 } // namespace nvbio

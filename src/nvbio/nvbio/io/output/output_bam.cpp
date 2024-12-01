@@ -36,8 +36,8 @@
 namespace nvbio {
 namespace io {
 
-BamOutput::BamOutput(const char *file_name, AlignmentType alignment_type, BNT bnt)
-    : OutputFile(file_name, alignment_type, bnt)
+BamOutput::BamOutput(const char *file_name, AlignmentType alignment_type, BNT bnt, bool cache_writes_enabled)
+    : OutputFile(file_name, alignment_type, bnt, cache_writes_enabled)
 {
     fp = fopen(file_name, "wt");
     if (fp == NULL)

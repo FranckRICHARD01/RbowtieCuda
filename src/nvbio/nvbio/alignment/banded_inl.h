@@ -33,6 +33,7 @@
 #include <nvbio/alignment/ed/ed_banded_inl.h>
 #include <nvbio/alignment/sw/sw_banded_inl.h>
 #include <nvbio/alignment/gotoh/gotoh_banded_inl.h>
+#include <nvbio/alignment/wfah/wfah_banded_inl.h>
 #include <nvbio/alignment/myers/myers_banded_inl.h>
 namespace nvbio {
 namespace aln {
@@ -53,7 +54,8 @@ template <
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        sink_type>
+    typename        sink_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_score(
     const aligner_type      aligner,
@@ -61,7 +63,8 @@ bool banded_alignment_score(
     const qual_string       quals,
     const text_string       text,
     const  int32            min_score,
-          sink_type&        sink)
+          sink_type&        sink,
+          wfa_type&         wfa)
 {
     return priv::banded_alignment_score<BAND_LEN>(
         aligner,
@@ -69,8 +72,10 @@ bool banded_alignment_score(
         quals,
         text,
         min_score,
-        sink );
+        sink,
+        wfa );
 }
+
 
 // a function to compute the alignment score between a pattern and a text string 
 // with banded DP alignment.
@@ -87,14 +92,16 @@ template <
     typename        aligner_type,
     typename        pattern_string,
     typename        text_string,
-    typename        sink_type>
+    typename        sink_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_score(
     const aligner_type      aligner,
     const pattern_string    pattern,
     const text_string       text,
     const  int32            min_score,
-          sink_type&        sink)
+          sink_type&        sink,
+          wfa_type&         wfa)
 {
     return priv::banded_alignment_score<BAND_LEN>(
         aligner,
@@ -102,8 +109,11 @@ bool banded_alignment_score(
         trivial_quality_string(),
         text,
         min_score,
-        sink );
+        sink,
+        wfa);
 }
+
+
 
 // a function to compute the alignment score between a pattern and a text string 
 // with banded DP alignment.
@@ -121,25 +131,29 @@ template <
     typename        aligner_type,
     typename        pattern_string,
     typename        qual_string,
-    typename        text_string>
+    typename        text_string,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 int32 banded_alignment_score(
     const aligner_type      aligner,
     const pattern_string    pattern,
     const qual_string       quals,
     const text_string       text,
-    const  int32            min_score)
+    const  int32            min_score,
+    wfa_type&               wfa)
 {
-    BestSink<int32> sink;
+    BestSink<int32> sink; 
     priv::banded_alignment_score<BAND_LEN>(
         aligner,
         pattern,
         quals,
         text,
         min_score,
-        sink );
+        sink,
+        wfa );
     return sink.score;
 }
+
 
 // a function to compute the alignment score between a pattern and a text string 
 // with banded DP alignment.
@@ -155,22 +169,25 @@ template <
     uint32          BAND_LEN,
     typename        aligner_type,
     typename        pattern_string,
-    typename        text_string>
+    typename        text_string,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 int32 banded_alignment_score(
     const aligner_type      aligner,
     const pattern_string    pattern,
     const text_string       text,
-    const  int32            min_score)
+    const int32             min_score,
+    wfa_type&               wfa)
 {
-    BestSink<int32> sink;
+    BestSink<int32> sink;       
     priv::banded_alignment_score<BAND_LEN>(
         aligner,
         pattern,
         trivial_quality_string(),
         text,
         min_score,
-        sink );
+        sink,
+        wfa );
     return sink.score;
 }
 
@@ -192,7 +209,8 @@ template <
     typename        qual_string,
     typename        text_string,
     typename        sink_type,
-    typename        checkpoint_type>
+    typename        checkpoint_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_score(
     const aligner_type      aligner,
@@ -203,7 +221,8 @@ bool banded_alignment_score(
     const uint32            window_begin,
     const uint32            window_end,
           sink_type&        sink,
-          checkpoint_type   checkpoint)
+          checkpoint_type   checkpoint,
+          wfa_type&         wfa)
 {
     return priv::banded_alignment_score<BAND_LEN>(
         aligner,
@@ -214,7 +233,8 @@ bool banded_alignment_score(
         window_begin,
         window_end,
         sink,
-        checkpoint );
+        checkpoint,
+        wfa );
 }
 
 //
@@ -237,7 +257,8 @@ template <
     typename        qual_string,
     typename        text_string,
     typename        sink_type,
-    typename        checkpoint_type>
+    typename        checkpoint_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 void banded_alignment_score_checkpoints(
     const aligner_type      aligner,
@@ -246,7 +267,8 @@ void banded_alignment_score_checkpoints(
     const text_string       text,
     const  int32            min_score,
           sink_type&        sink,
-          checkpoint_type   checkpoints)
+          checkpoint_type   checkpoints,
+          wfa_type&         wfa)
 {
     priv::banded_alignment_checkpoints<BAND_LEN,CHECKPOINTS>(
         aligner,
@@ -255,7 +277,8 @@ void banded_alignment_score_checkpoints(
         text,
         min_score,
         sink,
-        checkpoints );
+        checkpoints,
+        wfa );
 }
 
 //
@@ -297,7 +320,8 @@ template <
     typename        qual_string,
     typename        text_string,
     typename        checkpoint_type,
-    typename        submatrix_type>
+    typename        submatrix_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 uint32 banded_alignment_score_submatrix(
     const aligner_type      aligner,
@@ -307,7 +331,8 @@ uint32 banded_alignment_score_submatrix(
     const int32             min_score,
     checkpoint_type         checkpoints,
     const uint32            checkpoint_id,
-    submatrix_type          submatrix)
+    submatrix_type          submatrix,
+    wfa_type&               wfa)
 {
     return priv::banded_alignment_submatrix<BAND_LEN,CHECKPOINTS>(
         aligner,
@@ -317,8 +342,10 @@ uint32 banded_alignment_score_submatrix(
         min_score,
         checkpoints,
         checkpoint_id,
-        submatrix );
+        submatrix,
+        wfa );
 }
+
 
 //
 // Backtrace an optimal alignment using a full DP algorithm.
@@ -348,7 +375,7 @@ uint32 banded_alignment_score_submatrix(
 // \param submatrix            temporary submatrix storage
 //
 // \return                     reported alignment
-//
+// 
 template <
     uint32          BAND_LEN,
     uint32          CHECKPOINTS,
@@ -358,7 +385,8 @@ template <
     typename        text_string,
     typename        backtracer_type,
     typename        checkpoints_type,
-    typename        submatrix_type>
+    typename        submatrix_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 Alignment<int32> banded_alignment_traceback(
     const aligner_type      aligner,
@@ -368,7 +396,8 @@ Alignment<int32> banded_alignment_traceback(
     const int32             min_score,
     backtracer_type&        backtracer,
     checkpoints_type        checkpoints,
-    submatrix_type          submatrix)
+    submatrix_type          submatrix,
+    wfa_type&               wfa)
 {
     //
     // This function performs backtracing in a completely generic fashion that works
@@ -382,7 +411,7 @@ Alignment<int32> banded_alignment_traceback(
     //
     BestSink<int32> best;
     banded_alignment_score_checkpoints<BAND_LEN,CHECKPOINTS>(
-        aligner, pattern, quals, text, /*pos,*/ min_score, best, checkpoints );
+        aligner, pattern, quals, text, /*pos,*/ min_score, best, checkpoints, wfa );
 
     const uint32 n_checkpoints = 1u + (pattern.length() + CHECKPOINTS-1)/CHECKPOINTS;
 
@@ -413,10 +442,10 @@ Alignment<int32> banded_alignment_traceback(
     for (; checkpoint_id >= 0; --checkpoint_id)
     {
         const uint32 submatrix_height = banded_alignment_score_submatrix<BAND_LEN,CHECKPOINTS>(
-            aligner, pattern, quals, text, /*pos,*/ min_score, checkpoints, checkpoint_id, submatrix );
+            aligner, pattern, quals, text, /*pos,*/ min_score, checkpoints, checkpoint_id, submatrix, wfa );
 
         if (priv::banded_alignment_traceback<BAND_LEN,CHECKPOINTS>(
-            aligner, checkpoints, checkpoint_id, submatrix, submatrix_height, state, sink, backtracer ))
+            aligner, checkpoints, checkpoint_id, submatrix, submatrix_height, state, sink, backtracer, wfa ))
             break;
     }
 
@@ -455,7 +484,8 @@ template <
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        backtracer_type>
+    typename        backtracer_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 Alignment<int32> banded_alignment_traceback(
     const aligner_type      aligner,
@@ -463,7 +493,8 @@ Alignment<int32> banded_alignment_traceback(
     const qual_string       quals,
     const text_string       text,
     const int32             min_score,
-    backtracer_type&        backtracer)
+    backtracer_type&        backtracer,
+    wfa_type&               wfa)
 {
     typedef typename checkpoint_storage_type<aligner_type>::type checkpoint_type;
     typedef typename column_storage_type<aligner_type>::type     cell_type;
@@ -485,8 +516,11 @@ Alignment<int32> banded_alignment_traceback(
         min_score,
         backtracer,
         checkpoints,
-        submatrix );
+        submatrix,
+        wfa );
 }
+
+
 
 } // namespace alignment
 } // namespace nvbio

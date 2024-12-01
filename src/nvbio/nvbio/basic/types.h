@@ -74,7 +74,8 @@
 
 #if defined(NVBIO_CUDA_ASSERTS)
   // the following trickery eliminates the "controlling expression is constant" warning from nvcc when doing assert(!"some string")
-  #define NVBIO_CUDA_ASSERT(x) { const bool __yes = true; assert(x && __yes); }
+  //#define NVBIO_CUDA_ASSERT(x) { const bool __yes = true; assert(x && __yes); }
+  #define NVBIO_CUDA_ASSERT(x) { assert(x); }
   #define NVBIO_CUDA_ASSERT_IF(cond, x, ...) if ((cond) && !(x)) {printf(__VA_ARGS__); NVBIO_CUDA_ASSERT(x); }
   #define NVBIO_CUDA_DEBUG_ASSERT(x,...) if (!(x)) { printf(__VA_ARGS__); NVBIO_CUDA_ASSERT(x); }
 #elif defined(NVBIO_CUDA_NON_BLOCKING_ASSERTS) // !defined(NVBIO_CUDA_ASSERTS)

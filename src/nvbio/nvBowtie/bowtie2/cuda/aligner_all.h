@@ -300,7 +300,11 @@ void Aligner::score_all(
     Timer global_timer;
 
     const uint32 count = read_data.size();
-    const uint32 band_len = band_length( params.max_dist );
+    uint32 band_len = band_length( params.max_dist );
+    
+    // wfa
+    //if (params.scoring_mode == WfaMode)
+     //  band_len = 1u;
 
     // cast the reads to use proper iterators
     const read_batch_type reads( plain_view( read_data ) );
@@ -677,8 +681,32 @@ void Aligner::score_all(
 
                 cpu_batch.readback( gpu_batch );
 
-                output_file->process( cpu_batch );
+                if (params.cache_writes)
+                {
+                    output_file->reset_data_file();
+
+                    output_file->processCacheWrites( cpu_batch );            
+
+                    char *dat = output_file->get_write_thread_data();      
+                             
+                    if (dat)
+                    {
+                       int32 size = output_file->outfile_size();
+                       output_threadPE->write_thread_data_size = size;
+                       #pragma omp parallel for
+                       for (int32 i = 1; i < size; i++)
+                            output_threadPE->write_thread_data[i] = dat[i];
+                        
+                        output_threadPE->write_thread_data[size] = 0;
+                        output_threadPE->write_thread_data[0] = dat[0];
+                    }
+                }
+                else
+                {
+                    output_file->process( cpu_batch );
+                }
             }
+            
 
             buffer_count  -= n_backtracks;
             buffer_offset  = (buffer_offset + n_backtracks) % (BATCH_SIZE*2);

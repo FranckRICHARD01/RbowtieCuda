@@ -37,6 +37,7 @@
 #include <nvbio/basic/cuda/pingpong_queues.h>
 #include <nvbio/basic/cuda/ldg.h>
 #include <nvbio/basic/primitives.h>
+//#include <unistd.h>       
 
 #include <nvbio/io/output/output_types.h>
 #include <nvbio/io/output/output_batch.h>
@@ -123,7 +124,11 @@ void Aligner::best_approx(
     nvbio::cuda::Timer device_timer;
 
     const uint32 count = read_data1.size();
-    const uint32 band_len = band_length( params.max_dist );
+    /*const*/ uint32 band_len = band_length( params.max_dist );
+
+    // wfa
+    //if (params.scoring_mode == WfaMode)
+    //   band_len = 1u;
 
     // cast the genome to use proper iterators
     const io::LdgSequenceDataView   genome_view( plain_view( reference_data ) );
@@ -536,15 +541,40 @@ void Aligner::best_approx(
                 mds,
                 mapq_dvec);
 
-            cpu_batch.readback( gpu_batch, io::MATE_2 );
+            cpu_batch.readback( gpu_batch, io::MATE_2 );           
 
             timer.stop();
             stats.alignments_DtoH.add( count, timer.seconds() );
 
             timer.start();
 
-            output_file->process( cpu_batch );
+            if (params.cache_writes)
+            {
+                output_file->reset_data_file();
 
+                output_file->processCacheWrites( cpu_batch );            
+
+                char *dat = output_file->get_write_thread_data();      
+                             
+                if (dat)
+                {
+                    int32 size = output_file->outfile_size();
+                    output_threadPE->write_thread_data_size = size;
+                    #pragma omp parallel for
+                    for (int32 i = 1; i < size; i++)
+                        output_threadPE->write_thread_data[i] = dat[i];
+                    
+                    output_threadPE->write_thread_data[size] = 0;
+                    output_threadPE->write_thread_data[0] = dat[0];
+                }
+            }
+            else
+            {
+                output_file->process( cpu_batch );
+            }
+
+            //log_verbose(stderr, "[%u]   %c%c%c\n", ID, cpu_batch.write_thread_data[0], cpu_batch.write_thread_data[1], cpu_batch.write_thread_data[2]);                  
+                       
             timer.stop();
             stats.io.add( count, timer.seconds() );
         }
@@ -784,7 +814,7 @@ void Aligner::best_approx(
                 timer.stop();
                 stats.io.add( count, timer.seconds() );
             }
-        }
+        }       
     }
     #endif
 
@@ -847,7 +877,11 @@ void Aligner::best_approx_score(
 
     global_timer.start();
 
-    const uint32 band_len = band_length( params.max_dist );
+    /*const*/ uint32 band_len = band_length( params.max_dist );
+
+    // wfa
+    //if (params.scoring_mode == WfaMode)
+    //   band_len = 1u;
 
     const read_view_type  reads_view1 = plain_view( read_data1 );
     const read_view_type  reads_view2 = plain_view( read_data2 );
@@ -915,7 +949,7 @@ void Aligner::best_approx_score(
 
     for (uint32 extension_pass = 0; active_read_queues.in_size && n_ext < params.max_ext; ++extension_pass)
     {
-        log_debug(stderr, "[%u]    pass:\n[%u]      batch:[%u]          %u\n[%u]      seeding pass:   %u\n[%u]      extension pass: %u\n", ID, ID, batch_number, ID, seeding_pass, ID, extension_pass);
+        log_debug(stderr, "[%u]    pass:\n[%u]      batch:[%u]\n[%u]      seeding pass:   %u\n[%u]      extension pass: %u\n", ID, ID, batch_number, ID, seeding_pass, ID, extension_pass);
 
         // initialize all the scoring output queues
         scoring_queues.clear_output();
@@ -1180,6 +1214,10 @@ void Aligner::best_approx_score(
         device_timer.stop();
         timer.stop();
         stats.score.add( pipeline.hits_queue_size, score_time + timer.seconds(), dev_score_time + device_timer.seconds() );
+
+        // wfa
+        //if (params.scoring_mode == WfaMode)
+        //break;
     }
 
     optional_device_synchronize();

@@ -15,55 +15,58 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction
 
-NVBIO is a library of reusable components designed by NVIDIA Corporation to accelerate bioinformatics applications using CUDA.
+NVBIO is a library of reusable components developed by NVIDIA Corporation to accelerate bioinformatics applications using CUDA technology. Although specifically designed to harness the computational power of NVIDIA GPUs, many of its components are fully cross-platform and can be used in both host C++ and device CUDA code.
 
-Though it is specifically designed to unleash the power of NVIDIA GPUs, most of its components are completely cross-platform and can be used both from host C++ and device CUDA code.
+The purpose of NVBIO is twofold. It serves as a robust foundation for developing modern GPU-focused applications, ensuring that core computations delegated to the library automatically benefit from advances in GPU technology. At the same time, it provides valuable resources for designing novel bioinformatics algorithms tailored to massively parallel architectures.
 
-The purpose of NVBIO is twofold: it can be thought of both as a solid basis to build new, modern applications targeting GPUs, which deferring the core computations to a library will always automatically and transparently benefit from new advances in GPU computing, and as example material to design novel bioinformatics algorithms for massively parallel architectures.
-
-Additionally, NVBIO contains a suite of applications built on top of it, including a re-engineered implementation of the famous Bowtie2[1] short read aligner. Unlike many prototypes, nvBowtie is an attempt to build an industrial strength aligner, reproducing most of Bowtie2's original features as well as adding a few more, such as efficient support for direct BAM (and soon CRAM) output.
+In addition to its core components, NVBIO includes a suite of applications built on top of the library. Among these is nvBowtie, a re-engineered implementation of the widely recognized Bowtie2 short-read aligner ^[Langmead, B., & Salzberg, S. L. (2012). Fast gapped-read alignment with Bowtie 2. Nature methods, 9(4), 357-359.]. Unlike many prototypes, nvBowtie is built as an industrial-grade aligner, replicating most of Bowtie2’s original features while adding enhancements such as efficient support for direct BAM output, with future plans for CRAM support.
 
 ## Performances
 
-nvBowtie is designed to exploit all the massive parallelism of modern GPUs, thus enabling a much higher alignment throughput at equal accuracy, or higher accuracy in the same time. Here's a graph showing nvBowtie's performance compared to bowtie2 on an Illumina HiSeq 2000 dataset (the first 10M reads of ERR161544) and an IonProton run, using both end-to-end and local alignment. The alignment results show 99.98% agreement at high MAPQ. All bowtie2 tests were run using 20 CPU threads, and default aligment options:
+nvBowtie is designed to fully exploit the massive parallelism of modern GPUs, delivering significantly higher alignment throughput without compromising accuracy, or achieving even greater accuracy in the same amount of time. For example, its performance was compared to Bowtie2 using an Illumina HiSeq 2000 dataset (the first 10 million reads of ERR161544) and an IonProton dataset, applying both end-to-end and local alignment methods. The results demonstrate an impressive 99.98% agreement at high MAPQ scores. For comparison, Bowtie2 tests were performed using 20 CPU threads with default alignment settings.
 
-```{r}
+```{r fig.cap="benchmark", fig.alt = "benchmark."}
 knitr::include_graphics("benchmark-nvbowtie-speedup.png")
 ```
 
 
-### BowtieCuda
+### RBowtieCuda
 
-This package provides an R wrapper of [nvBio/nvBowtie](https://github.com/NVlabs/nvbio). We wrap it into an R package that provide user friendly interfaces for R users. For more efficiency, the indexing and alignment functions (nvBWT and nvBowtieCuda) are written in C++ and are called thanks to the system2 function provided by the R language. All this in a transparent way for the user. The features offered by this package are therefore available in a version that is highly optimized for your machine.
+This package provides an R wrapper for [nvBio/nvBowtie](https://github.com/NVlabs/nvbio), offering user-friendly interfaces specifically designed for R users. To maximize efficiency, the indexing and alignment functions (nvBWT and nvBowtie) are implemented in C++ and seamlessly integrated into R using the system2 function. This integration is fully transparent to the user, ensuring that the package is easy to use while providing high-performance features optimized to take full advantage of your machine's capabilities.
 
-An NVidia graphics card is required.
+Additionally, an experimental implementation of the `Wavefront Alignment (WFA)` method ^[Marco-Sola S, Moure JC, Moreto M et al. Fast gap-affine pairwise alignment using the wavefront algorithm. Bioinformatics 2021;37: 456–63.] is included and can be accessed by using the ```--wfa``` parameter during execution.
+
+Please note that this package requires an NVIDIA graphics card for proper functionality.
 
 
 ## Additional Installation Instructions
 
-Please consult the INSTALL file.
+For detailed installation steps, please refer to the INSTALL file included with the package.
 
+RbowtieCuda is compatible with all Cuda versions greater than or equal to 10.
 
-## An Example Workflow by Using RbowtieCuda
+However, compiling the nvBWT indexing tool results in an error when using CUDA versions 12.5 or later. We are actively working on a solution.
+
+## An Example Workflow Using RbowtieCuda
 
 ### Installation
 
-To install the latest version of RbowtieCuda, you will need to be using the latest version of R. RbowtieCuda is part of Bioconductor project, so you can install RbowtieCuda and its dependencies like this:
+To install the latest version of RbowtieCuda, ensure that you are running the most up-to-date version of R. As RbowtieCuda is part of the Bioconductor project, you can easily install it along with its dependencies by following these steps:
 
 ```
 library(BiocManager)
 BiocManager::install("RbowtieCuda")
 ```
 
-Just like other R package, you need to load RbowtieCuda like this each time before using the package.
+As with any other R package, you need to load RbowtieCuda each time before using it, like this:
 
 ```{r loading}
 library(RbowtieCuda)
 ```
 
-### nvBWT : builds the BWT indices of the reference FASTA files
+### nvBWT : Building BWT Indices for Reference FASTA Files
 
-nvBWT is an application built on top of NVBIO to perform BWT-based reference indexing for nvBowtie and potentially other FM-index based applications. Given one or multiple fasta files, it will create both the forward and reverse BWT as well as 2-bit packed representation of the files and a few other auxiliary indices:
+nvBWT is an application developed as part of the NVBIO library, designed to perform BWT-based reference indexing for nvBowtie and potentially other FM-index-based applications. When provided with one or more FASTA files, nvBWT generates both the forward and reverse Burrows-Wheeler Transform (BWT), along with a 2-bit packed representation of the sequences. In addition, it produces several auxiliary indices to support efficient alignment and querying.
 
 #### Example:
 
@@ -96,19 +99,23 @@ nvBWT supports the following command options:
 -d       | --device                          // select a cuda device
 ```
 
-### nvBowtie Alignment:
+### nvBowtie Alignments:
 
-nvBowtie is a GPU-accelerated re-engineering of Bowtie2, a very widely used short-read aligner. While being completely rewritten from scratch, nvBowtie reproduces many (though not all) of the features of Bowtie2.
+nvBowtie is a GPU-accelerated re-engineering of Bowtie2, one of the most widely used short-read aligners. Completely rewritten from scratch, nvBowtie retains many of the key features of Bowtie2, though not all functionalities are replicated.
 
-nvBowtie is designed to exploit all the massive parallelism of modern GPUs, thus enabling a much higher alignment throughput at equal accuracy, or higher accuracy in the same time. While targeting maximum performance, nvBowtie is designed to match Bowtie2 as closely as possible, with the explicit goal of mantaining the same specificity and sensitivity characteristics. 
+Designed to fully exploit the massive parallelism of modern GPUs, nvBowtie achieves significantly higher alignment throughput without sacrificing accuracy—or offers even greater accuracy within the same time frame. Despite its focus on performance, nvBowtie is carefully designed to align closely with Bowtie2 in terms of specificity and sensitivity, maintaining the same level of reliability for users.
 
-In order to take advantage of the massive parallelism available in modern processor architectures, nvBowtie re-implements the same underlying algorithms as Bowtie2 taking a fundamentally different approach. In fact, while Bowtie2 is essentially designed to operate on a single read at a time (possibly having multiple CPU threads working on a different read), carrying the entire alignment process in what is basically a very complex chain of nested function calls, nvBowtie works at all times with large batches of reads, and treats their alignment as a complex pipeline composed by many relatively simple but deeply parallel stages. In many of these stages parallelism is spread at a much finer granularity than at the reads-level, for example by processing many candidate hits from each read at the same time.
+To harness the computational power of modern processor architectures, nvBowtie re-implements the algorithms underlying Bowtie2 but adopts a fundamentally different approach. While Bowtie2 is optimized to process one read at a time—using multiple CPU threads to handle different reads simultaneously—nvBowtie operates on large batches of reads, treating their alignment as a pipeline. This pipeline consists of many relatively simple but highly parallel stages, each optimized for execution on GPUs. In several stages, the parallelism extends far beyond the read level, processing multiple candidate hits for each read simultaneously, enabling a much finer granularity of parallel computation.
 
+#### New features :
+
+We’ve introduced several new functions to nvBowtie. You can now perform alignments using the WFA method by including the ```--wfa  (or --scoring wfa)``` parameter. The WFA method requires a large amount of RAM on the graphics card. We therefore recommend using an Nvidia card with 8GB or more. Please note that this feature is still experimental; it currently supports only end-to-end alignments and does not yet allow customization of scoring parameters. By default, it uses the following scoring:  match:0, mismatch:1, gap_open:1 and gap_ext:1.
+
+Additionally, the ```--cache-writes``` parameter optimizes disk write operations, resulting in faster alignments. This functionality requires 4GB of RAM and is limited to paired-end alignments.
 
 #### Example :
 
-Reads_1 and reads_2 are raw paired-end reads file with fastq format. With bowtie2 index, reads will be mapped to reference by calling bowtie2. The result is saved in a bam file whose path is set to output.
-
+Reads_1 and Reads_2 represent raw paired-end read files in FASTQ format. Using a nvBWT index, these reads are mapped to the reference genome by invoking nvBowtie. The resulting alignments are stored in a BAM file, with its file path specified by the output parameter.
 
 ```{r bt2bd1}
 read_1 <- system.file(package="RbowtieCuda", "extdata", "bt2", "reads", "reads_1.fastq")
@@ -118,13 +125,13 @@ nvBowtie(file.path(td, "index"), file.path(td, "my_result.bam"), options="", seq
 
 #### Indexing of bam files produced by nvBowtie
 
-NvBowtie does not generate .bai index files associated with .bam files
+nvBowtie does not automatically generate the .bai index files that are typically associated with .bam files.
 
-These index files are essential in order to display a .bam file in the Integrative Genomics Viewer (IGV) program, for example.
+These index files are essential for visualizing .bam files in tools such as the Integrative Genomics Viewer (IGV).
 
-However, this can be easily fixed. We will use the Rsamtools package which contains the necessary functions. If we have produced a results.bam file, for example...
+Fortunately, this issue can be easily resolved using the Rsamtools package, which includes the required functionality. For example, if you have generated a file named results.bam, you can create the corresponding index file with a simple command.
 
-It will be just enough to do :
+You only need to run the following in R:
 
 ```
 library(Rsamtools) 
@@ -132,15 +139,23 @@ sortBam("results.bam", "results")
 indexBam("results.bam")
 ```
 
-#### Options and Version of Bowtie2 Aligner
+#### 
 
-It is possible to influence alignment using the following options :
+#### Options and Version of the nvBowtie Aligner
+
+You can customize the alignment process by adjusting the available options, enabling you to optimize performance and accuracy according to your specific needs:
 
 ```{r bt2usage}
 nvBowtie_usage()
 ```
 
-You can get version information by call:
+You can execute unit tests for the program using the following commands or tools, ensuring its functionality and correctness:
+
+```{r bt2tests}
+nvbio_tests()
+```
+
+And you can obtain version information by executing the following command:
 
 ```{r bt2version}
 nvBowtie_version()
@@ -175,10 +190,11 @@ The maintainer of the RbowtieCuda package is [Franck RICHARD](mailto:franck.rich
 
 ## Website
 
-A small website containing help for the RbowtieCuda package can be found [here](https://belacqua-labo.ovh/bioinformatic/RbowtieCuda), and a github copy [here](https://github.com/FranckRICHARD01/RbowtieCuda).
+A dedicated website with helpful resources for the RbowtieCuda package is available [here](https://belacqua-labo.ovh/bioinformatic/RbowtieCuda), and a github copy [here](https://github.com/FranckRICHARD01/RbowtieCuda)
 
 
 ## References
 
 [1] Langmead, B., & Salzberg, S. L. (2012). Fast gapped-read alignment with Bowtie 2. Nature methods, 9(4), 357-359.
 
+[2] Marco-Sola S, Moure JC, Moreto M et al. Fast gap-affine pairwise alignment using the wavefront algorithm. Bioinformatics 2021;37: 456–63.

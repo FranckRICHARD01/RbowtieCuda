@@ -90,7 +90,7 @@ struct DebugOutput : public OutputFile
     };
 
 public:
-    DebugOutput(const char *file_name, AlignmentType alignment_type, BNT bnt);
+    DebugOutput(const char *file_name, AlignmentType alignment_type, BNT bnt, bool cache_writes_enabled);
     ~DebugOutput();
 
     /// Process a set of alignment results for the current batch.

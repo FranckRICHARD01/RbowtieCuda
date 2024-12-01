@@ -69,6 +69,19 @@ void banded_traceback_best(
 /// execute a batch of banded-alignment traceback calculations
 ///
 void banded_traceback_best(
+    const uint32                                                aln_idx,
+    const uint32                                                count,
+    const uint32*                                               idx,
+          io::Alignment*                                        best_data,
+    const uint32                                                best_stride,
+    const uint32                                                band_len,
+    const TracebackPipelineState<WfaScoringScheme<> >&          pipeline,
+    const ParamsPOD&                                            params);
+
+///
+/// execute a batch of banded-alignment traceback calculations
+///
+void banded_traceback_best(
     const uint32                                                    aln_idx,
     const uint32                                                    count,
     const uint32*                                                   idx,
@@ -94,6 +107,19 @@ void opposite_traceback_best(
 /// execute a batch of opposite alignment traceback calculations
 ///
 void opposite_traceback_best(
+    const uint32                                                aln_idx,
+    const uint32                                                count,
+    const uint32*                                               idx,
+          io::Alignment*                                        best_data,
+    const uint32                                                best_stride,
+    const TracebackPipelineState<WfaScoringScheme<> >&          pipeline,
+    const ParamsPOD&                                            params);
+
+
+///
+/// execute a batch of opposite alignment traceback calculations
+///
+void opposite_traceback_best(
     const uint32                                                    aln_idx,
     const uint32                                                    count,
     const uint32*                                                   idx,
@@ -113,6 +139,20 @@ void banded_traceback_all(
           io::Alignment*                                        alignments,
     const uint32                                                band_len,
     const AllMappingPipelineState<EditDistanceScoringScheme>&   pipeline,
+    const ParamsPOD&                                            params);
+
+
+///
+/// execute a batch of banded-alignment traceback calculations
+///
+void banded_traceback_all(
+    const uint32                                                count,
+    const uint32*                                               idx,
+    const uint32                                                buffer_offset,
+    const uint32                                                buffer_size,
+          io::Alignment*                                        alignments,
+    const uint32                                                band_len,
+    const AllMappingPipelineState<WfaScoringScheme<> >&         pipeline,
     const ParamsPOD&                                            params);
 
 ///
@@ -146,6 +186,20 @@ void finish_alignment_best(
 /// finish a batch of alignment calculations
 ///
 void finish_alignment_best(
+    const uint32                                                aln_idx,
+    const uint32                                                count,
+    const uint32*                                               idx,
+          io::Alignment*                                        best_data,
+    const uint32                                                best_stride,
+    const uint32                                                band_len,
+    const TracebackPipelineState<WfaScoringScheme<> >&          pipeline,
+    const SmithWatermanScoringScheme<>                          scoring_scheme,
+    const ParamsPOD&                                            params);
+
+///
+/// finish a batch of alignment calculations
+///
+void finish_alignment_best(
     const uint32                                                    aln_idx,
     const uint32                                                    count,
     const uint32*                                                   idx,
@@ -174,6 +228,20 @@ void finish_opposite_alignment_best(
 /// finish a batch of opposite alignment calculations
 ///
 void finish_opposite_alignment_best(
+    const uint32                                                aln_idx,
+    const uint32                                                count,
+    const uint32*                                               idx,
+          io::Alignment*                                        best_data,
+    const uint32                                                best_stride,
+    const uint32                                                band_len,
+    const TracebackPipelineState<WfaScoringScheme<> >&          pipeline,
+    const SmithWatermanScoringScheme<>                          scoring_scheme,
+    const ParamsPOD&                                            params);
+
+///
+/// finish a batch of opposite alignment calculations
+///
+void finish_opposite_alignment_best(
     const uint32                                                    aln_idx,
     const uint32                                                    count,
     const uint32*                                                   idx,
@@ -195,6 +263,20 @@ void finish_alignment_all(
           io::Alignment*                                        alignments,
     const uint32                                                band_len,
     const AllMappingPipelineState<EditDistanceScoringScheme>&   pipeline,
+    const SmithWatermanScoringScheme<>                          scoring_scheme,
+    const ParamsPOD&                                            params);
+
+    ///
+/// finish a batch of alignment calculations, all-mapping
+///
+void finish_alignment_all(
+    const uint32                                                count,
+    const uint32*                                               idx,
+    const uint32                                                buffer_offset,
+    const uint32                                                buffer_size,
+          io::Alignment*                                        alignments,
+    const uint32                                                band_len,
+    const AllMappingPipelineState<WfaScoringScheme<> >&         pipeline,
     const SmithWatermanScoringScheme<>                          scoring_scheme,
     const ParamsPOD&                                            params);
 

@@ -93,6 +93,11 @@ template <AlignmentType TYPE, typename ScoringScheme, typename AlgorithmTag> str
 template <AlignmentType TYPE, typename ScoringScheme, typename AlgorithmTag> struct supports_scheduler<GotohAligner<TYPE,ScoringScheme,AlgorithmTag>, DeviceStagedThreadScheduler>          { static const bool pred = true; };
 template <AlignmentType TYPE, typename ScoringScheme, typename AlgorithmTag> struct supports_scheduler<GotohAligner<TYPE,ScoringScheme,AlgorithmTag>, DeviceWarpScheduler>                  { static const bool pred = true; };
 
+template <AlignmentType TYPE, typename ScoringScheme, typename AlgorithmTag> struct supports_scheduler<WfahAligner<TYPE,ScoringScheme,AlgorithmTag>, HostThreadScheduler>                  { static const bool pred = true; };
+template <AlignmentType TYPE, typename ScoringScheme, typename AlgorithmTag> struct supports_scheduler<WfahAligner<TYPE,ScoringScheme,AlgorithmTag>, DeviceThreadScheduler>                { static const bool pred = true; };
+template <AlignmentType TYPE, typename ScoringScheme, typename AlgorithmTag> struct supports_scheduler<WfahAligner<TYPE,ScoringScheme,AlgorithmTag>, DeviceStagedThreadScheduler>          { static const bool pred = true; };
+template <AlignmentType TYPE, typename ScoringScheme, typename AlgorithmTag> struct supports_scheduler<WfahAligner<TYPE,ScoringScheme,AlgorithmTag>, DeviceWarpScheduler>                  { static const bool pred = true; };
+
 template <AlignmentType TYPE, typename ScoringScheme, typename AlgorithmTag> struct supports_scheduler<HammingDistanceAligner<TYPE,ScoringScheme,AlgorithmTag>, HostThreadScheduler>            { static const bool pred = true; };
 template <AlignmentType TYPE, typename ScoringScheme, typename AlgorithmTag> struct supports_scheduler<HammingDistanceAligner<TYPE,ScoringScheme,AlgorithmTag>, DeviceThreadScheduler>          { static const bool pred = true; };
 template <AlignmentType TYPE, typename ScoringScheme, typename AlgorithmTag> struct supports_scheduler<HammingDistanceAligner<TYPE,ScoringScheme,AlgorithmTag>, DeviceStagedThreadScheduler>    { static const bool pred = true; };

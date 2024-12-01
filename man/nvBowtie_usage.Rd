@@ -7,11 +7,12 @@
 nvBowtie_usage()
 }
 \value{
-Information about available arguments that can be passed to nvBowtie().
+An invisible Integer of call status. The value is 0 when there is not any mistakes
+Otherwise the value is non-zero.
 }
 \description{
-Calling nvBowtie_usage() prints the available arguments that can
-be passed to the ... argument 'options' of the nvBowtie() function of the package.
+Calling nvBowtie_usage() prints available arguments 
+that can be passed to the nvBowtie() function.
 }
 \examples{
 nvBowtie_usage()

@@ -63,7 +63,7 @@ private:
     } BamAlignmentFlags;
 
 public:
-    BamOutput(const char *file_name, AlignmentType alignment_type, BNT bnt);
+    BamOutput(const char *file_name, AlignmentType alignment_type, BNT bnt, bool cache_writes_enabled);
     ~BamOutput();
 
     void header() { output_header(); }

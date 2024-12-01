@@ -1,3 +1,3 @@
 {
-    "cmake.sourceDirectory": "/home/karlhal/bioinformatic2/code/Rbowtie2-cuda/src/nvbio"
+    "cmake.sourceDirectory": "/home/karlhal/bioinformatic2/code/RbowtieCuda/src/nvbio"
 }

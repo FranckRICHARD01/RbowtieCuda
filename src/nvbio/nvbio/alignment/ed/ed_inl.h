@@ -79,7 +79,8 @@ struct alignment_score_dispatch<
     ///
     /// \return             true iff the minimum score was reached
     ///
-    template <typename sink_type>
+
+template <typename sink_type, typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static bool dispatch(
         const aligner_type      aligner,
@@ -88,7 +89,8 @@ struct alignment_score_dispatch<
         const text_string       text,
         const  int32            min_score,
               sink_type&        sink,
-              column_type       column)
+              column_type       column,
+              wfa_type&         wfa)
     {
         typedef typename pattern_string::value_type    symbol_type;
 
@@ -98,7 +100,7 @@ struct alignment_score_dispatch<
 
         const uint32 length = equal<algorithm_tag,PatternBlockingTag>() ? pattern.length() : text.length();
 
-        return sw_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( EditDistanceSWScheme(), context, pattern, quals, text, min_score, sink, 0, length, column );
+        return sw_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( EditDistanceSWScheme(), context, pattern, quals, text, min_score, sink, 0, length, column, wfa );
     }
 
     /// dispatch scoring in a window of the pattern
@@ -118,7 +120,8 @@ struct alignment_score_dispatch<
     ///
     template <
         typename sink_type,
-        typename checkpoint_type>
+        typename checkpoint_type,
+        typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static bool dispatch(
         const aligner_type      aligner,
@@ -130,7 +133,8 @@ struct alignment_score_dispatch<
         const uint32            window_end,
               sink_type&        sink,
         checkpoint_type         checkpoint,
-              column_type       column)
+              column_type       column,
+              wfa_type&         wfa)
     {
         typedef typename pattern_string::value_type    symbol_type;
 
@@ -138,7 +142,7 @@ struct alignment_score_dispatch<
 
         priv::SWCheckpointedScoringContext<BAND_LEN,TYPE,algorithm_tag,checkpoint_type> context( checkpoint );
 
-        return sw_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( EditDistanceSWScheme(), context, pattern, quals, text, min_score, sink, window_begin, window_end, column );
+        return sw_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( EditDistanceSWScheme(), context, pattern, quals, text, min_score, sink, window_begin, window_end, column, wfa );
     }
 
     /// dispatch scoring in a window of the pattern, retaining the intermediate results in the column
@@ -153,7 +157,8 @@ struct alignment_score_dispatch<
     ///
     /// \return             true iff the minimum score was reached
     ///
-    template <typename sink_type>
+
+template <typename sink_type, typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static bool dispatch(
         const aligner_type      aligner,
@@ -164,7 +169,8 @@ struct alignment_score_dispatch<
         const uint32            window_begin,
         const uint32            window_end,
               sink_type&        sink,
-              column_type       column)
+              column_type       column,
+              wfa_type&         wfa)
     {
         typedef typename pattern_string::value_type    symbol_type;
 
@@ -172,7 +178,7 @@ struct alignment_score_dispatch<
 
         priv::SWScoringContext<BAND_LEN,TYPE,algorithm_tag> context;
 
-        return sw_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( EditDistanceSWScheme(), context, pattern, quals, text, min_score, sink, window_begin, window_end, column );
+        return sw_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( EditDistanceSWScheme(), context, pattern, quals, text, min_score, sink, window_begin, window_end, column, wfa );
     }
 };
 
@@ -223,7 +229,8 @@ struct alignment_checkpointed_dispatch<
     ///
     template <
         typename    sink_type,
-        typename    checkpoint_type>
+        typename    checkpoint_type,
+        typename    wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static
     void dispatch_checkpoints(
@@ -234,7 +241,8 @@ struct alignment_checkpointed_dispatch<
         const  int32            min_score,
               sink_type&        sink,
         checkpoint_type         checkpoints,
-              column_type       column)
+              column_type       column,
+              wfa_type&         wfa)
     {
         typedef typename pattern_string::value_type    symbol_type;
 
@@ -242,9 +250,8 @@ struct alignment_checkpointed_dispatch<
 
         priv::SWCheckpointContext<BAND_LEN,TYPE,CHECKPOINTS,checkpoint_type> context( checkpoints );
 
-        sw_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_type>::run( EditDistanceSWScheme(), context, pattern, quals, text, min_score, sink, 0, pattern.length(), column );
+        sw_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_type>::run( EditDistanceSWScheme(), context, pattern, quals, text, min_score, sink, 0, pattern.length(), column, wfa );
     }
-
     ///
     /// Compute the banded Dynamic Programming submatrix between two given checkpoints,
     /// storing its flow at each cell.
@@ -271,7 +278,8 @@ struct alignment_checkpointed_dispatch<
     ///
     template <
         typename      checkpoint_type,
-        typename      submatrix_type>
+        typename      submatrix_type,
+        typename      wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static
     uint32 dispatch_submatrix(
@@ -283,7 +291,8 @@ struct alignment_checkpointed_dispatch<
         checkpoint_type         checkpoints,
         const uint32            checkpoint_id,
         submatrix_type          submatrix,
-        column_type             column)
+        column_type             column,
+        wfa_type&               wfa)
     {
         typedef typename pattern_string::value_type     symbol_type;
 
@@ -296,7 +305,7 @@ struct alignment_checkpointed_dispatch<
         const uint32 window_end   = nvbio::min( window_begin + CHECKPOINTS, uint32(pattern.length()) );
 
         NullSink null_sink;
-        sw_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_type>::run( EditDistanceSWScheme(), context, pattern, quals, text, min_score, null_sink, window_begin, window_end, column );
+        sw_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_type>::run( EditDistanceSWScheme(), context, pattern, quals, text, min_score, null_sink, window_begin, window_end, column, wfa );
 
         return window_end - window_begin;
     }
@@ -342,7 +351,8 @@ template <
     AlignmentType   TYPE,
     typename        checkpoint_type,
     typename        submatrix_type,
-    typename        backtracer_type>
+    typename        backtracer_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool alignment_traceback(
     const EditDistanceAligner<TYPE>   aligner,
@@ -353,7 +363,8 @@ bool alignment_traceback(
     const uint32                      submatrix_height,
           uint8&                      state,
           uint2&                      sink,
-    backtracer_type&                  backtracer)
+    backtracer_type&                  backtracer,
+    wfa_type&                         wfa)
 {
     return alignment_traceback<CHECKPOINTS>(
         make_smith_waterman_aligner<TYPE>( EditDistanceSWScheme() ),
@@ -364,7 +375,8 @@ bool alignment_traceback(
         submatrix_height,
         state,
         sink,
-        backtracer );
+        backtracer,
+        wfa );
 }
 
 /// @} // end of private group

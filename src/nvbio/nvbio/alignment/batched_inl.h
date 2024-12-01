@@ -62,6 +62,24 @@ void batched_alignment_score(stream_type& stream, column_type column, const uint
         return;
     }
 
+    // wfa
+
+    aln::wfa_type<int32> wfa;
+
+    wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED * work_id]);
+    wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED * work_id]);
+    wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED * work_id]);
+    wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * work_id]);
+
     // compute the end of the current DP matrix window
     const uint32 len = equal<typename aligner_type::algorithm_tag,PatternBlockingTag>() ?
         stream.pattern_length( work_id, &context ) :
@@ -71,6 +89,12 @@ void batched_alignment_score(stream_type& stream, column_type column, const uint
     strings_type strings;
     stream.load_strings( work_id, 0, len, &context, &strings );
 
+    /*uint32 id = 84;
+    if (stream.test_read_id(id, &context))
+    {
+        strings = strings;
+    }*/
+
     // score the current DP matrix window
     alignment_score(
         stream.aligner(),
@@ -79,7 +103,19 @@ void batched_alignment_score(stream_type& stream, column_type column, const uint
         strings.text,
         context.min_score,
         context.sink,
-        column );
+        column,
+        wfa);
+
+    /*if (stream.test_read_id(id, &context))
+    {
+        char ref_str[1000];
+        char read_str[1000];
+
+        dna_ref_type_to_string(strings.pattern, strings.pattern.length(), ref_str);
+        dna_ref_type_to_string(strings.text, strings.text.length(), read_str);
+
+        NVBIO_CUDA_DEBUG_PRINT("read_id(opposite) = %d\n1:%s\n2:%s\nscore:%d\npos.x:%d\npos.y:%d\n", id, ref_str, read_str, context.sink.score, context.sink.sink.x, context.sink.sink.y);
+    }*/
 
     // handle the output
     stream.output( work_id, &context );
@@ -626,6 +662,24 @@ void batched_alignment_traceback(stream_type& stream, cell_type* checkpoints, ui
         return;
     }
 
+    // wfa
+
+    aln::wfa_type<int32> wfa;
+
+    wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED * work_id]);
+    wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED * work_id]);
+    wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED * work_id]);
+    wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * work_id]);
+
     // compute the end of the current DP matrix window
     const uint32 pattern_len = stream.pattern_length( work_id, &context );
 
@@ -657,7 +711,8 @@ void batched_alignment_traceback(stream_type& stream, cell_type* checkpoints, ui
         context.backtracer,
         checkpoint,
         submatrix,
-        column );
+        column,
+        wfa );
 
     // handle the output
     stream.output( work_id, &context );
@@ -725,9 +780,9 @@ struct BatchedAlignmentTraceback<CHECKPOINTS, stream_type,DeviceThreadBlockSched
     static uint32 checkpoint_storage(const uint32 max_pattern_len, const uint32 max_text_len)
     {
         if (equal<typename aligner_type::algorithm_tag,PatternBlockingTag>())
-            return align<4>( uint32( max_text_len * ((max_pattern_len + CHECKPOINTS-1) / CHECKPOINTS) * sizeof(cell_type) ) );
+            return align<4>( CORRECT_SIZE_MATRIX * uint32( max_text_len * ((max_pattern_len + CHECKPOINTS-1) / CHECKPOINTS) * sizeof(cell_type) ) );
         else
-            return align<4>( uint32( max_pattern_len * ((max_text_len + CHECKPOINTS-1) / CHECKPOINTS) * sizeof(cell_type) ) );
+            return align<4>( CORRECT_SIZE_MATRIX * uint32( max_pattern_len * ((max_text_len + CHECKPOINTS-1) / CHECKPOINTS) * sizeof(cell_type) ) );
     }
 
     /// return the per-element storage size
@@ -739,14 +794,14 @@ struct BatchedAlignmentTraceback<CHECKPOINTS, stream_type,DeviceThreadBlockSched
             typedef typename stream_type::aligner_type  aligner_type;
             const uint32 BITS = direction_vector_traits<aligner_type>::BITS;
             const uint32 ELEMENTS_PER_WORD = 32 / BITS;
-            return ((max_text_len * CHECKPOINTS + ELEMENTS_PER_WORD-1) / ELEMENTS_PER_WORD) * sizeof(uint32);
+            return CORRECT_SIZE_MATRIX * ((max_text_len * CHECKPOINTS + ELEMENTS_PER_WORD-1) / ELEMENTS_PER_WORD) * sizeof(uint32);
         }
         else
         {
             typedef typename stream_type::aligner_type  aligner_type;
             const uint32 BITS = direction_vector_traits<aligner_type>::BITS;
             const uint32 ELEMENTS_PER_WORD = 32 / BITS;
-            return ((max_pattern_len * CHECKPOINTS + ELEMENTS_PER_WORD-1) / ELEMENTS_PER_WORD) * sizeof(uint32);
+            return CORRECT_SIZE_MATRIX * ((max_pattern_len * CHECKPOINTS + ELEMENTS_PER_WORD-1) / ELEMENTS_PER_WORD) * sizeof(uint32);
         }
     }
 
@@ -969,6 +1024,14 @@ struct AlignmentStream
     {
         // copy the sink
         m_sinks[i] = context->sink;
+    }
+
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+    bool test_read_id(
+        const uint32        id,
+        const context_type* context) const
+    {
+       if (context->read_id == id) return true; else return false;
     }
 
     aligner_type        m_aligner;

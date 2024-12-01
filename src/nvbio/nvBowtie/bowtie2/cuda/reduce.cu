@@ -61,6 +61,17 @@ void score_reduce(
 }
 
 ///
+/// Reduce the scores associated to each read in the scoring queue to find the best 2 alignments.
+///
+void score_reduce(
+    const ReduceBestApproxContext                                           context,
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&              pipeline,
+    const ParamsPOD&                                                        params)
+{
+    score_reduce_t( context, pipeline, params );
+}
+
+///
 /// Reduce the scores associated to each paired-end read in the scoring queue to find the best 2 alignments.
 ///
 void score_reduce_paired(
@@ -77,6 +88,17 @@ void score_reduce_paired(
 void score_reduce_paired(
     const ReduceBestApproxContext                                           context,
     const BestApproxScoringPipelineState<SmithWatermanScoringScheme<> >&    pipeline,
+    const ParamsPOD&                                                        params)
+{
+    score_reduce_paired_t( context, pipeline, params );
+}
+
+///
+/// Reduce the scores associated to each paired-end read in the scoring queue to find the best 2 alignments.
+///
+void score_reduce_paired(
+    const ReduceBestApproxContext                                           context,
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&    pipeline,
     const ParamsPOD&                                                        params)
 {
     score_reduce_paired_t( context, pipeline, params );

@@ -35,11 +35,13 @@ namespace nvbio {
 ///
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE char dna_to_char(const uint8 c)
 {
-    return c == 0 ? 'A' :
+    return "ACGTN"[c];
+    
+    /*return c == 0 ? 'A' :
            c == 1 ? 'C' :
            c == 2 ? 'G' :
            c == 3 ? 'T' :
-                    'N';
+                    'N';*/
 }
 
 /// convert a 2-bit DNA symbol to a IUPAC16 symbol
@@ -111,6 +113,32 @@ NVBIO_FORCEINLINE NVBIO_HOST_DEVICE uint8 char_to_iupac16(const char c)
 template <typename SymbolIterator>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void dna_to_string(
     const SymbolIterator begin,
+    const uint32 n,
+    char* string)
+{
+    for (uint32 i = 0; i < n; ++i)
+        string[i] = dna_to_char( begin[i] );
+
+    string[n] = '\0';
+}
+
+///
+template <typename text_cache_type>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void dna_text_cache_to_string(
+    const text_cache_type *begin,
+    const uint32 n,
+    char* string)
+{
+    for (uint32 i = 0; i < n; ++i)
+        string[i] = dna_to_char( begin[i].x );
+
+    string[n] = '\0';
+}
+
+///
+template <typename ref_type>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void dna_ref_type_to_string(
+    const ref_type begin,
     const uint32 n,
     char* string)
 {

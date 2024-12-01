@@ -155,6 +155,14 @@ struct AllScoreStream : public AlignmentStreamBase<SCORE_STREAM,AlignerType,Pipe
         }
     }
 
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+    bool test_read_id(
+        const uint32        id,
+        const context_type* context) const
+    {
+       if (context->read_id == id) return true; else return false;
+    }
+
     const uint32  m_band_len;
     const uint32  m_buffer_offset;
     const uint32  m_buffer_size;
@@ -175,6 +183,7 @@ void banded_score_all(
           uint32*        counter)
 {
     const uint32 static_band_len = 
+        (band_len < 2)  ? (WFA_LAUNCH - 1u) :
         (band_len < 4)  ? 3u  :
         (band_len < 8)  ? 7u  :
         (band_len < 16) ? 15u :
@@ -191,8 +200,33 @@ void banded_score_all(
         buffer_size,
         counter );
 
+
+    // Wfa
+    stream.wfa_H_buffer = pipeline.wfa_H_buffer;
+    stream.wfa_H_lo_buffer = pipeline.wfa_H_lo_buffer;
+    stream.wfa_H_hi_buffer = pipeline.wfa_H_hi_buffer;
+    stream.wfa_H_null_buffer = pipeline.wfa_H_null_buffer;
+    stream.wfa_E_buffer = pipeline.wfa_E_buffer;
+    stream.wfa_E_lo_buffer = pipeline.wfa_E_lo_buffer;
+    stream.wfa_E_hi_buffer = pipeline.wfa_E_hi_buffer;
+    stream.wfa_E_null_buffer = pipeline.wfa_E_null_buffer;
+    stream.wfa_F_buffer = pipeline.wfa_F_buffer;
+    stream.wfa_F_lo_buffer = pipeline.wfa_F_lo_buffer;
+    stream.wfa_F_hi_buffer = pipeline.wfa_F_hi_buffer;
+    stream.wfa_F_null_buffer = pipeline.wfa_F_null_buffer;
+    stream.wfa_PointeurH_buffer = pipeline.wfa_PointeurH_buffer;
+
     //typedef aln::DeviceThreadScheduler scheduler_type;
     typedef aln::DeviceStagedThreadScheduler scheduler_type;
+
+    if (band_len == 1)
+    {
+        aln::BatchedBandedAlignmentScore<WFA_LAUNCH,stream_type,scheduler_type> batch;
+
+        batch.enact( stream, pipeline.dp_buffer_size, pipeline.dp_buffer );
+
+        return;
+    }
 
     if (band_len < 4)
     {

@@ -15,11 +15,15 @@
 the path.}
 }
 \value{
-The output of the system call or the path provided.
+An invisible \code{Integer} of call status.
+The value is 0 when there is not any mistakes.
 }
 \description{
 Function that makes a system call for the RbowtieCuda binaries.
- Note it is not intended to be used outside of the package.
+ Note that it is not designed to be used outside the package.
+}
+\examples{
+.callbinary2(bin1 = "nvBowtie", args1 = "--version")
 }
 \author{
 Franck RICHARD

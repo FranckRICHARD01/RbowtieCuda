@@ -36,6 +36,7 @@
 #include <nvBowtie/bowtie2/cuda/params.h>
 #include <nvBowtie/bowtie2/cuda/stats.h>
 #include <nvBowtie/bowtie2/cuda/mapping.h>
+#include <nvBowtie/bowtie2/cuda/output_thread.h>
 #include <nvbio/io/alignments.h>
 #include <nvbio/io/output/output_file.h>
 #include <nvbio/io/output/output_batch.h>
@@ -143,6 +144,34 @@ struct Aligner
     uint32*                               hits_count_scan_dptr;
     thrust::device_vector<uint64>         hits_range_scan_dvec;
     uint64*                               hits_range_scan_dptr;
+    
+    // -------- Wfa ------------------------------------------- //
+    thrust::device_vector<int16>          wfa_H_dvec;
+    int16*                                wfa_H_dptr; 
+    thrust::device_vector<int16>          wfa_H_lo_dvec;
+    int16*                                wfa_H_lo_dptr; 
+    thrust::device_vector<int16>          wfa_H_hi_dvec;
+    int16*                                wfa_H_hi_dptr; 
+    thrust::device_vector<bool>           wfa_H_null_dvec;
+    bool*                                 wfa_H_null_dptr; 
+    thrust::device_vector<int16>          wfa_E_dvec;
+    int16*                                wfa_E_dptr; 
+    thrust::device_vector<int16>          wfa_E_lo_dvec;
+    int16*                                wfa_E_lo_dptr; 
+    thrust::device_vector<int16>          wfa_E_hi_dvec;
+    int16*                                wfa_E_hi_dptr; 
+    thrust::device_vector<bool>           wfa_E_null_dvec;
+    bool*                                 wfa_E_null_dptr; 
+    thrust::device_vector<int16>          wfa_F_dvec;
+    int16*                                wfa_F_dptr; 
+    thrust::device_vector<int16>          wfa_F_lo_dvec;
+    int16*                                wfa_F_lo_dptr; 
+    thrust::device_vector<int16>          wfa_F_hi_dvec;
+    int16*                                wfa_F_hi_dptr; 
+    thrust::device_vector<bool>           wfa_F_null_dvec;
+    bool*                                 wfa_F_null_dptr; 
+    thrust::device_vector<int16>          wfa_PointeurH_dvec;
+    int16*                                wfa_PointeurH_dptr; 
     // -------------------------------------------------------- //
 
     nvbio::DeviceVectorArray<uint8>       mds;
@@ -161,6 +190,10 @@ struct Aligner
 
     // file object that we're writing into
     io::OutputFile *output_file;
+
+    OutputThreadPE* output_threadPE;
+
+    OutputThreadSE* output_threadSE;
 
     static uint32 band_length(const uint32 max_dist)
     {

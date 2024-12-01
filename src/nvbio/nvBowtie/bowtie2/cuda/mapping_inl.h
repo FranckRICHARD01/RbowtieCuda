@@ -587,7 +587,7 @@ void map_queues_kernel(
         if (reseed)
             reseed[ id ] = (range_count == 0 || range_sum >= params.rep_seeds * range_count);
 
-        NVBIO_CUDA_DEBUG_PRINT_IF( params.debug.read_id == read_id, "map:  ranges[%u], rows[%u]\n", read_id, range_count, range_sum );
+        NVBIO_CUDA_DEBUG_PRINT_IF( params.debug.read_id == read_id, "map[%u]:  ranges[%u], rows[%u]\n", read_id, range_count, range_sum );
     }
 }
 

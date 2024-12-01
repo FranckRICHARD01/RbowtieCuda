@@ -28,13 +28,15 @@
 #pragma once
 
 #include <nvBowtie/bowtie2/cuda/stats.h>
+#include <nvBowtie/bowtie2/cuda/output_thread.h>
 #include <nvbio/io/sequence/sequence.h>
 #include <nvbio/io/fmindex/fmindex.h>
+
 #include <nvbio/basic/threads.h>
 #include <map>
 #include <string>
 
-namespace nvbio { namespace io { struct OutputFile; } }
+namespace nvbio { namespace io { struct OutputFile;} }
 
 namespace nvbio {
 namespace bowtie2 {
@@ -42,6 +44,8 @@ namespace cuda {
 
 struct InputThreadSE;
 struct InputThreadPE;
+struct OutputThreadSE;
+struct OutputThreadPE;
 struct Aligner;
 struct Stats;
 
@@ -62,11 +66,15 @@ struct ComputeThreadSE : public Thread<ComputeThreadSE>
     ///
     uint32 gauge_batch_size();
 
-    /// setup the input thread
+    // setup the input thread
     ///
-    void set_input(InputThreadSE* _input_thread) { input_thread = _input_thread; }
+    void set_input_thread(InputThreadSE* _input_thread) { input_thread = _input_thread; }
 
-    /// setup the input thread
+    /// setup the output thread
+    ///
+    void set_output_thread(OutputThreadSE* _output_thread) { output_threadSE = _output_thread; }
+
+    /// setup the output file
     ///
     void set_output(io::OutputFile* _output_file) { output_file = _output_file; }
 
@@ -80,6 +88,7 @@ struct ComputeThreadSE : public Thread<ComputeThreadSE>
     const io::FMIndexData&                   driver_data_host;
     const std::map<std::string,std::string>& options;
           InputThreadSE*                     input_thread;
+          OutputThreadSE*                    output_threadSE;
           io::OutputFile*                    output_file;
           Params                             params;
           Stats&                             stats;
@@ -107,9 +116,13 @@ struct ComputeThreadPE : public Thread<ComputeThreadPE>
 
     /// setup the input thread
     ///
-    void set_input(InputThreadPE* _input_thread) { input_thread = _input_thread; }
+    void set_input_thread(InputThreadPE* _input_thread) { input_thread = _input_thread; }
 
-    /// setup the input thread
+     /// setup the output thread
+    ///
+    void set_output_thread(OutputThreadPE* _output_thread) { output_threadPE = _output_thread; }
+
+    /// setup the output
     ///
     void set_output(io::OutputFile* _output_file) { output_file = _output_file; }
 
@@ -123,12 +136,13 @@ struct ComputeThreadPE : public Thread<ComputeThreadPE>
     const io::FMIndexData&                   driver_data_host;
     const std::map<std::string,std::string>& options;
           InputThreadPE*                     input_thread;
+          OutputThreadPE*                    output_threadPE;
           io::OutputFile*                    output_file;
           Params                             params;
           Stats&                             stats;
     SharedPointer<Aligner>                   aligner;
     SharedPointer<io::SequenceDataDevice>    reference_data_device;
-    SharedPointer<io::FMIndexDataDevice>     driver_data_device;
+    SharedPointer<io::FMIndexDataDevice>     driver_data_device;    
 };
 
 } // namespace cuda

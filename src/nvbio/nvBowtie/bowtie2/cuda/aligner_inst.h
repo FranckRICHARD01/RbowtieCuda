@@ -45,6 +45,18 @@ void all_ed(
     io::HostOutputBatchSE&                  cpu_batch,
     Stats&                                  stats);
 
+void all_wfa(
+          Aligner&                          aligner,
+    const Params&                           params,
+    const FMIndexDef::type                  fmi,
+    const FMIndexDef::type                  rfmi,
+    const UberScoringScheme&                scoring_scheme,
+    const io::SequenceDataDevice&           reference_data,
+    const io::FMIndexDataDevice&            driver_data,
+    io::SequenceDataDevice&                 read_data,
+    io::HostOutputBatchSE&                  cpu_batch,
+    Stats&                                  stats);    
+
 void all_sw(
           Aligner&                          aligner,
     const Params&                           params,
@@ -69,6 +81,18 @@ void best_approx_ed(
     io::HostOutputBatchSE&                  cpu_batch,
     Stats&                                  stats);
 
+void best_approx_wfa(
+          Aligner&                          aligner,
+    const Params&                           params,
+    const FMIndexDef::type                  fmi,
+    const FMIndexDef::type                  rfmi,
+    const UberScoringScheme&                scoring_scheme,
+    const io::SequenceDataDevice&           reference_data,
+    const io::FMIndexDataDevice&            driver_data,
+    io::SequenceDataDevice&                 read_data,
+    io::HostOutputBatchSE&                  cpu_batch,
+    Stats&                                  stats);
+
 void best_approx_sw(
           Aligner&                          aligner,
     const Params&                           params,
@@ -82,6 +106,19 @@ void best_approx_sw(
     Stats&                                  stats);
 
 void best_approx_ed(
+          Aligner&                          aligner,
+    const Params&                           params,
+    const FMIndexDef::type                  fmi,
+    const FMIndexDef::type                  rfmi,
+    const UberScoringScheme&                scoring_scheme,
+    const io::SequenceDataDevice&           reference_data,
+    const io::FMIndexDataDevice&            driver_data,
+    io::SequenceDataDevice&                 read_data1,
+    io::SequenceDataDevice&                 read_data2,
+    io::HostOutputBatchPE&                  cpu_batch,
+    Stats&                                  stats);
+
+void best_approx_wfa(
           Aligner&                          aligner,
     const Params&                           params,
     const FMIndexDef::type                  fmi,

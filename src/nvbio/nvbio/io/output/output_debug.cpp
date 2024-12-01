@@ -39,8 +39,8 @@ char* mystrncpy(char* dest, const char*src, size_t n) {
         return dest;
 }
 
-DebugOutput::DebugOutput(const char *file_name, AlignmentType alignment_type, BNT bnt)
-    : OutputFile(file_name, alignment_type, bnt)
+DebugOutput::DebugOutput(const char *file_name, AlignmentType alignment_type, BNT bnt, bool cache_writes_enabled)
+    : OutputFile(file_name, alignment_type, bnt, cache_writes_enabled)
 {
     if (alignment_type == PAIRED_END)
     {

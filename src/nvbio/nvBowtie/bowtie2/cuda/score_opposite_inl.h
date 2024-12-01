@@ -243,7 +243,15 @@ struct BestOppositeScoreStream : public AlignmentStreamBase<OPPOSITE_SCORE_STREA
         hit.opposite_loc   = context->genome_begin;
         hit.opposite_sink  = context->genome_begin + genome_sink;
         hit.opposite_sink2 = context->genome_begin + genome_sink2;
-        NVBIO_CUDA_DEBUG_PRINT_IF( base_type::m_params.debug.show_score( context->read_id, (sink.score >= context->min_score) ), "score opposite: %d (min[%d], mate[%u], rc[%u], pos[%u:%u], [qid %u])\n", sink.score, context->min_score, base_type::m_pipeline.anchor ? 0u : 1u, context->read_rc, context->genome_begin, context->genome_end, i );
+        NVBIO_CUDA_DEBUG_PRINT_IF( base_type::m_params.debug.show_score( context->read_id, (sink.score >= context->min_score) ), "score opposite: %d (min[%d], mate[%u], rc[%u], pos[%u:%u], sink[%u:%u], [qid %u])\n", sink.score, context->min_score, base_type::m_pipeline.anchor ? 0u : 1u, context->read_rc, context->genome_begin, context->genome_end, hit.opposite_sink, hit.opposite_sink2, i );
+    }
+
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+    bool test_read_id(
+        const uint32        id,
+        const context_type* context) const
+    {
+       if (context->read_id == id) return true; else return false;
     }
 };
 
@@ -261,7 +269,22 @@ void opposite_score_best(
     stream_type stream(
         pipeline,
         aligner,
-        params );
+        params );        
+   
+    // Wfa
+    stream.wfa_H_buffer = pipeline.wfa_H_buffer;
+    stream.wfa_H_lo_buffer = pipeline.wfa_H_lo_buffer;
+    stream.wfa_H_hi_buffer = pipeline.wfa_H_hi_buffer;
+    stream.wfa_H_null_buffer = pipeline.wfa_H_null_buffer;
+    stream.wfa_E_buffer = pipeline.wfa_E_buffer;
+    stream.wfa_E_lo_buffer = pipeline.wfa_E_lo_buffer;
+    stream.wfa_E_hi_buffer = pipeline.wfa_E_hi_buffer;
+    stream.wfa_E_null_buffer = pipeline.wfa_E_null_buffer;
+    stream.wfa_F_buffer = pipeline.wfa_F_buffer;
+    stream.wfa_F_lo_buffer = pipeline.wfa_F_lo_buffer;
+    stream.wfa_F_hi_buffer = pipeline.wfa_F_hi_buffer;
+    stream.wfa_F_null_buffer = pipeline.wfa_F_null_buffer;
+    stream.wfa_PointeurH_buffer = pipeline.wfa_PointeurH_buffer;
 
     aln::BatchedAlignmentScore<stream_type, aln::DeviceThreadBlockScheduler<128,9> > batch;
     //aln::BatchedAlignmentScore<stream_type, aln::DeviceStagedThreadScheduler> batch;

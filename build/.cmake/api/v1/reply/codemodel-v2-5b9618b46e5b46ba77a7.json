@@ -1,0 +1,357 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-Release-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						2
+					]
+				},
+				{
+					"build" : "contrib/zlib-1.2.7",
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-contrib.zlib-1.2.7-Release-989892dc27f494b57527.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 1,
+					"source" : "contrib/zlib-1.2.7",
+					"targetIndexes" : 
+					[
+						9,
+						10
+					]
+				},
+				{
+					"build" : "contrib/lz4",
+					"jsonFile" : "directory-contrib.lz4-Release-965746583750cbbd7423.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 2,
+					"source" : "contrib/lz4",
+					"targetIndexes" : 
+					[
+						3
+					]
+				},
+				{
+					"build" : "contrib/crc",
+					"jsonFile" : "directory-contrib.crc-Release-bcf1a1e0906bbf7dc43d.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 3,
+					"source" : "contrib/crc",
+					"targetIndexes" : 
+					[
+						1
+					]
+				},
+				{
+					"build" : "contrib/bamtools",
+					"jsonFile" : "directory-contrib.bamtools-Release-d03ed5cddba747ee960f.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 4,
+					"source" : "contrib/bamtools",
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"build" : "contrib/moderngpu",
+					"jsonFile" : "directory-contrib.moderngpu-Release-105070c40356285c33cd.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.22"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 5,
+					"source" : "contrib/moderngpu",
+					"targetIndexes" : 
+					[
+						4
+					]
+				},
+				{
+					"build" : "nvbio",
+					"jsonFile" : "directory-nvbio-Release-fb2910b232964925a23c.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "nvbio",
+					"targetIndexes" : 
+					[
+						7
+					]
+				},
+				{
+					"build" : "nvBowtie",
+					"jsonFile" : "directory-nvBowtie-Release-036a15ef4db0f6045186.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "nvBowtie",
+					"targetIndexes" : 
+					[
+						6
+					]
+				},
+				{
+					"build" : "nvBWT",
+					"jsonFile" : "directory-nvBWT-Release-bbf58399a5b926c7ad5e.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "nvBWT",
+					"targetIndexes" : 
+					[
+						5
+					]
+				},
+				{
+					"build" : "nvbio-test",
+					"jsonFile" : "directory-nvbio-test-Release-b940933e616b627ae06f.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.15"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "nvbio-test",
+					"targetIndexes" : 
+					[
+						8
+					]
+				}
+			],
+			"name" : "Release",
+			"projects" : 
+			[
+				{
+					"childIndexes" : 
+					[
+						1,
+						2,
+						3,
+						4,
+						5
+					],
+					"directoryIndexes" : 
+					[
+						0,
+						6,
+						7,
+						8,
+						9
+					],
+					"name" : "nvBio",
+					"targetIndexes" : 
+					[
+						2,
+						5,
+						6,
+						7,
+						8
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						1
+					],
+					"name" : "zlib",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						9,
+						10
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						2
+					],
+					"name" : "lz4",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						3
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						3
+					],
+					"name" : "crc",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						1
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						4
+					],
+					"name" : "bamtools",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						0
+					]
+				},
+				{
+					"directoryIndexes" : 
+					[
+						5
+					],
+					"name" : "moderngpu",
+					"parentIndex" : 0,
+					"targetIndexes" : 
+					[
+						4
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 4,
+					"id" : "bamtools::@ac25ea42c1c680d2b6b5",
+					"jsonFile" : "target-bamtools-Release-1bc7cbc92938a7030a7b.json",
+					"name" : "bamtools",
+					"projectIndex" : 4
+				},
+				{
+					"directoryIndex" : 3,
+					"id" : "crcstatic::@df05745fb52c7ed3aab4",
+					"jsonFile" : "target-crcstatic-Release-62c3ee2c4ec127ff4ba0.json",
+					"name" : "crcstatic",
+					"projectIndex" : 3
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "doc::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-doc-Release-458e44377135727d759e.json",
+					"name" : "doc",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "lz4::@f6b0aebf5b71fb76e4b1",
+					"jsonFile" : "target-lz4-Release-597f974344ac8ada3f85.json",
+					"name" : "lz4",
+					"projectIndex" : 2
+				},
+				{
+					"directoryIndex" : 5,
+					"id" : "moderngpu::@81174ce6af64d013d64b",
+					"jsonFile" : "target-moderngpu-Release-94630caec46555532c52.json",
+					"name" : "moderngpu",
+					"projectIndex" : 5
+				},
+				{
+					"directoryIndex" : 8,
+					"id" : "nvBWT::@02d4aa583efea97ae269",
+					"jsonFile" : "target-nvBWT-Release-1f5d54d899ba68cb7b98.json",
+					"name" : "nvBWT",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 7,
+					"id" : "nvBowtie::@e62d83eb4ae3bd5d4ce9",
+					"jsonFile" : "target-nvBowtie-Release-18fbe3e18843b7bc3b0a.json",
+					"name" : "nvBowtie",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 6,
+					"id" : "nvbio::@f1f38b7e300c736eeb9c",
+					"jsonFile" : "target-nvbio-Release-6fb53c5c2f4360a8f28e.json",
+					"name" : "nvbio",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 9,
+					"id" : "nvbio-test::@de3d9e2a39d149452414",
+					"jsonFile" : "target-nvbio-test-Release-50a6da136e24eb4b5b34.json",
+					"name" : "nvbio-test",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "zlib::@ab03dcd2404bc6013dc0",
+					"jsonFile" : "target-zlib-Release-0be209bacbec7dae06f8.json",
+					"name" : "zlib",
+					"projectIndex" : 1
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "zlibstatic::@ab03dcd2404bc6013dc0",
+					"jsonFile" : "target-zlibstatic-Release-644b3a3d31b33d5a9908.json",
+					"name" : "zlibstatic",
+					"projectIndex" : 1
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/karlhal/bioinformatic2/code/RbowtieCuda/build",
+		"source" : "/home/karlhal/bioinformatic2/code/RbowtieCuda/src/nvbio"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}

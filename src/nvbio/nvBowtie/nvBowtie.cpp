@@ -43,6 +43,7 @@
 #include <nvBowtie/bowtie2/cuda/params.h>
 #include <nvBowtie/bowtie2/cuda/stats.h>
 #include <nvBowtie/bowtie2/cuda/input_thread.h>
+#include <nvBowtie/bowtie2/cuda/output_thread.h>
 #include <nvBowtie/bowtie2/cuda/compute_thread.h>
 #include <nvbio/basic/omp.h>
 
@@ -139,72 +140,76 @@ int main(int argc, char* argv[])
         log_info(stderr,"nvBowtie [options]\n");
         log_info(stderr,"options:\n");
         log_info(stderr,"  General:\n");
-        log_info(stderr,"    -U                  filename             unpaired reads\n");
-        log_info(stderr,"    -1                  filename             first mate reads\n");
-        log_info(stderr,"    -2                  filename             second mate reads\n");
-        log_info(stderr,"    -S                  filename             output file (.sam|.bam)\n");
-        log_info(stderr,"    -x                  filename             reference index\n");
-        log_info(stderr,"    --verbosity         int       [5]        verbosity level\n");
-        log_info(stderr,"    --upto       | -u   int       [-1]       maximum number of reads to process\n");
-        log_info(stderr,"    --trim3      | -3   int       [0]        trim the first N bases of 3'\n");
-        log_info(stderr,"    --trim5      | -5   int       [0]        trim the first N bases of 5'\n");
-        log_info(stderr,"    --nofw                        [false]    do not align the forward strand\n");
-        log_info(stderr,"    --norc                        [false]    do not align the reverse-complemented strand\n");
-        log_info(stderr,"    --device            int       [0]        select the given cuda device(s) (e.g. --device 0 --device 1 ...)\n");
-        log_info(stderr,"    --file-ref                    [false]    load reference from file\n");
-        log_info(stderr,"    --server-ref                  [false]    load reference from server\n");
-        log_info(stderr,"    --phred33                     [true]     qualities are ASCII characters equal to Phred quality + 33\n");
-        log_info(stderr,"    --phred64                     [false]    qualities are ASCII characters equal to Phred quality + 64\n");
-        log_info(stderr,"    --solexa-quals                [false]    qualities are in the Solexa format\n");
-        log_info(stderr,"    --rg-id             string               add the RG-ID field of the SAM output header\n");
-        log_info(stderr,"    --rg                string,val           add an RG-TAG field of the SAM output header\n");
+        log_info(stderr,"    -U                  filename                          unpaired reads\n");
+        log_info(stderr,"    -1                  filename                          first mate reads\n");
+        log_info(stderr,"    -2                  filename                          second mate reads\n");
+        log_info(stderr,"    -S                  filename                          output file (.sam|.bam)\n");
+        log_info(stderr,"    -x                  filename                          reference index\n");
+        log_info(stderr,"    --verbosity         int                    [5]        verbosity level\n");
+        log_info(stderr,"    --upto       | -u   int                    [-1]       maximum number of reads to process\n");
+        log_info(stderr,"    --trim3      | -3   int                    [0]        trim the first N bases of 3'\n");
+        log_info(stderr,"    --trim5      | -5   int                    [0]        trim the first N bases of 5'\n");
+        log_info(stderr,"    --nofw                                     [false]    do not align the forward strand\n");
+        log_info(stderr,"    --norc                                     [false]    do not align the reverse-complemented strand\n");
+        log_info(stderr,"    --device            int                    [0]        select the given cuda device(s) (e.g. --device 0 --device 1 ...)\n");
+        log_info(stderr,"    --file-ref                                 [false]    load reference from file\n");
+        log_info(stderr,"    --server-ref                               [false]    load reference from server\n");
+        log_info(stderr,"    --phred33                                  [true]     qualities are ASCII characters equal to Phred quality + 33\n");
+        log_info(stderr,"    --phred64                                  [false]    qualities are ASCII characters equal to Phred quality + 64\n");
+        log_info(stderr,"    --solexa-quals                             [false]    qualities are in the Solexa format\n");
+        log_info(stderr,"    --rg-id             string                            add the RG-ID field of the SAM output header\n");
+        log_info(stderr,"    --rg                string,val                        add an RG-TAG field of the SAM output header\n");
+        log_info(stderr,"    --cache-writes      bool                   [false]    speed up writes on disk\n");
         log_info(stderr,"  Paired-End:\n");
-        log_info(stderr,"    --ff                          [false]    paired mates are forward-forward\n");
-        log_info(stderr,"    --fr                          [true]     paired mates are forward-reverse\n");
-        log_info(stderr,"    --rf                          [false]    paired mates are reverse-forward\n");
-        log_info(stderr,"    --rr                          [false]    paired mates are reverse-reverse\n");
-        log_info(stderr,"    --minins            int       [0]        minimum insert length\n");
-        log_info(stderr,"    --maxins            int       [500]      maximum insert length\n");
-        log_info(stderr,"    --overlap                     [true]     allow overlapping mates\n");
-        //log_info(stderr,"    --dovetail                    [false]    allow dovetailing mates\n");
-        log_info(stderr,"    --no-discordant               [false]    do not allow discordant mates\n");
-        log_info(stderr,"    --no-mixed                    [false]    only report paired alignments\n");
-        log_info(stderr,"    --ungapped-mates | -ug                   perform ungapped mate alignment\n");
+        log_info(stderr,"    --ff                                       [false]    paired mates are forward-forward\n");
+        log_info(stderr,"    --fr                                       [true]     paired mates are forward-reverse\n");
+        log_info(stderr,"    --rf                                       [false]    paired mates are reverse-forward\n");
+        log_info(stderr,"    --rr                                       [false]    paired mates are reverse-reverse\n");
+        log_info(stderr,"    --minins     | -I   int                    [0]        minimum insert length\n");
+        log_info(stderr,"    --maxins     | -X   int                    [500]      maximum insert length\n");
+        log_info(stderr,"    --overlap                                  [true]     allow overlapping mates\n");
+        //log_info(stderr,"    --dovetail                                [false]    allow dovetailing mates\n");
+        log_info(stderr,"    --no-discordant                            [false]    do not allow discordant mates\n");
+        log_info(stderr,"    --no-mixed                                 [false]    only report paired alignments\n");
+        log_info(stderr,"    --ungapped-mates | -ug                                perform ungapped mate alignment\n");
         log_info(stderr,"  Seeding:\n");
-        log_info(stderr,"    --seed-len   | -L   int       [22]       seed lengths\n");
-        log_info(stderr,"    --seed-freq  | -i   {G|L|S},x,y          seed interval, as x + y*func(read-len) (G=log,L=linear,S=sqrt)\n");
-        log_info(stderr,"    --max-hits          int       [100]      maximum amount of seed hits\n");
-        log_info(stderr,"    --max-reseed | -R   int       [2]        number of reseeding rounds\n");
-        log_info(stderr,"    --top               bool      [false]    explore top seed entirely\n");
-        log_info(stderr,"    --N                 bool      [false]    allow substitution in seed\n");
+        log_info(stderr,"    --seed-len   | -L   int                    [22]       seed lengths\n");
+        log_info(stderr,"    --seed-freq  | -i   {G|L|S},x,y                       seed interval, as x + y*func(read-len) (G=log,L=linear,S=sqrt)\n");
+        log_info(stderr,"    --max-hits          int                    [100]      maximum amount of seed hits\n");
+        log_info(stderr,"    --max-reseed | -R   int                    [2]        number of reseeding rounds\n");
+        log_info(stderr,"    --top               bool                   [false]    explore top seed entirely\n");
+        log_info(stderr,"    --N                 bool                   [false]    allow substitution in seed\n");
         log_info(stderr,"  Extension:\n");
-        log_info(stderr,"    --all        | -a             [false]    perform all-mapping (i.e. find and report all alignments)\n");
-        log_info(stderr,"    --local                       [false]    perform local alignment\n");
-        log_info(stderr,"    --rand                        [true]     randomized seed hit selection\n");
-        log_info(stderr,"    --no-rand                     [false]    do not randomize seed hit selection\n");
-        log_info(stderr,"    --max-dist          int       [15]       maximum edit distance\n");
-        log_info(stderr,"    --max-effort-init   int       [15]       initial maximum number of consecutive extension failures\n");
-        log_info(stderr,"    --max-effort | -D   int       [15]       maximum number of consecutive extension failures\n");
-        log_info(stderr,"    --min-ext           int       [30]       minimum number of extensions per read\n");
-        log_info(stderr,"    --max-ext           int       [400]      maximum number of extensions per read\n");
-        log_info(stderr,"    --very-fast                              apply the very-fast presets\n");
-        log_info(stderr,"    --fast                                   apply the fast presets\n");        
-        log_info(stderr,"    --sensitive                              apply the sensitive presets\n");
-        log_info(stderr,"    --very-sensitive                         apply the very-sensitive presets\n");
-        log_info(stderr,"    --very-fast-local                        apply the very-fast presets\n");
-        log_info(stderr,"    --fast-local                             apply the fast presets\n");       
-        log_info(stderr,"    --sensitive-local                        apply the sensitive presets\n");
-        log_info(stderr,"    --very-sensitive-local                   apply the very-sensitive presets\n");
+        log_info(stderr,"    --mode              {best,best-exact,all}  [best]     alignment mode\n");
+        log_info(stderr,"    --all        | -a                          [false]    perform all-mapping (i.e. find and report all alignments)\n");
+        log_info(stderr,"    --local                                    [false]    perform local alignment\n");
+        log_info(stderr,"    --rand                                     [true]     randomized seed hit selection\n");
+        log_info(stderr,"    --no-rand                                  [false]    do not randomize seed hit selection\n");
+        log_info(stderr,"    --max-dist          int                    [15]       maximum edit distance\n");
+        log_info(stderr,"    --max-effort-init   int                    [15]       initial maximum number of consecutive extension failures\n");
+        log_info(stderr,"    --max-effort | -D   int                    [15]       maximum number of consecutive extension failures\n");
+        log_info(stderr,"    --min-ext           int                    [30]       minimum number of extensions per read\n");
+        log_info(stderr,"    --max-ext           int                    [400]      maximum number of extensions per read\n");
+        log_info(stderr,"    --very-fast                                           apply the very-fast presets\n");
+        log_info(stderr,"    --fast                                                apply the fast presets\n");        
+        log_info(stderr,"    --sensitive                                           apply the sensitive presets\n");
+        log_info(stderr,"    --very-sensitive                                      apply the very-sensitive presets\n");
+        log_info(stderr,"    --very-fast-local                                     apply the very-fast presets\n");
+        log_info(stderr,"    --fast-local                                          apply the fast presets\n");       
+        log_info(stderr,"    --sensitive-local                                     apply the sensitive presets\n");
+        log_info(stderr,"    --very-sensitive-local                                apply the very-sensitive presets\n");
         log_info(stderr,"  Scoring:\n");
-        log_info(stderr,"    --scoring           {sw|ed}  [ed]        Smith-Waterman / Edit-Distance scoring\n");
-        log_info(stderr,"    --score-min         {G|L|S},x,y          minimum score function, as x + y*func(read-len)\n");
-        log_info(stderr,"    --ma                int                  match bonus\n");
-        log_info(stderr,"    --mp                int,int              mismatch min/max penalties\n");
-        log_info(stderr,"    --np                int                  N penalty\n");
-        log_info(stderr,"    --rdg               int,int              read open/extension gap penalties\n");
-        log_info(stderr,"    --rfg               int,int              reference open/extension gap penalties\n");
+        log_info(stderr,"    --scoring           {sw|ed|wfa}            [ed]       Smith-Waterman / Edit-Distance / Wfa scoring\n");
+        log_info(stderr,"    --score-min         {G|L|S},x,y                       minimum score function, as x + y*func(read-len)\n");
+        log_info(stderr,"    --ma                int                               match bonus\n");
+        log_info(stderr,"    --mp                int,int                           mismatch min/max penalties\n");
+        log_info(stderr,"    --np                int                               N penalty\n");
+        log_info(stderr,"    --rdg               int,int                           read open/extension gap penalties\n");
+        log_info(stderr,"    --rfg               int,int                           reference open/extension gap penalties\n");
+        log_info(stderr,"  Alternative:\n");
+        log_info(stderr,"    --wfa                                                 Activate wavefront algorithm\n");
         log_info(stderr,"  Reporting:\n");
-        log_info(stderr,"    --mapQ-filter | -Q  int       [0]        minimum mapQ threshold\n\n\n\n");
+        log_info(stderr,"    --mapQ-filter | -Q  int                    [0]        minimum mapQ threshold\n\n\n\n");
         log_info(stderr,"Default values are indicated in brackets [].\n\n");
 
         exit(0);
@@ -246,30 +251,48 @@ int main(int argc, char* argv[])
         argstr += argv[i];
     }
 
+    if (argstr.find("-U ") != std::string::npos && (argstr.find("-1 ") != std::string::npos || argstr.find("-2 ") != std::string::npos))
+    {
+        log_error(stderr, "The -U -1 -2 options cannot be used together.\n");
+        return 1;
+    }
+
+    if (argstr.find("-1 ") != std::string::npos && argstr.find("-2 ") == std::string::npos)
+    {
+        log_error(stderr, "If you use the -1 option, you must also use the -2 option.\n");
+        return 1;
+    }
+
     std::string rg_id;
     std::string rg_string;
+    std::string comdline;
 
     bool legacy_cmdline = true;
+    bool valid_cmdline = false;
 
     const char* read_name1      = "";
     const char* read_name2      = "";
     const char* reference_name  = "";
     const char* output_name     = "";
 
+   
+
     for (int32 i = 1; i < argc; ++i)
     {
+        valid_cmdline = false;
+
         if (strcmp( argv[i], "--pe" ) == 0 ||
             strcmp( argv[i], "-paired-ends" ) == 0 ||
             strcmp( argv[i], "--paired-ends" ) == 0)
-            paired_end = true;
+            { paired_end = true; valid_cmdline = true; }
         else if (strcmp( argv[i], "--ff" ) == 0)
-            pe_policy = io::PE_POLICY_FF;
+            { pe_policy = io::PE_POLICY_FF; valid_cmdline = true; }
         else if (strcmp( argv[i], "--fr" ) == 0)
-            pe_policy = io::PE_POLICY_FR;
+            { pe_policy = io::PE_POLICY_FR; valid_cmdline = true; }
         else if (strcmp( argv[i], "--rf" ) == 0)
-            pe_policy = io::PE_POLICY_RF;
+            { pe_policy = io::PE_POLICY_RF; valid_cmdline = true; }
         else if (strcmp( argv[i], "--rr" ) == 0)
-            pe_policy = io::PE_POLICY_RR;
+            { pe_policy = io::PE_POLICY_RR; valid_cmdline = true; }
         else if (strcmp( argv[i], "-max-reads" )  == 0 ||
                  strcmp( argv[i], "--max-reads" ) == 0 ||
                  strcmp( argv[i], "-u" )          == 0 ||
@@ -277,7 +300,8 @@ int main(int argc, char* argv[])
                  {
                     if (i < argc - 1 && isNaturalNumber(argv[++i]))
                     {
-                        max_reads = (uint32)atoi( argv[++i] );
+                        max_reads = (uint32)atoi( argv[i] );
+                        valid_cmdline = true;
                     }
                     else
                     {
@@ -290,7 +314,8 @@ int main(int argc, char* argv[])
                  {
                     if (i < argc - 1 && isNaturalNumber(argv[++i]))
                     {
-                        max_read_len = (uint32)atoi( argv[++i] );
+                        max_read_len = (uint32)atoi( argv[i] );
+                        valid_cmdline = true;
                     }
                     else
                     {
@@ -303,7 +328,8 @@ int main(int argc, char* argv[])
                   {
                     if (i < argc - 1 && isNaturalNumber(argv[++i]))
                     {
-                        trim3 = (uint32)atoi( argv[++i] );
+                        trim3 = (uint32)atoi( argv[i] );
+                        valid_cmdline = true;
                     }
                     else
                     {
@@ -316,7 +342,8 @@ int main(int argc, char* argv[])
                   {
                     if (i < argc - 1 && isNaturalNumber(argv[++i]))
                     {
-                        trim5 = (uint32)atoi( argv[++i] );
+                        trim5 = (uint32)atoi( argv[i] );
+                        valid_cmdline = true;
                     }
                     else
                     {
@@ -326,37 +353,38 @@ int main(int argc, char* argv[])
                   }            
         else if (strcmp( argv[i], "-file-ref" )  == 0 ||
                  strcmp( argv[i], "--file-ref" ) == 0)
-            from_file = true;
+            { from_file = true; valid_cmdline = true; }
         else if (strcmp( argv[i], "-server-ref" )  == 0 ||
                  strcmp( argv[i], "--server-ref" ) == 0)
-            from_file = false;
+            { from_file = false; valid_cmdline = true; }
         else if (strcmp( argv[i], "-input" )  == 0 ||
                  strcmp( argv[i], "--input" ) == 0)
         {
             if (strcmp( argv[i+1], "file" ) == 0)
-                from_file = true;
+               { from_file = true; valid_cmdline = true; }
             else if (strcmp( argv[i+1], "server" ) == 0)
-                from_file = false;
+                { from_file = false; valid_cmdline = true; }
             else
-                log_warning(stderr, "unknown \"%s\" input, skipping\n", argv[i+1]);
+                { log_warning(stderr, "unknown \"%s\" input, skipping\n", argv[i+1]); valid_cmdline = true; }
 
             ++i;
         }
         else if (strcmp( argv[i], "-phred33" ) == 0 ||
                  strcmp( argv[i], "--phred33" ) == 0)
-            qencoding = io::Phred33;
+            { qencoding = io::Phred33; valid_cmdline = true; }
         else if (strcmp( argv[i], "-phred64" ) == 0 ||
                  strcmp( argv[i], "--phred64" ) == 0)
-            qencoding = io::Phred64;
+            { qencoding = io::Phred64; valid_cmdline = true; }
         else if (strcmp( argv[i], "-solexa-quals" ) == 0 ||
                  strcmp( argv[i], "--solexa-quals" ) == 0)
-            qencoding = io::Solexa;
+            { qencoding = io::Solexa; valid_cmdline = true; }
         else if (strcmp( argv[i], "-device" ) == 0 ||
                  strcmp( argv[i], "--device" ) == 0)
                 {
                     if (i < argc - 1 && isNaturalNumber(argv[++i]))
                     {
-                        cuda_devices.push_back( atoi( argv[++i] ) );
+                        cuda_devices.push_back( atoi( argv[i] ) );
+                        valid_cmdline = true;
                     }
                     else
                     {
@@ -369,7 +397,8 @@ int main(int argc, char* argv[])
                  {
                     if (i < argc - 1 && isNaturalNumber(argv[++i]))
                     {
-                        set_verbosity( Verbosity( atoi( argv[++i] ) ) );
+                        set_verbosity( Verbosity( atoi( argv[i] ) ) );
+                        valid_cmdline = true;
                     }
                     else
                     {
@@ -383,6 +412,7 @@ int main(int argc, char* argv[])
                     if (i < argc - 1)
                     {
                         rg_id = argv[++i];
+                        valid_cmdline = true;
                     }
                     else
                     {
@@ -397,6 +427,7 @@ int main(int argc, char* argv[])
                     {
                         rg_string += "\t";
                         rg_string += argv[++i];
+                        valid_cmdline = true;
                     }
                     else
                     {
@@ -409,6 +440,7 @@ int main(int argc, char* argv[])
             if (i < argc - 1)
             {
                 legacy_cmdline = false;
+                valid_cmdline = true;
                 paired_end     = true;
                 read_name1     = argv[++i];
             }
@@ -423,6 +455,7 @@ int main(int argc, char* argv[])
             if (i < argc - 1)
             {
                 legacy_cmdline = false;
+                valid_cmdline = true;
                 paired_end     = true;
                 read_name2     = argv[++i];
             }
@@ -437,6 +470,7 @@ int main(int argc, char* argv[])
             if (i < argc - 1)
             {
                legacy_cmdline = false;
+               valid_cmdline = true;
                paired_end     = false;
                read_name1     = argv[++i];
             }
@@ -451,6 +485,7 @@ int main(int argc, char* argv[])
             if (i < argc - 1)
             {
                legacy_cmdline = false;
+               valid_cmdline = true;
                output_name    = argv[++i];
             }
             else
@@ -464,6 +499,7 @@ int main(int argc, char* argv[])
             if (i < argc - 1)
             {
                 legacy_cmdline = false;
+                valid_cmdline = true;
                 reference_name = argv[++i];
             }
             else
@@ -480,14 +516,22 @@ int main(int argc, char* argv[])
 
             if (next)
             {
-                 if (is_number(next) || next[0] != '-')
-                 {
+                if (is_number(next) || next[0] != '-')
+                {
                     const std::string val = std::string( next ); ++i;
                     string_options.insert( std::make_pair( key, val ) );
-                 }
+                }
                 else
                     string_options.insert( std::make_pair( key, "1" ) );
+
+                valid_cmdline = true;
             }
+        }
+
+        if (!valid_cmdline)
+        {
+            log_error(stderr, "unknown %s option.\n", argv[i]);
+            return 1;
         }
     }
 
@@ -562,6 +606,9 @@ int main(int argc, char* argv[])
                 log_verbose(stderr, "  chosen device %d\n", cuda_devices[i]);
                 log_verbose(stderr, "    device name        : %s\n", device_prop.name);
                 log_verbose(stderr, "    compute capability : %d.%d\n", device_prop.major, device_prop.minor);
+
+                //size_t size = min(int(device_prop.l2CacheSize * 0.1), device_prop.persistingL2CacheMaxSize);
+                //cudaDeviceSetLimit(cudaLimitPersistingL2CacheSize, size); /* set-aside 3/4 of L2 cache for persisting accesses or the max allowed*/
             }
         }
         else
@@ -591,6 +638,7 @@ int main(int argc, char* argv[])
 
         // WARNING: we don't do any error checking on passed parameters!
         bowtie2::cuda::Params params;
+        params.scoring_mode = bowtie2::cuda::EditDistanceMode;
         params.pe_policy = pe_policy;
         {
             bool init = true;
@@ -690,7 +738,8 @@ int main(int argc, char* argv[])
         SharedPointer<io::OutputFile> output_file( io::OutputFile::open(
                                                     output_name,
                                                     paired_end ? io::PAIRED_END : io::SINGLE_END,
-                                                    io::BNT(*reference_data) ) );
+                                                    io::BNT(*reference_data),
+                                                    params.cache_writes ) );
 
         output_file->set_rg( rg_id.c_str(), rg_string.c_str() );
         output_file->set_program(
@@ -744,37 +793,45 @@ int main(int argc, char* argv[])
                 return 1;
             }
 
-
             // print the command line options
             {
-                const bowtie2::cuda::SimpleFunc& score_min = bowtie2::cuda::EditDistanceMode ?
-                    params.scoring_scheme.ed.m_score_min :
-                    params.scoring_scheme.sw.m_score_min;
+                const bowtie2::cuda::SimpleFunc& score_min = params.scoring_mode == bowtie2::cuda::EditDistanceMode ?
+                    params.scoring_scheme.ed.m_score_min : params.scoring_mode == bowtie2::cuda::SmithWatermanMode ?
+                    params.scoring_scheme.sw.m_score_min : params.scoring_scheme.wfa.m_score_min;
 
-                log_verbose(stderr, "  mode           = %s\n", bowtie2::cuda::mapping_mode( params.mode ));
-                log_verbose(stderr, "  scoring        = %s\n", bowtie2::cuda::scoring_mode( params.scoring_mode ));
-                log_verbose(stderr, "  score-min      = %s:%.2f:%.2f\n", score_min.type_string(), score_min.k, score_min.m);
-                log_verbose(stderr, "  alignment type = %s\n", params.alignment_type == bowtie2::cuda::LocalAlignment ? "local" : "end-to-end");
-                log_verbose(stderr, "  pe-policy      = %s\n",
+                log_verbose(stderr, "  mode               = %s\n", bowtie2::cuda::mapping_mode( params.mode ));
+                log_verbose(stderr, "  scoring            = %s\n", bowtie2::cuda::scoring_mode( params.scoring_mode ));
+                log_verbose(stderr, "  score-min          = %s:%.2f:%.2f\n", score_min.type_string(), score_min.k, score_min.m);
+                if (params.scoring_mode == bowtie2::cuda::SmithWatermanMode)
+                {
+                    log_verbose(stderr, "  match bonus        = %u\n", params.scoring_scheme.sw.m_match.m_val);
+                    log_verbose(stderr, "  mismatch penalties = %u:%u\n", params.scoring_scheme.sw.m_mmp.m_min_val, params.scoring_scheme.sw.m_mmp.m_max_val);
+                    log_verbose(stderr, "  N penaltie         = %u\n", params.scoring_scheme.sw.m_np.m_val);
+                    log_verbose(stderr, "  rdg penalties      = %u:%u\n", params.scoring_scheme.sw.m_read_gap_const, params.scoring_scheme.sw.m_read_gap_coeff);
+                    log_verbose(stderr, "  rfg penalties      = %u:%u\n", params.scoring_scheme.sw.m_ref_gap_const, params.scoring_scheme.sw.m_ref_gap_coeff);
+                }
+                log_verbose(stderr, "  alignment type     = %s\n", params.alignment_type == bowtie2::cuda::LocalAlignment ? "local" : "end-to-end");
+                log_verbose(stderr, "  pe-policy          = %s\n",
                                                                pe_policy == io::PE_POLICY_FF ? "ff" :
                                                                pe_policy == io::PE_POLICY_FR ? "fr" :
                                                                pe_policy == io::PE_POLICY_RF ? "rf" :
                                                                                                "rr" );
-                log_verbose(stderr, "  seed length    = %u\n", params.seed_len);
-                log_verbose(stderr, "  seed interval  = (%s, %.3f, %.3f)\n", params.seed_freq.type_symbol(), params.seed_freq.k, params.seed_freq.m);
-                log_verbose(stderr, "  seed rounds    = %u\n", params.max_reseed);
-                log_verbose(stderr, "  max hits       = %u\n", params.max_hits);
-                log_verbose(stderr, "  max edit dist  = %u\n", params.max_dist);
-                log_verbose(stderr, "  max effort     = %u\n", params.max_effort);
-                log_verbose(stderr, "  substitutions  = %u\n", params.allow_sub);
-                log_verbose(stderr, "  mapq filter    = %u\n", params.mapq_filter);
-                log_verbose(stderr, "  randomized     = %s\n", params.randomized ? "yes" : "no");
+                log_verbose(stderr, "  seed length        = %u\n", params.seed_len);
+                log_verbose(stderr, "  seed interval      = (%s, %.3f, %.3f)\n", params.seed_freq.type_symbol(), params.seed_freq.k, params.seed_freq.m);
+                log_verbose(stderr, "  seed rounds        = %u\n", params.max_reseed);
+                log_verbose(stderr, "  max hits           = %u\n", params.max_hits);
+                log_verbose(stderr, "  max edit dist      = %u\n", params.max_dist);
+                log_verbose(stderr, "  max effort         = %u\n", params.max_effort);
+                log_verbose(stderr, "  substitutions      = %u\n", params.allow_sub);
+                log_verbose(stderr, "  mapq filter        = %u\n", params.mapq_filter);
+                log_verbose(stderr, "  randomized         = %s\n", params.randomized ? "yes" : "no");
                 if (params.allow_sub)
-                    log_verbose(stderr, "  subseed length = %u\n", params.subseed_len);
-                log_verbose(stderr, "  overlap        = %s\n", params.pe_overlap ? "yes" : "no");
+                    log_verbose(stderr, "  subseed length     = %u\n", params.subseed_len);
+                log_verbose(stderr, "  overlap            = %s\n", params.pe_overlap ? "yes" : "no");
                 //log_verbose(stderr, "  dovetail       = %s\n", params.pe_dovetail ? "yes" : "no");
-                log_verbose(stderr, "  no-mixed       = %s\n", !params.pe_unpaired ? "yes" : "no");
-                log_verbose(stderr, "  discordant     = %s\n", params.pe_discordant ? "yes" : "no");
+                log_verbose(stderr, "  no-mixed           = %s\n", !params.pe_unpaired ? "yes" : "no");
+                log_verbose(stderr, "  discordant         = %s\n", params.pe_discordant ? "yes" : "no");
+                log_verbose(stderr, "  cache writes       = %s\n", params.cache_writes ? "yes" : "no");
             }
 
             //
@@ -815,12 +872,27 @@ int main(int argc, char* argv[])
             bowtie2::cuda::InputThreadPE input_thread( read_data_file1.get(),  read_data_file2.get(), input_stats, batch_size, params.avg_read_length );
             input_thread.create();
 
+            //
+            // FR: Setup the output thread 
+            //
+
+           
+            bowtie2::cuda::OutputThreadPE output_thread(output_file->get_file_pointer());
+            if (params.cache_writes)
+            {
+                output_thread.create();
+            }
+
             for (uint32 i = 0; i < cuda_devices.size(); ++i)
             {
-                compute_threads[i]->set_input( &input_thread );
+                compute_threads[i]->set_input_thread( &input_thread );
+                if (params.cache_writes)
+                {
+                    compute_threads[i]->set_output_thread( &output_thread );
+                }
                 compute_threads[i]->set_output( output_file.get() );
                 compute_threads[i]->create();
-            }
+            }              
 
             uint32                        n_reads = 0;
             bowtie2::cuda::AlignmentStats concordant;
@@ -840,7 +912,7 @@ int main(int argc, char* argv[])
             }
 
             input_thread.join();
-
+            
             timer.stop();
 
             log_verbose( stderr, "  compute threads joined\n" );
@@ -895,7 +967,59 @@ int main(int argc, char* argv[])
                     log_stats(stderr, "    aligned ambiguously   : %4.1f%% (%4.1f%% of total)\n", 100.0f * float(mate2.n_ambiguous)/float(mate2.n_mapped), 100.0f * float(mate2.n_ambiguous)/float(n_reads) );
                     log_stats(stderr, "    aligned multiply      : %4.1f%% (%4.1f%% of total)\n", 100.0f * float(mate2.n_multiple)/float(mate2.n_mapped), 100.0f * float(mate2.n_multiple)/float(n_reads) );
                 }
-            }
+
+
+                log_stats(stderr, "\n\n -------------------- Bowtie2 like stats --------------------------\n\n");
+                log_stats(stderr, "%4.0f reads; of these:\n", float(n_reads) );
+                log_stats(stderr, "  %4.0f (%4.1f%%) were paired; of these:\n", float(n_reads), 100.0f );
+                log_stats(stderr, "    %4.0f (%4.1f%%) aligned concordantly 0 times\n", float(n_reads - n_mapped), 100.0f * float(n_reads - n_mapped) / float(n_reads));
+                log_stats(stderr, "    %4.0f (%4.1f%%) aligned concordantly exactly 1 time\n", float(n_unique), 100.0f * float(n_unique) / float(n_reads));
+                log_stats(stderr, "    %4.0f (%4.1f%%) aligned concordantly >1 times\n", float(n_multiple), 100.0f * float(n_multiple) / float(n_reads) );
+                log_stats(stderr, "    ----\n");
+                if (params.pe_discordant)
+                {
+                log_stats(stderr, "    %4.0f pairs aligned concordantly 0 times; of these:\n", float(n_reads - n_mapped) );
+                log_stats(stderr, "    %4.0f (%4.1f%%) aligned discordantly 1 time\n", float(discordant.n_mapped), 100.0f * float(discordant.n_mapped) / float(n_reads - n_mapped));
+                log_stats(stderr, "    ----\n");
+                }
+                uint32 n = n_reads - n_mapped - discordant.n_mapped;
+                if (params.pe_unpaired)
+                {               
+                log_stats(stderr, "    %4.0f pairs aligned 0 times concordantly or discordantly; of these:\n",  float(n) );
+                log_stats(stderr, "      %4.0f mates make up the pairs; of these:\n", float(2 * n ) );
+                log_stats(stderr, "        %4.0f (%4.1f%%) aligned 0 times\n", float( 2 * n - mate1.n_mapped - mate2.n_mapped), 100.0f * float( 2 * n - mate1.n_mapped - mate2.n_mapped) / float(2 * n) );
+                log_stats(stderr, "        %4.0f (%4.1f%%) aligned exactly 1 time\n", float( mate1.n_unique + mate2.n_unique ), 100.0f * float( mate1.n_unique + mate2.n_unique) / float( 2 * n ));
+                log_stats(stderr, "        %4.0f (%4.1f%%) aligned >1 times\n", float(  mate1.n_multiple + mate2.n_multiple), 100.0f * float( mate1.n_multiple + mate2.n_multiple) / float( 2 * n ));
+                }
+                log_stats(stderr, "%4.1f%% overall alignment rate\n", 100.0f * (1.0f - float( n - mate1.n_mapped / 2 - mate2.n_mapped / 2) / float( n_reads )));
+                
+                /*log_stats(stderr, "\n\n -------------------- Variables --------------------------\n\n");
+                log_stats(stderr, "n_reads %4.0f\n", float( n_reads ) );
+                log_stats(stderr, "\n");
+                log_stats(stderr, "concordant.n_mapped %4.0f\n", float( concordant.n_mapped ) );
+                log_stats(stderr, "concordant.n_unique %4.0f\n", float( concordant.n_unique ) );
+                log_stats(stderr, "concordant.n_ambiguous %4.0f\n", float( concordant.n_ambiguous ) );
+                log_stats(stderr, "concordant.n_unambiguous %4.0f\n", float( concordant.n_unambiguous ) );
+                log_stats(stderr, "concordant.n_multiple %4.0f\n", float( concordant.n_multiple ) );
+                log_stats(stderr, "\n");
+                log_stats(stderr, "discordant.n_mapped %4.0f\n", float( discordant.n_mapped ) );
+                log_stats(stderr, "discordant.n_unique %4.0f\n", float( discordant.n_unique ) );
+                log_stats(stderr, "discordant.n_ambiguous %4.0f\n", float( discordant.n_ambiguous ) );
+                log_stats(stderr, "discordant.n_unambiguous %4.0f\n", float( discordant.n_unambiguous ) );
+                log_stats(stderr, "discordant.n_multiple %4.0f\n", float( discordant.n_multiple ) );
+                log_stats(stderr, "\n");
+                log_stats(stderr, "mate1.n_mapped %4.0f\n", float( mate1.n_mapped ) );
+                log_stats(stderr, "mate1.n_unique %4.0f\n", float( mate1.n_unique ) );
+                log_stats(stderr, "mate1.n_ambiguous %4.0f\n", float( mate1.n_ambiguous ) );
+                log_stats(stderr, "mate1.n_unambiguous %4.0f\n", float( mate1.n_unambiguous ) );
+                log_stats(stderr, "mate1.n_multiple %4.0f\n", float( mate1.n_multiple  ) );
+                log_stats(stderr, "\n");
+                log_stats(stderr, "mate2.n_mapped %4.0f\n", float( mate2.n_mapped ) );
+                log_stats(stderr, "mate2.n_unique %4.0f\n", float( mate2.n_unique ) );
+                log_stats(stderr, "mate2.n_ambiguous %4.0f\n", float( mate2.n_ambiguous ) );
+                log_stats(stderr, "mate2.n_unambiguous %4.0f\n", float( mate2.n_unambiguous ) );
+                log_stats(stderr, "mate2.n_multiple %4.0f\n", float( mate2.n_multiple ) );*/
+            }               
 
             // generate an html report
             if (params.report.length())
@@ -931,21 +1055,30 @@ int main(int argc, char* argv[])
                                               params.scoring_scheme.ed.m_score_min :
                                               params.scoring_scheme.sw.m_score_min;
                 
-                log_verbose(stderr, "  mode           = %s\n", bowtie2::cuda::mapping_mode( params.mode ));
-                log_verbose(stderr, "  scoring        = %s\n", bowtie2::cuda::scoring_mode( params.scoring_mode ));
-                log_verbose(stderr, "  score-min      = %s:%.2f:%.2f\n", score_min.type_string(), score_min.k, score_min.m);
-                log_verbose(stderr, "  alignment type = %s\n", params.alignment_type == bowtie2::cuda::LocalAlignment ? "local" : "end-to-end");
-                log_verbose(stderr, "  seed length    = %u\n", params.seed_len);
-                log_verbose(stderr, "  seed interval  = (%s, %.3f, %.3f)\n", params.seed_freq.type_symbol(), params.seed_freq.k, params.seed_freq.m);
-                log_verbose(stderr, "  seed rounds    = %u\n", params.max_reseed);
-                log_verbose(stderr, "  max hits       = %u\n", params.max_hits);
-                log_verbose(stderr, "  max edit dist  = %u\n", params.max_dist);
-                log_verbose(stderr, "  max effort     = %u\n", params.max_effort);
-                log_verbose(stderr, "  substitutions  = %u\n", params.allow_sub);
-                log_verbose(stderr, "  mapq filter    = %u\n", params.mapq_filter);
-                log_verbose(stderr, "  randomized     = %s\n", params.randomized ? "yes" : "no");
+                log_verbose(stderr, "  mode               = %s\n", bowtie2::cuda::mapping_mode( params.mode ));
+                log_verbose(stderr, "  scoring            = %s\n", bowtie2::cuda::scoring_mode( params.scoring_mode ));
+                log_verbose(stderr, "  score-min          = %s:%.2f:%.2f\n", score_min.type_string(), score_min.k, score_min.m);
+                if (params.scoring_mode == bowtie2::cuda::SmithWatermanMode)
+                {
+                    log_verbose(stderr, "  match bonus        = %u\n", params.scoring_scheme.sw.m_match.m_val);
+                    log_verbose(stderr, "  mismatch penalties = %u:%u\n", params.scoring_scheme.sw.m_mmp.m_min_val, params.scoring_scheme.sw.m_mmp.m_max_val);
+                    log_verbose(stderr, "  N penaltie         = %u\n", params.scoring_scheme.sw.m_np.m_val);
+                    log_verbose(stderr, "  rdg penalties      = %u:%u\n", params.scoring_scheme.sw.m_read_gap_const, params.scoring_scheme.sw.m_read_gap_coeff);
+                    log_verbose(stderr, "  rfg penalties      = %u:%u\n", params.scoring_scheme.sw.m_ref_gap_const, params.scoring_scheme.sw.m_ref_gap_coeff);
+                }
+                log_verbose(stderr, "  alignment type     = %s\n", params.alignment_type == bowtie2::cuda::LocalAlignment ? "local" : "end-to-end");
+                log_verbose(stderr, "  seed length        = %u\n", params.seed_len);
+                log_verbose(stderr, "  seed interval      = (%s, %.3f, %.3f)\n", params.seed_freq.type_symbol(), params.seed_freq.k, params.seed_freq.m);
+                log_verbose(stderr, "  seed rounds        = %u\n", params.max_reseed);
+                log_verbose(stderr, "  max hits           = %u\n", params.max_hits);
+                log_verbose(stderr, "  max edit dist      = %u\n", params.max_dist);
+                log_verbose(stderr, "  max effort         = %u\n", params.max_effort);
+                log_verbose(stderr, "  substitutions      = %u\n", params.allow_sub);
+                log_verbose(stderr, "  mapq filter        = %u\n", params.mapq_filter);
+                log_verbose(stderr, "  randomized         = %s\n", params.randomized ? "yes" : "no");
                 if (params.allow_sub)
-                    log_verbose(stderr, "  subseed length = %u\n", params.subseed_len);
+                    log_verbose(stderr, "  subseed length     = %u\n", params.subseed_len);
+                log_verbose(stderr, "  cache writes       = %s\n", params.cache_writes ? "yes" : "no");
             }
 
             //
@@ -986,9 +1119,23 @@ int main(int argc, char* argv[])
             bowtie2::cuda::InputThreadSE input_thread( read_data_file.get(), input_stats, batch_size, params.avg_read_length );
             input_thread.create();
 
+            //
+            // FR: Setup the output thread 
+            //
+            
+            bowtie2::cuda::OutputThreadSE output_thread(output_file->get_file_pointer());
+            if (params.cache_writes)
+            {               
+                output_thread.create();
+            }
+
             for (uint32 i = 0; i < cuda_devices.size(); ++i)
             {
-                compute_threads[i]->set_input( &input_thread );
+                compute_threads[i]->set_input_thread( &input_thread );
+                if (params.cache_writes)
+                {
+                    compute_threads[i]->set_output_thread( &output_thread );
+                }
                 compute_threads[i]->set_output( output_file.get() );
                 compute_threads[i]->create();
             }
@@ -1038,6 +1185,24 @@ int main(int argc, char* argv[])
                 log_stats(stderr, "    aligned multiply      : %4.1f%% (%4.1f%% of total)\n", 100.0f * float(n_multiple)/float(n_mapped), 100.0f * float(n_multiple)/float(n_reads) );
                 log_ed( mate1 );
                 log_mapq( mate1 );
+
+                log_stats(stderr, "\n\n -------------------- bowtie2 like stats --------------------------\n\n");
+                log_stats(stderr, "%4.0f reads; of these:\n", float(n_reads) );
+                log_stats(stderr, "  %4.0f (%4.1f%%) were paired; of these:\n", float(n_reads), 100.0f );
+                log_stats(stderr, "    %4.0f (%4.1f%%) aligned concordantly 0 times\n", float(n_reads - n_mapped), 100.0f * float(n_reads - n_mapped) / float(n_reads));
+                log_stats(stderr, "    %4.0f (%4.1f%%) aligned concordantly exactly 1 time\n", float(n_unique), 100.0f * float(n_unique) / float(n_reads));
+                log_stats(stderr, "    %4.0f (%4.1f%%) aligned concordantly >1 times\n", float(n_multiple), 100.0f * float(n_multiple) / float(n_reads) );
+                log_stats(stderr, "%4.1f%% overall alignment rate\n", 100.0f * (1.0f - float( n_reads - n_mapped ) / float( n_reads )));
+                
+                /*log_stats(stderr, "\n\n");
+                log_stats(stderr, "\n\n -------------------- Variables --------------------------\n\n");
+                log_stats(stderr, "n_reads %4.0f\n", float( n_reads ) );
+                log_stats(stderr, "\n");
+                log_stats(stderr, "mate1.n_mapped %4.0f\n", float( mate1.n_mapped ) );
+                log_stats(stderr, "mate1.n_unique %4.0f\n", float( mate1.n_unique ) );
+                log_stats(stderr, "mate1.n_ambiguous %4.0f\n", float( mate1.n_ambiguous ) );
+                log_stats(stderr, "mate1.n_unambiguous %4.0f\n", float( mate1.n_unambiguous ) );
+                log_stats(stderr, "mate1.n_multiple %4.0f\n", float( mate1.n_multiple  ) );*/               
             }
 
             // generate an html report

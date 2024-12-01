@@ -342,6 +342,20 @@ struct AlignmentStreamBase
     PipelineType    m_pipeline;     ///< the pipeline object
     aligner_type    m_aligner;      ///< the aligner
     ParamsPOD       m_params;       ///< global parameters
+
+    int16 *wfa_H_buffer         = nullptr;
+    int16 *wfa_H_hi_buffer      = nullptr;
+    int16 *wfa_H_lo_buffer      = nullptr;
+    bool  *wfa_H_null_buffer    = nullptr;
+    int16 *wfa_E_buffer         = nullptr;
+    int16 *wfa_E_hi_buffer      = nullptr;
+    int16 *wfa_E_lo_buffer      = nullptr;
+    bool  *wfa_E_null_buffer    = nullptr;
+    int16 *wfa_F_buffer         = nullptr;
+    int16 *wfa_F_hi_buffer      = nullptr;
+    int16 *wfa_F_lo_buffer      = nullptr;
+    bool  *wfa_F_null_buffer    = nullptr;
+    int16 *wfa_PointeurH_buffer = nullptr;
 };
 
 ///@}  // group AlignmentDetail

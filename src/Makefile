@@ -12,6 +12,7 @@ all:
 	(cd "../build" && $(MAKE))
 	cd "../build" && cp nvBWT/nvBWT ../inst
 	cd "../build" && cp nvBowtie/nvBowtie ../inst
+	cd "../build" && cp nvbio-test/nvbio-test ../inst
 	
 
 clean:
@@ -20,5 +21,7 @@ clean:
 	rm -f *.o
 	rm -f nvBWT
 	rm -f nvBowtie
+	rm -f nvbio-test
 	rm -f ../inst/nvBWT
 	rm -f ../inst/nvBowtie
+	rm -f ../inst/nvbio-test

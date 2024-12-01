@@ -485,7 +485,7 @@ int build(
                 d_bwt,                              // output bwt iterator
                 nvbio::plain_view( h_ssa ) );       // output ssa iterator
 
-            cuda::blockwise_suffix_sort(
+            nvbio::cuda::blockwise_suffix_sort(
                 seq_length,
                 d_string,
                 output,
@@ -547,7 +547,7 @@ int build(
                 d_bwt,                              // output bwt iterator
                 nvbio::plain_view( h_ssa ) );       // output ssa iterator
 
-            cuda::blockwise_suffix_sort(
+            nvbio::cuda::blockwise_suffix_sort(
                 seq_length,
                 d_string,
                 output,
@@ -711,7 +711,7 @@ int main(int argc, char* argv[])
     {
         int device_count;
         cudaGetDeviceCount(&device_count);
-        cuda::check_error("cuda-check");
+        nvbio::cuda::check_error("cuda-check");
 
         log_verbose(stderr, "  cuda devices : %d\n", device_count);
 
@@ -756,7 +756,7 @@ int main(int argc, char* argv[])
         cudaMemGetInfo(&free, &total);
         NVBIO_CUDA_DEBUG_STATEMENT( log_info(stderr,"device mem : total: %.1f GB, free: %.1f GB\n", float(total)/float(1024*1024*1024), float(free)/float(1024*1024*1024)) );
 
-        cuda::check_error("cuda-memory-check");
+        nvbio::cuda::check_error("cuda-memory-check");
 
         return build( input_name, output_name, pac_name, rpac_name, bwt_name, rbwt_name, sa_name, rsa_name, max_length, pac_type, crc );
     }

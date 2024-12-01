@@ -260,7 +260,8 @@ template <
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        sink_type>
+    typename        sink_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_score(
     const aligner_type      aligner,
@@ -268,7 +269,8 @@ bool banded_alignment_score(
     const qual_string       quals,
     const text_string       text,
     const  int32            min_score,
-          sink_type&        sink);
+          sink_type&        sink,
+          wfa_type&         wfa);
 
 /// Compute the alignment score between a pattern and a text string 
 /// with banded DP alignment.
@@ -287,14 +289,18 @@ template <
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        sink_type>
+    typename        sink_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_score(
     const aligner_type      aligner,
     const pattern_string    pattern,
     const text_string       text,
     const  int32            min_score,
-          sink_type&        sink);
+          sink_type&        sink,
+          wfa_type&         wfa);
+
+
 
 /// Compute the alignment score between a pattern and a text string 
 /// with banded DP alignment.
@@ -315,14 +321,17 @@ template <
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        sink_type>
+    typename        sink_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 int32 banded_alignment_score(
     const aligner_type      aligner,
     const pattern_string    pattern,
     const qual_string       quals,
     const text_string       text,
-    const  int32            min_score);
+    const  int32            min_score,
+    wfa_type&               wfa);
+
 
 /// Compute the alignment score between a pattern and a text string 
 /// with banded DP alignment.
@@ -342,13 +351,15 @@ template <
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        sink_type>
+    typename        sink_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 int32 banded_alignment_score(
     const aligner_type      aligner,
     const pattern_string    pattern,
     const text_string       text,
-    const  int32            min_score);
+    const  int32            min_score,
+    wfa_type&               wfa);
 
 ///
 /// Backtrace an alignment using a banded DP algorithm.
@@ -389,7 +400,8 @@ template <
     typename        text_string,
     typename        backtracer_type,
     typename        checkpoints_type,
-    typename        submatrix_type>
+    typename        submatrix_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 Alignment<int32> banded_alignment_traceback(
     const aligner_type      aligner,
@@ -399,7 +411,8 @@ Alignment<int32> banded_alignment_traceback(
     const int32             min_score,
     backtracer_type&        backtracer,
     checkpoints_type        checkpoints,
-    submatrix_type          submatrix);
+    submatrix_type          submatrix,
+    wfa_type&               wfa);
 
 
 /// Compute the alignment score between a pattern and a text string 
@@ -459,7 +472,8 @@ template <
     typename        qual_string,
     typename        text_string,
     typename        sink_type,
-    typename        column_type>
+    typename        column_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool alignment_score(
     const aligner_type      aligner,
@@ -468,7 +482,8 @@ bool alignment_score(
     const text_string       text,
     const  int32            min_score,
           sink_type&        sink,
-          column_type       column);
+          column_type       column,
+          wfa_type&         wfa);
 
 /// Compute the alignment score between a pattern and a text string 
 /// with full DP alignment.
@@ -507,14 +522,14 @@ bool alignment_score(
 /// \param text                text string
 /// \param min_score           threshold alignment score
 /// \param sink                output sink
-///
 template <
     uint32          MAX_TEXT_LEN,
     typename        aligner_type,
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        sink_type>
+    typename        sink_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool alignment_score(
     const aligner_type      aligner,
@@ -522,7 +537,8 @@ bool alignment_score(
     const qual_string       quals,
     const text_string       text,
     const  int32            min_score,
-          sink_type&        sink);
+          sink_type&        sink,
+          wfa_type&         wfa);          
 
 ///
 /// Backtrace an optimal alignment using a full DP algorithm.
@@ -614,7 +630,8 @@ template <
     typename        backtracer_type,
     typename        checkpoints_type,
     typename        submatrix_type,
-    typename        column_type>
+    typename        column_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 Alignment<int32> alignment_traceback(
     const aligner_type      aligner,
@@ -625,7 +642,8 @@ Alignment<int32> alignment_traceback(
     backtracer_type&        backtracer,
     checkpoints_type        checkpoints,
     submatrix_type          submatrix,
-    column_type             column);
+    column_type             column,
+    wfa_type&               wfa);
 
 ///
 /// Backtrace an optimal alignment using a full DP algorithm.
@@ -660,7 +678,8 @@ template <
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        backtracer_type>
+    typename        backtracer_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 Alignment<int32> alignment_traceback(
     const aligner_type      aligner,
@@ -668,7 +687,8 @@ Alignment<int32> alignment_traceback(
     const qual_string       quals,
     const text_string       text,
     const int32             min_score,
-    backtracer_type&        backtracer);
+    backtracer_type&        backtracer,
+    wfa_type&               wfa);
 
 #if defined(__CUDACC__)
 namespace warp {
@@ -701,7 +721,8 @@ template <
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        column_type>
+    typename        column_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 int32 alignment_score(
     const aligner_type      aligner,
@@ -710,7 +731,8 @@ int32 alignment_score(
     const text_string       text,
     const  int32            min_score,
           uint2*            sink,
-          column_type       column);
+          column_type       column,
+          wfa_type&           wfa);
 
 } // namespace warp
 #endif

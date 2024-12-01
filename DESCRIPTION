@@ -1,8 +1,8 @@
 Package: RbowtieCuda
 Type: Package
 Title: An R Wrapper for nvBowtie and nvBWT, a rewritten version of Bowtie2 for cuda
-Version: 0.1.0
-Date: 2023-05-7
+Version: 0.1.2
+Date: 2024-12-01
 Authors@R: 
         c(person(given = "Jacopo", family = "Pantaleoni", role = c("aut"), 
             email = "jpantaleoni@nvidia.com"),
@@ -12,21 +12,22 @@ Authors@R:
             email = "samsimon@ucm.es"),
         person(given = "Franck", family = "RICHARD", role = c("aut","cre"), 
             email = "franck.richard@winstars.net"))
-Description: This package provides an R wrapper for the popular bowtie2 sequencing 
-    read aligner optimised to run on NVidia graphics cards The package contains 
-    wrapper functions that allow for genome indexing and alignment to those 
-    indexes.
+Description: This package provides an R wrapper for the popular Bowtie2 sequencing read aligner,
+ optimized to run on NVIDIA graphics cards. It includes wrapper functions that enable both genome 
+ indexing and alignment to the generated indexes, ensuring high performance and ease of use within the R environment.
 License: BSD_3_clause + file LICENSE
-Depends: R (>= 4.3.0)
+Depends: R (>= 4.4.0), SummarizedExperiment
 Encoding: UTF-8
 Suggests: 
     knitr,
     testthat (>= 3.0.0),
-    rmarkdown
-SystemRequirements: C++17, GNU make, CUDA Toolkit, MSVC
+    rmarkdown,
+    RUnit,
+    BiocGenerics
+SystemRequirements: C++17, GNU make, CUDA Toolkit (<= 12.4), MSVC, libthrust-dev, libcub-dev, gcc (< 14.0)
 Archs: x64
-RoxygenNote: 7.2.3
-biocViews: Sequencing, Alignment, Preprocessing
+RoxygenNote: 7.3.2
+biocViews: Sequencing, Alignment, Preprocessing, Coverage
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 NeedsCompilation: yes
@@ -35,3 +36,5 @@ Author: c(Jacopo Pantaleoni [aut],
   Samuel Simon Sanchez [aut],
   Franck RICHARD [aut, cre])
 Maintainer: Franck RICHARD <franck.richard@winstars.net>
+BugReports: https://github.com/FranckRICHARD01/RbowtieCuda/issues 
+URL: https://github.com/FranckRICHARD01/RbowtieCuda, https://belacqua-labo.ovh/bioinformatic/RbowtieCuda

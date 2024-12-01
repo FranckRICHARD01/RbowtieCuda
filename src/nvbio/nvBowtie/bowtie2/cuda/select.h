@@ -94,6 +94,11 @@ void select_init(BestApproxScoringPipelineState<EditDistanceScoringScheme>& pipe
 ///
 /// Initialize the hit-selection pipeline
 ///
+void select_init(BestApproxScoringPipelineState<WfaScoringScheme<> >& pipeline, const ParamsPOD& params);
+
+///
+/// Initialize the hit-selection pipeline
+///
 void select_init(BestApproxScoringPipelineState<SmithWatermanScoringScheme<> >& pipeline, const ParamsPOD& params);
 
 ///
@@ -140,6 +145,16 @@ void select_n_from_top_range_kernel(
 void select(
     const SelectBestApproxContext                                           context,
     const BestApproxScoringPipelineState<EditDistanceScoringScheme>&        pipeline,
+    const ParamsPOD                                                         params);
+
+///
+/// Prepare for a round of seed extension by selecting the next SA row from each
+/// of the seed-hit deque arrays (SeedHitDequeArray) bound to the active-reads in
+/// the scoring queues (ScoringQueues::active_reads).
+///
+void select(
+    const SelectBestApproxContext                                           context,
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&              pipeline,
     const ParamsPOD                                                         params);
 
 ///

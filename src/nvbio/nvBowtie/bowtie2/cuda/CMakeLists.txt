@@ -4,10 +4,12 @@ aligner_all_ed.cu
 aligner_all_sw.cu
 aligner_all.h
 aligner_best_approx_ed.cu
+aligner_best_approx_wfa.cu
 aligner_best_approx.h
 aligner_best_approx_paired_ed.cu
 aligner_best_approx_paired.h
 aligner_best_approx_paired_sw.cu
+aligner_best_approx_paired_wfa.cu
 aligner_best_approx_sw.cu
 aligner_best_exact.h
 aligner.h
@@ -22,6 +24,8 @@ defs.h
 fmindex_def.h
 input_thread.cpp
 input_thread.h
+output_thread.cpp
+output_thread.h
 locate.h
 locate_inl.h
 mapping.cu

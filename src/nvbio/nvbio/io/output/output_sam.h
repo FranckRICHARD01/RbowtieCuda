@@ -34,6 +34,7 @@
 #include <nvbio/io/output/output_priv.h>
 #include <nvbio/io/sequence/sequence.h>
 #include <nvbio/basic/threads.h>
+#include <vector>
 
 #include <stdio.h>
 
@@ -90,7 +91,7 @@ private:
     };
 
 public:
-    SamOutput(const char *file_name, AlignmentType alignment_type, BNT bnt);
+    SamOutput(const char *file_name, AlignmentType alignment_type, BNT bnt, bool cache_writes_enabled);
     ~SamOutput();
 
     void header() { output_header(); }
@@ -101,13 +102,58 @@ public:
     ///
     void process(struct HostOutputBatchSE& batch);
 
+    void processCacheWrites(struct HostOutputBatchSE& batch);
+
     /// Process a set of alignment results for the current batch.
     ///
     /// \param batch    Handle to the buffers containing the alignment results
     ///
     void process(struct HostOutputBatchPE& batch);
 
+    void processCacheWrites(struct HostOutputBatchPE& batch);
+
+    uint32 outfile_size() 
+    {
+        if (write_thread_data)
+            return mystrcat(write_thread_data, "");
+        else
+            return 0;
+    };
+
     void close(void);
+
+    FILE* get_file_pointer() { return fp; };
+
+    char* get_write_thread_data() 
+    {
+        if (write_thread_data) 
+            return &write_thread_data[0];
+        else
+            return nullptr;
+    };
+
+    void reset_data_file() 
+    { 
+        if (write_thread_data) 
+            mystrcat(write_thread_data, "" , true); 
+    }
+
+    uint32 mystrcat( char* dest, const char* src, bool init = false )
+    {
+        static uint32 p = 0;
+
+        if (init) { p = 0; dest[0] = 0; return 0; }
+
+        //if (src[0] == 0) return p;
+
+        dest += p;
+
+        while (*src) { *dest++ = *src++; p++; }
+
+        --dest;
+
+        return p;
+    }
 
 private:
     // write a printf-style formatted string to the file (preceded by a \t)
@@ -115,19 +161,27 @@ private:
     // write a plain string
     // tab controls whether to output a \t before the string
     void write_string(const char *str, bool tab = true);
-    // write an integer
+    void write_string(char* result, const char *str, bool tab = true);
+    // write an integer   
     template <typename T> void write_int(T i, bool tab = true);
+    template <typename T> void write_int(char * result, T i, bool tab = true);
     // add a line break
     void linebreak();
+    void linebreak(char * result);
 
     // write a SAM tag
     template <typename T>
     void write_tag(const char *name, T value);
+    template <typename T>
+    void write_tag(char * result, const char *name, T value);
 
     // output the SAM file header
     void output_header(void);
     // output an alignment
     void output_alignment(const struct SamAlignment& aln);
+
+    // output an alignment
+    void output_alignment(char* result, const struct SamAlignment& aln);
 
     // process a single alignment from the stream and output it
     uint32 process_one_alignment(const AlignmentData& alignment,
@@ -139,10 +193,8 @@ private:
     // generate the MD string from the internal representation
     uint32 generate_md_string(SamAlignment& sam_align, const AlignmentData& alignment);
 
-    // our file pointer
-    FILE *fp;
-
-    Mutex mutex;
+ 
+    Mutex mutex;    
 };
 
 } // namespace io

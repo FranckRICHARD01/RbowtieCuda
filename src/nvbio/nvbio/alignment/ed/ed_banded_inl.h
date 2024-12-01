@@ -58,7 +58,8 @@ template <
     typename pattern_type,
     typename qual_type,
     typename text_type,
-    typename sink_type>
+    typename sink_type,
+    typename wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_score(
     const EditDistanceAligner<TYPE>&  aligner,
@@ -66,7 +67,8 @@ bool banded_alignment_score(
     qual_type                         quals,
     text_type                         text,
     const int32                       min_score,
-    sink_type&                        sink)
+    sink_type&                        sink,
+    wfa_type&                         wfa)
 {
     return banded_alignment_score<BAND_LEN>(
         make_smith_waterman_aligner<TYPE>( EditDistanceSWScheme() ),
@@ -74,7 +76,8 @@ bool banded_alignment_score(
         quals,
         text,
         min_score,
-        sink );
+        sink,
+        wfa);
 }
 
 ///
@@ -97,7 +100,8 @@ template <
     typename qual_type,
     typename text_type,
     typename sink_type,
-    typename checkpoint_type>
+    typename checkpoint_type,
+    typename wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_score(
     const EditDistanceAligner<TYPE>&  aligner,
@@ -108,7 +112,8 @@ bool banded_alignment_score(
     const uint32                      window_begin,
     const uint32                      window_end,
     sink_type&                        sink,
-    checkpoint_type                   checkpoint)
+    checkpoint_type                   checkpoint,
+    wfa_type&                         wfa)
 {
     return banded_alignment_score<BAND_LEN>(
         make_smith_waterman_aligner<TYPE>( EditDistanceSWScheme() ),
@@ -119,8 +124,10 @@ bool banded_alignment_score(
         window_begin,
         window_end,
         sink,
-        checkpoint );
+        checkpoint,
+        wfa );
 }
+
 
 ///
 /// Calculate the banded edit distance between a pattern and a text string
@@ -152,7 +159,8 @@ template <
     typename        qual_type,
     typename        text_type,
     typename        sink_type,
-    typename        checkpoint_type>
+    typename        checkpoint_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_checkpoints(
     const EditDistanceAligner<TYPE>&  aligner,
@@ -161,7 +169,8 @@ bool banded_alignment_checkpoints(
     text_type                         text,
     const int32                       min_score,
     sink_type&                        sink,
-    checkpoint_type                   checkpoints)
+    checkpoint_type                   checkpoints,
+    wfa_type&                         wfa)
 {
     return banded_alignment_checkpoints<BAND_LEN,CHECKPOINTS>(
         make_smith_waterman_aligner<TYPE>( EditDistanceSWScheme() ),
@@ -170,7 +179,8 @@ bool banded_alignment_checkpoints(
         text,
         min_score,
         sink,
-        checkpoints );
+        checkpoints,
+        wfa );
 }
 
 ///
@@ -213,7 +223,8 @@ template <
     typename        qual_string,
     typename        text_string,
     typename        checkpoint_type,
-    typename        submatrix_type>
+    typename        submatrix_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 uint32 banded_alignment_submatrix(
     const EditDistanceAligner<TYPE>&  aligner,
@@ -223,7 +234,8 @@ uint32 banded_alignment_submatrix(
     const int32                       min_score,
     checkpoint_type                   checkpoints,
     const uint32                      checkpoint_id,
-    submatrix_type                    submatrix)
+    submatrix_type                    submatrix,
+    wfa_type&                         wfa)
 {
     return banded_alignment_submatrix<BAND_LEN,CHECKPOINTS>(
         make_smith_waterman_aligner<TYPE>( EditDistanceSWScheme() ),
@@ -233,8 +245,10 @@ uint32 banded_alignment_submatrix(
         min_score,
         checkpoints,
         checkpoint_id,
-        submatrix );
+        submatrix,
+        wfa );
 }
+
 
 ///
 /// Given the banded edit distance Dynamic Programming submatrix between two checkpoints,
@@ -276,7 +290,8 @@ template <
     AlignmentType   TYPE,
     typename        checkpoint_type,
     typename        submatrix_type,
-    typename        backtracer_type>
+    typename        backtracer_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_traceback(
     const EditDistanceAligner<TYPE>&  aligner,
@@ -286,7 +301,8 @@ bool banded_alignment_traceback(
     const uint32                      submatrix_height,
           uint8&                      state,
           uint2&                      sink,
-    backtracer_type&                  backtracer)
+    backtracer_type&                  backtracer,
+    wfa_type&                         wfa)
 {
     return banded_alignment_traceback<BAND_LEN,CHECKPOINTS>(
         make_smith_waterman_aligner<TYPE>( EditDistanceSWScheme() ),
@@ -296,7 +312,8 @@ bool banded_alignment_traceback(
         submatrix_height,
         state,
         sink,
-        backtracer );
+        backtracer,
+        wfa );
 }
 
 /// @} // end of private group

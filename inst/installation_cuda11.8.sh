@@ -7,11 +7,24 @@
 # verify the installation
 ###
 
+### continue ?
+echo "Please note that this script will first delete old nvidia libraries and old nvidia drivers 
+from your system. Be careful if you're using containers that use these components,
+as they may also be deleted during this operation."
+while true; do
+    read -p "Do you wish to continue (y/n)?" yn
+    case $yn in
+        [Yy]* ) break;;
+        [Nn]* ) exit;;
+        * ) echo "Please answer yes (Y) or no (N).";;
+    esac
+done
+
 ### to verify your gpu is cuda enable check
 lspci | grep -i nvidia
 
 ### If you have previous installation remove it first. 
-sudo apt-get purge nvidia*
+sudo apt-get purge nvidia* libnvidia*
 sudo apt remove nvidia-*
 sudo rm /etc/apt/sources.list.d/cuda*
 sudo apt-get autoremove && sudo apt-get autoclean
@@ -22,16 +35,16 @@ sudo apt-get update
 sudo apt-get upgrade
 
 # install other import packages
-sudo apt-get install g++ freeglut3-dev build-essential libx11-dev libxmu-dev libxi-dev libglu1-mesa libglu1-mesa-dev
+sudo apt-get install g++ freeglut3-dev build-essential libx11-dev libxmu-dev libxi-dev libglu1-mesa libglu1-mesa-dev libthrust-dev libcub-dev
 
 # first get the PPA repository driver
 sudo add-apt-repository ppa:graphics-drivers/ppa
 sudo apt update
 
 # install nvidia driver with dependencies
-sudo apt install libnvidia-common-515
-sudo apt install libnvidia-gl-515
-sudo apt install nvidia-driver-515
+sudo apt install libnvidia-common-535
+sudo apt install libnvidia-gl-535
+sudo apt install nvidia-driver-535
 
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-ubuntu2204.pin
 sudo mv cuda-ubuntu2204.pin /etc/apt/preferences.d/cuda-repository-pin-600

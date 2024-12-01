@@ -578,7 +578,8 @@ struct hamming_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_
         typename ref_type,
         typename scoring_type,
         typename sink_type,
-        typename column_type>
+        typename column_type,
+        typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static
     bool run(
@@ -591,7 +592,8 @@ struct hamming_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_
               sink_type&    sink,
         const uint32        window_begin,
         const uint32        window_end,
-        column_type         temp)
+        column_type         temp,
+        wfa_type&           wfa)
     {
         const uint32 M = query.length();
         const uint32 N = ref.length();
@@ -799,7 +801,8 @@ struct hamming_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_
         typename qual_type,
         typename ref_type,
         typename scoring_type,
-        typename sink_type>
+        typename sink_type,
+        typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static
     bool run(
@@ -811,7 +814,8 @@ struct hamming_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_
         const int32         min_score,
               sink_type&    sink,
         const uint32        window_begin,
-        const uint32        window_end)
+        const uint32        window_end,
+        wfa_type&           wfa)
     {
         // instantiated a local memory array
         int16  temp[MAX_REF_LEN];
@@ -827,7 +831,8 @@ struct hamming_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_
             sink,
             window_begin,
             window_end,
-            temp_ptr );
+            temp_ptr,
+            wfa );
     }
 };
 
@@ -999,7 +1004,8 @@ struct hamming_alignment_score_dispatch<BAND_LEN,TYPE,TextBlockingTag,symbol_typ
         typename ref_type,
         typename scoring_type,
         typename sink_type,
-        typename column_type>
+        typename column_type,
+        typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static
     bool run(
@@ -1012,7 +1018,8 @@ struct hamming_alignment_score_dispatch<BAND_LEN,TYPE,TextBlockingTag,symbol_typ
               sink_type&    sink,
         const uint32        window_begin,
         const uint32        window_end,
-        column_type         temp)
+        column_type         temp,
+        wfa_type&           wfa)
     {
         const uint32 M = query.length();
         const uint32 N = ref.length();
@@ -1245,7 +1252,8 @@ struct hamming_alignment_score_dispatch<BAND_LEN,TYPE,TextBlockingTag,symbol_typ
         typename qual_type,
         typename ref_type,
         typename scoring_type,
-        typename sink_type>
+        typename sink_type,
+        typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static
     bool run(
@@ -1257,7 +1265,8 @@ struct hamming_alignment_score_dispatch<BAND_LEN,TYPE,TextBlockingTag,symbol_typ
         const int32         min_score,
               sink_type&    sink,
         const uint32        window_begin,
-        const uint32        window_end)
+        const uint32        window_end,
+        wfa_type&           wfa)
     {
         // instantiated a local memory array
         int16  temp[MAX_PATTERN_LEN];
@@ -1273,7 +1282,8 @@ struct hamming_alignment_score_dispatch<BAND_LEN,TYPE,TextBlockingTag,symbol_typ
             sink,
             window_begin,
             window_end,
-            temp_ptr );
+            temp_ptr,
+            wfa );
     }
 };
 
@@ -1331,7 +1341,7 @@ struct alignment_score_dispatch<
     ///
     /// \return             true iff the minimum score was reached
     ///
-    template <typename sink_type>
+    template <typename sink_type, typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static bool dispatch(
         const aligner_type      aligner,
@@ -1340,7 +1350,8 @@ struct alignment_score_dispatch<
         const text_string       text,
         const  int32            min_score,
               sink_type&        sink,
-              column_type       column)
+              column_type       column,
+              wfa_type&         wfa)
     {
         typedef typename pattern_string::value_type    symbol_type;
 
@@ -1350,7 +1361,7 @@ struct alignment_score_dispatch<
 
         const uint32 length = equal<algorithm_tag,PatternBlockingTag>() ? pattern.length() : text.length();
 
-        return hamming_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( aligner.scheme, context, pattern, quals, text, min_score, sink, 0, length, column );
+        return hamming_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( aligner.scheme, context, pattern, quals, text, min_score, sink, 0, length, column, wfa );
     }
 
     /// dispatch scoring in a window of the pattern
@@ -1370,7 +1381,8 @@ struct alignment_score_dispatch<
     ///
     template <
         typename sink_type,
-        typename checkpoint_type>
+        typename checkpoint_type,
+        typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static bool dispatch(
         const aligner_type      aligner,
@@ -1382,7 +1394,8 @@ struct alignment_score_dispatch<
         const uint32            window_end,
               sink_type&        sink,
         checkpoint_type         checkpoint,
-              column_type       column)
+              column_type       column,
+              wfa_type&         wfa)
     {
         typedef typename pattern_string::value_type    symbol_type;
 
@@ -1390,7 +1403,7 @@ struct alignment_score_dispatch<
 
         priv::HammingCheckpointedScoringContext<BAND_LEN,TYPE,algorithm_tag,checkpoint_type> context( checkpoint );
 
-        return hamming_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( aligner.scheme, context, pattern, quals, text, min_score, sink, window_begin, window_end, column );
+        return hamming_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( aligner.scheme, context, pattern, quals, text, min_score, sink, window_begin, window_end, column, wfa );
     }
 
     /// dispatch scoring in a window of the pattern, retaining the intermediate results in the column
@@ -1406,7 +1419,7 @@ struct alignment_score_dispatch<
     ///
     /// \return             true iff the minimum score was reached
     ///
-    template <typename sink_type>
+    template <typename sink_type, typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static bool dispatch(
         const aligner_type      aligner,
@@ -1417,7 +1430,8 @@ struct alignment_score_dispatch<
         const uint32            window_begin,
         const uint32            window_end,
               sink_type&        sink,
-              column_type       column)
+              column_type       column,
+              wfa_type&         wfa)
     {
         typedef typename pattern_string::value_type    symbol_type;
 
@@ -1425,7 +1439,7 @@ struct alignment_score_dispatch<
 
         priv::HammingScoringContext<BAND_LEN,TYPE,algorithm_tag> context;
 
-        return hamming_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( aligner.scheme, context, pattern, quals, text, min_score, sink, window_begin, window_end, column );
+        return hamming_alignment_score_dispatch<BAND_LEN,TYPE,algorithm_tag,symbol_type>::run( aligner.scheme, context, pattern, quals, text, min_score, sink, window_begin, window_end, column, wfa );
     }
 };
 
@@ -1478,7 +1492,8 @@ struct alignment_checkpointed_dispatch<
     ///
     template <
         typename    sink_type,
-        typename    checkpoint_type>
+        typename    checkpoint_type,
+        typename    wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static
     void dispatch_checkpoints(
@@ -1489,7 +1504,8 @@ struct alignment_checkpointed_dispatch<
         const  int32            min_score,
               sink_type&        sink,
         checkpoint_type         checkpoints,
-              column_type       column)
+              column_type       column,
+              wfa_type&         wfa)
     {
         typedef typename pattern_string::value_type    symbol_type;
 
@@ -1497,7 +1513,7 @@ struct alignment_checkpointed_dispatch<
 
         priv::HammingCheckpointContext<BAND_LEN,TYPE,CHECKPOINTS,checkpoint_type> context( checkpoints );
 
-        hamming_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_type>::run( aligner.scheme, context, pattern, quals, text, min_score, sink, 0, pattern.length(), column );
+        hamming_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_type>::run( aligner.scheme, context, pattern, quals, text, min_score, sink, 0, pattern.length(), column, wfa );
     }
 
     ///
@@ -1526,7 +1542,8 @@ struct alignment_checkpointed_dispatch<
     ///
     template <
         typename      checkpoint_type,
-        typename      submatrix_type>
+        typename      submatrix_type,
+        typename      wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     static
     uint32 dispatch_submatrix(
@@ -1538,7 +1555,8 @@ struct alignment_checkpointed_dispatch<
         checkpoint_type         checkpoints,
         const uint32            checkpoint_id,
         submatrix_type          submatrix,
-        column_type             column)
+        column_type             column,
+        wfa_type&               wfa)
     {
         typedef typename pattern_string::value_type     symbol_type;
 
@@ -1551,7 +1569,7 @@ struct alignment_checkpointed_dispatch<
         const uint32 window_end   = nvbio::min( window_begin + CHECKPOINTS, uint32(pattern.length()) );
 
         NullSink null_sink;
-        hamming_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_type>::run( aligner.scheme, context, pattern, quals, text, min_score, null_sink, window_begin, window_end, column );
+        hamming_alignment_score_dispatch<BAND_LEN,TYPE,PatternBlockingTag,symbol_type>::run( aligner.scheme, context, pattern, quals, text, min_score, null_sink, window_begin, window_end, column, wfa );
 
         return window_end - window_begin;
     }
@@ -1598,7 +1616,8 @@ template <
     typename        scoring_type,
     typename        checkpoint_type,
     typename        submatrix_type,
-    typename        output_type>
+    typename        output_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool alignment_traceback(
     const HammingDistanceAligner<TYPE,scoring_type>   aligner,
@@ -1609,7 +1628,8 @@ bool alignment_traceback(
     const uint32                                    submatrix_height,
           uint8&                                    state,
           uint2&                                    sink,
-    output_type&                                    output)
+    output_type&                                    output,
+    wfa_type&                                       wfa)
 {
     //
     // Backtrack from the second checkpoint to the first looking up the flow submatrix.

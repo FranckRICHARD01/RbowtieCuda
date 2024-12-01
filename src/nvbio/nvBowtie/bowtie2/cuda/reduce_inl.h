@@ -183,7 +183,7 @@ void replace_best(
 
     best_pairs.m_a1 = pair.m_a;
     best_pairs.m_o1 = pair.m_o;
-    NVBIO_CUDA_DEBUG_PRINT_IF( params.debug.show_reduce( read_id ), "update best (anchor[%u]):\n  1. score[%d], rc[%u], pos[%u]\n  2. score[%d], rc[%u], pos[%u,%u]\n", pair.m_a.mate(), pair.m_a.score(), pair.m_a.is_rc(), pair.m_a.alignment(), pair.m_o.score(), pair.m_o.is_rc(), pair.m_o.alignment, pair.m_o.alignment() + pair.m_o.sink() );
+    NVBIO_CUDA_DEBUG_PRINT_IF( params.debug.show_reduce( read_id ), "update best (anchor[%u]):\n  1. score[%d], rc[%u], pos[%u]\n  2. score[%d], rc[%u], pos[%u,%u]\n", pair.m_a.mate(), pair.m_a.score(), pair.m_a.is_rc(), pair.m_a.alignment(), pair.m_o.score(), pair.m_o.is_rc(), pair.m_o.alignment(), pair.m_o.alignment() + pair.m_o.sink() );
 }
 
 template <typename ReduceContext>
@@ -199,7 +199,7 @@ void update_second(
 
     best_pairs.m_a2 = pair.m_a;
     best_pairs.m_o2 = pair.m_o;
-    NVBIO_CUDA_DEBUG_PRINT_IF( params.debug.show_reduce( read_id ), "update second (anchor[%u]):\n  1. score[%d], rc[%u], pos[%u]\n  2. score[%d], rc[%u], pos[%u,%u]\n", pair.m_a.mate(), pair.m_a.score(), pair.m_a.is_rc(), pair.m_a.alignment(), pair.m_o.score(), pair.m_o.is_rc(), pair.m_o.alignment, pair.m_o.alignment() + pair.m_o.sink() );
+    NVBIO_CUDA_DEBUG_PRINT_IF( params.debug.show_reduce( read_id ), "update second (anchor[%u]):\n  1. score[%d], rc[%u], pos[%u]\n  2. score[%d], rc[%u], pos[%u,%u]\n", pair.m_a.mate(), pair.m_a.score(), pair.m_a.is_rc(), pair.m_a.alignment(), pair.m_o.score(), pair.m_o.is_rc(), pair.m_o.alignment(), pair.m_o.alignment() + pair.m_o.sink() );
 }
 
 template <typename ReduceContext>
@@ -299,7 +299,7 @@ void update_second(
     context.second_score( read_id, params ); // pretend we did find something useful, even though for unpaired alignments
 
     a2 = a;
-    NVBIO_CUDA_DEBUG_PRINT_IF( params.debug.show_reduce( read_id ), "update second unpaired[%u]:\n  score[%d], rc[%u], pos[%u]\n", a.mate(), i, a.score(), a.is_rc(), a.alignment() );
+    NVBIO_CUDA_DEBUG_PRINT_IF( params.debug.show_reduce( read_id ), "update second unpaired[%u]:\n  score[%d], rc[%u], pos[%u]\n", a.mate(), a.score(), a.is_rc(), a.alignment() );
 }
 
 template <typename ReduceContext>
@@ -480,7 +480,7 @@ void score_reduce_paired_kernel(
         {
             // stop traversal
             pipeline.hits.erase( read_id );
-            //NVBIO_CUDA_DEBUG_PRINT_IF( params.debug.show_reduce( read_id ), "discard:  (parent[%u:%u])\n  score[%d + %d], rc[%u], pos[%u]\n", anchor, thread_id, i, score_a, score_o, read_rc, g_pos );
+            NVBIO_CUDA_DEBUG_PRINT_IF( params.debug.show_reduce( read_id ), "discard: anchor %u (parent[%u:%u])\n  score[%d + %d], rc[%u], pos[%u]\n", anchor, thread_id, i, score_a, score_o, read_rc, g_pos.x );
         }
     }
 

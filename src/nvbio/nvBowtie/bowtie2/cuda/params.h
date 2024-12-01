@@ -48,6 +48,7 @@ enum MappingMode {
 enum ScoringMode {
     EditDistanceMode  = 0,
     SmithWatermanMode = 1,
+    WfaMode = 2,
 };
 
 static const char* s_mapping_mode[] = {
@@ -72,7 +73,8 @@ inline uint32 mapping_mode(const char* str)
 
 static const char* s_scoring_mode[] = {
     "ed",
-    "sw"
+    "sw",
+    "wfa"
 };
 inline const char* scoring_mode(const uint32 mode)
 {
@@ -85,6 +87,8 @@ inline uint32 scoring_mode(const char* str)
         return EditDistanceMode;
     else if (strcmp( str, "sw" ) == 0)
         return SmithWatermanMode;
+    else if (strcmp( str, "wfa" ) == 0)
+        return WfaMode;
     else
         return EditDistanceMode;
 }
@@ -151,6 +155,8 @@ struct Params : public ParamsPOD
     std::string   persist_file;
 
     int32         no_multi_hits;
+
+    bool          cache_writes;
 };
 
 ///

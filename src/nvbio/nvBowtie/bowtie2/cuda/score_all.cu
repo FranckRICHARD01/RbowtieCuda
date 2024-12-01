@@ -89,6 +89,34 @@ uint32 score_all(
     return score_all_t( band_len, pipeline, params, buffer_offset, buffer_size );
 }
 
+//
+// execute a batch of single-ended banded-alignment score calculations, all-mapping
+//
+// \b inputs:
+//  - HitQueues::seed
+//  - HitQueues::loc
+//
+// \b outputs:
+//  - HitQueues::score
+//  - HitQueues::sink
+//
+// \param band_len             alignment band length
+// \param pipeline             all mapping pipeline
+// \param params               alignment params
+// \param buffer_offset        ring buffer offset
+// \param buffer_size          ring buffer size
+// \return                     number of valid alignments
+uint32 score_all(
+    const uint32                                                    band_len,
+    const AllMappingPipelineState<WfaScoringScheme<> >&             pipeline,
+    const ParamsPOD&                                                params,
+    const uint32                                                    buffer_offset,
+    const uint32                                                    buffer_size)
+{
+    return score_all_t( band_len, pipeline, params, buffer_offset, buffer_size );
+}
+
+
 } // namespace cuda
 } // namespace bowtie2
 } // namespace nvbio

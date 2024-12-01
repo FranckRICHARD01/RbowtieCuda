@@ -37,12 +37,14 @@
 #include <cstdarg>
 #include <map>
 
-#define MGPU_RAND_NS std::tr1
+
 
 #ifdef _MSC_VER
 #include <random>
+#define MGPU_RAND_NS std
 #else
 #include <tr1/random>
+#define MGPU_RAND_NS std::tr1
 #endif
 
 namespace mgpu {

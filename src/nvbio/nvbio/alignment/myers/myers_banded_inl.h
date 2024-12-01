@@ -306,7 +306,8 @@ template <
     typename pattern_type,
     typename qual_type,
     typename text_type,
-    typename sink_type>
+    typename sink_type,
+    typename wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_score(
     const EditDistanceAligner<TYPE, MyersTag<ALPHABET_SIZE> >&  aligner,
@@ -314,7 +315,8 @@ bool banded_alignment_score(
     qual_type                                                   quals,
     text_type                                                   text,
     const int32                                                 min_score,
-    sink_type&                                                  sink)
+    sink_type&                                                  sink,
+    wfa_type&                                                   wfa)
 {
     return banded_myers<BAND_LEN,0u,TYPE,ALPHABET_SIZE>(
         pattern,
@@ -344,7 +346,8 @@ template <
     typename qual_type,
     typename text_type,
     typename sink_type,
-    typename checkpoint_type>
+    typename checkpoint_type,
+    typename wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool banded_alignment_score(
     const EditDistanceAligner<TYPE, MyersTag<ALPHABET_SIZE> >&  aligner,
@@ -355,7 +358,8 @@ bool banded_alignment_score(
     const uint32                                                window_begin,
     const uint32                                                window_end,
     sink_type&                                                  sink,
-    checkpoint_type                                             checkpoint)
+    checkpoint_type                                             checkpoint,
+    wfa_type&                                                   wfa )
 {
     return banded_myers<BAND_LEN,0u,TYPE,ALPHABET_SIZE>(
         pattern,

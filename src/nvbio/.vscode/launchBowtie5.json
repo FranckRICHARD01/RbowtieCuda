@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+           
+        {
+            "cwd": "/home/karlhal/bioinformatic2/code/RbowtieCuda/src/nvbio/build_deb/sw-benchmark",
+            "type": "cuda-gdb",
+            "request": "launch",
+            "name": "Lancer le programme",
+            "breakOnLaunch": false,
+            "args": "-tests wfa '/home/karlhal/Documents/essai 1/fastq/1M_SRR9336468_1.fastq' '/home/karlhal/Documents/essai 1/chromosomes/Saccharomyces_cerevisiae.R64-1-1.dna.toplevel.fa' ",
+            "program": "/home/karlhal/bioinformatic2/code/RbowtieCuda/src/nvbio/build_deb/sw-benchmark/sw-benchmark"
+        }
+    ]
+}

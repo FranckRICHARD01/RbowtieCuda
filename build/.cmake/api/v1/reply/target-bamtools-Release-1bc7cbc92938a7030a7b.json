@@ -1,0 +1,253 @@
+{
+	"archive" : {},
+	"artifacts" : 
+	[
+		{
+			"path" : "contrib/bamtools/libbamtools.a"
+		}
+	],
+	"backtrace" : 2,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"cuda_add_library",
+			"add_definitions",
+			"include_directories",
+			"CUDA_ADD_CUDA_INCLUDE_ONCE"
+		],
+		"files" : 
+		[
+			"/usr/share/cmake-3.30/Modules/FindCUDA.cmake",
+			"contrib/bamtools/CMakeLists.txt",
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 19,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 2015,
+				"parent" : 1
+			},
+			{
+				"file" : 2
+			},
+			{
+				"command" : 2,
+				"file" : 2,
+				"line" : 63,
+				"parent" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 113,
+				"parent" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 114,
+				"parent" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 116,
+				"parent" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 117,
+				"parent" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 118,
+				"parent" : 3
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 7,
+				"parent" : 0
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 2000,
+				"parent" : 1
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 1393,
+				"parent" : 11
+			},
+			{
+				"command" : 3,
+				"file" : 2,
+				"line" : 119,
+				"parent" : 3
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : " -Wall -Wno-unknown-pragmas -Wstrict-aliasing=0 -Wno-unused-local-typedefs -Wno-unused-result -O3 -fopenmp -O3 -DNDEBUG -msse4.2 -mpopcnt -funroll-loops -std=gnu++17"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 4,
+					"define" : "PLATFORM_X86"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 5,
+					"path" : "/home/karlhal/bioinformatic2/code/RbowtieCuda/src/nvbio"
+				},
+				{
+					"backtrace" : 6,
+					"path" : "/home/karlhal/bioinformatic2/code/RbowtieCuda/src/nvbio/contrib"
+				},
+				{
+					"backtrace" : 7,
+					"path" : "/home/karlhal/bioinformatic2/code/RbowtieCuda/src/nvbio/contrib/crc"
+				},
+				{
+					"backtrace" : 8,
+					"path" : "/home/karlhal/bioinformatic2/code/RbowtieCuda/src/nvbio/contrib/bamtools"
+				},
+				{
+					"backtrace" : 9,
+					"path" : "/usr/local/cuda/targets/x86_64-linux/include"
+				},
+				{
+					"backtrace" : 10,
+					"path" : "/home/karlhal/bioinformatic2/code/RbowtieCuda/build/contrib/bamtools"
+				},
+				{
+					"backtrace" : 10,
+					"path" : "/home/karlhal/bioinformatic2/code/RbowtieCuda/src/nvbio/nvbio"
+				},
+				{
+					"backtrace" : 12,
+					"path" : "/usr/local/cuda/include"
+				},
+				{
+					"backtrace" : 13,
+					"isSystem" : true,
+					"path" : "/home/karlhal/bioinformatic2/code/RbowtieCuda/src/nvbio/contrib/moderngpu/include"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					2
+				],
+				"standard" : "17"
+			},
+			"sourceIndexes" : 
+			[
+				1,
+				3,
+				5
+			]
+		}
+	],
+	"id" : "bamtools::@ac25ea42c1c680d2b6b5",
+	"name" : "bamtools",
+	"nameOnDisk" : "libbamtools.a",
+	"paths" : 
+	{
+		"build" : "contrib/bamtools",
+		"source" : "contrib/bamtools"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				0,
+				2,
+				4,
+				6
+			]
+		},
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				1,
+				3,
+				5
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 2,
+			"path" : "contrib/bamtools/BamAux.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "contrib/bamtools/BamReader.cpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "contrib/bamtools/BamReader.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "contrib/bamtools/BamWriter.cpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "contrib/bamtools/BamWriter.h",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "contrib/bamtools/BGZF.cpp",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "contrib/bamtools/BGZF.h",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}

@@ -33,12 +33,14 @@
 #include <nvbio/alignment/sw/sw_inl.h>
 #include <nvbio/alignment/ed/ed_inl.h>
 #include <nvbio/alignment/gotoh/gotoh_inl.h>
+#include <nvbio/alignment/wfah/wfah_inl.h>
 #include <nvbio/alignment/hamming/hamming_inl.h>
 
 #if defined(__CUDACC__)
 #include <nvbio/alignment/sw/sw_warp_inl.h>
 #include <nvbio/alignment/ed/ed_warp_inl.h>
 #include <nvbio/alignment/gotoh/gotoh_warp_inl.h>
+#include <nvbio/alignment/wfah/wfah_warp_inl.h>
 #endif
 
 namespace nvbio {
@@ -60,7 +62,8 @@ template <
     typename        qual_string,
     typename        text_string,
     typename        sink_type,
-    typename        column_type>
+    typename        column_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool alignment_score(
     const aligner_type      aligner,
@@ -69,7 +72,8 @@ bool alignment_score(
     const text_string       text,
     const  int32            min_score,
           sink_type&        sink,
-          column_type       column)
+          column_type       column,
+          wfa_type&         wfa)
 {
     typedef priv::alignment_score_dispatch<aligner_type,pattern_string,qual_string,text_string,column_type> dispatcher;
     return dispatcher::dispatch(
@@ -79,7 +83,8 @@ bool alignment_score(
         text,
         min_score,
         sink,
-        column );
+        column,
+        wfa );
 }
 
 // a function to compute the alignment score between a pattern and a text string 
@@ -98,7 +103,8 @@ template <
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        sink_type>
+    typename        sink_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool alignment_score(
     const aligner_type      aligner,
@@ -106,7 +112,8 @@ bool alignment_score(
     const qual_string       quals,
     const text_string       text,
     const  int32            min_score,
-          sink_type&        sink)
+          sink_type&        sink,
+          wfa_type&         wfa)
 {
     typedef typename column_storage_type<aligner_type>::type    cell_type;
 
@@ -120,7 +127,8 @@ bool alignment_score(
         text,
         min_score,
         sink,
-        column );
+        column,
+        wfa );
 }
 
 // a function to compute the alignment score between a pattern and a text string 
@@ -141,7 +149,8 @@ template <
     typename        text_string,
     typename        sink_type,
     typename        column_type,
-    typename        checkpoint_type>
+    typename        checkpoint_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool alignment_score(
     const aligner_type      aligner,
@@ -153,7 +162,8 @@ bool alignment_score(
     const uint32            window_end,
           sink_type&        sink,
           checkpoint_type   checkpoint,
-          column_type       column)
+          column_type       column,
+          wfa_type&         wfa)
 {
      typedef priv::alignment_score_dispatch<aligner_type,pattern_string,qual_string,text_string,column_type> dispatcher;
      return dispatcher::dispatch(
@@ -166,7 +176,8 @@ bool alignment_score(
         window_end,
         sink,
         checkpoint,
-        column );
+        column,
+        wfa );
 }
 
 // a function to compute the alignment score between a pattern and a text string 
@@ -187,7 +198,8 @@ template <
     typename        qual_string,
     typename        text_string,
     typename        sink_type,
-    typename        column_type>
+    typename        column_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 bool alignment_score(
     const aligner_type      aligner,
@@ -198,7 +210,8 @@ bool alignment_score(
     const uint32            window_begin,
     const uint32            window_end,
           sink_type&        sink,
-          column_type       column)
+          column_type       column,
+          wfa_type&         wfa)
 {
      typedef priv::alignment_score_dispatch<aligner_type,pattern_string,qual_string,text_string,column_type> dispatcher;
      return dispatcher::dispatch(
@@ -210,7 +223,8 @@ bool alignment_score(
         window_begin,
         window_end,
         sink,
-        column );
+        column,
+        wfa );
 }
 
 //
@@ -233,7 +247,8 @@ template <
     typename        text_string,
     typename        sink_type,
     typename        checkpoint_type,
-    typename        column_type>
+    typename        column_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 void alignment_score_checkpoints(
     const aligner_type      aligner,
@@ -243,7 +258,8 @@ void alignment_score_checkpoints(
     const  int32            min_score,
           sink_type&        sink,
           checkpoint_type   checkpoints,
-          column_type       column)
+          column_type       column,
+          wfa_type&         wfa)
 {
     typedef priv::alignment_checkpointed_dispatch<CHECKPOINTS,aligner_type,pattern_string,qual_string,text_string,column_type> dispatcher;
     dispatcher::dispatch_checkpoints(
@@ -254,7 +270,8 @@ void alignment_score_checkpoints(
         min_score,
         sink,
         checkpoints,
-        column );
+        column,
+        wfa );
 }
 
 //
@@ -296,7 +313,8 @@ template <
     typename        text_string,
     typename        column_type,
     typename        checkpoint_type,
-    typename        submatrix_type>
+    typename        submatrix_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 uint32 alignment_score_submatrix(
     const aligner_type      aligner,
@@ -307,7 +325,8 @@ uint32 alignment_score_submatrix(
     checkpoint_type         checkpoints,
     const uint32            checkpoint_id,
     submatrix_type          submatrix,
-    column_type             column)
+    column_type             column,
+    wfa_type&               wfa)
 {
     typedef priv::alignment_checkpointed_dispatch<CHECKPOINTS,aligner_type,pattern_string,qual_string,text_string,column_type> dispatcher;
     return dispatcher::dispatch_submatrix(
@@ -319,7 +338,8 @@ uint32 alignment_score_submatrix(
         checkpoints,
         checkpoint_id,
         submatrix,
-        column );
+        column,
+        wfa );
 }
 
 //
@@ -360,7 +380,8 @@ template <
     typename        backtracer_type,
     typename        checkpoints_type,
     typename        submatrix_type,
-    typename        column_type>
+    typename        column_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 Alignment<int32> alignment_traceback(
     const aligner_type      aligner,
@@ -371,7 +392,8 @@ Alignment<int32> alignment_traceback(
     backtracer_type&        backtracer,
     checkpoints_type        checkpoints,
     submatrix_type          submatrix,
-    column_type             column)
+    column_type             column,
+    wfa_type&               wfa)
 {
     //
     // This function performs backtracing in a completely generic fashion that works
@@ -400,7 +422,7 @@ Alignment<int32> alignment_traceback(
     // compute a set of checkpoints along the pattern
     BestSink<int32> best;
     alignment_score_checkpoints<CHECKPOINTS>(
-        aligner, pattern, quals, text, min_score, best, checkpoints, column );
+        aligner, pattern, quals, text, min_score, best, checkpoints, column, wfa );
 
     const uint32 n_checkpoints = (pattern.length() + CHECKPOINTS-1)/CHECKPOINTS;
 
@@ -432,10 +454,10 @@ Alignment<int32> alignment_traceback(
     for (; checkpoint_id >= 0; --checkpoint_id)
     {
         const uint32 submatrix_width = alignment_score_submatrix<CHECKPOINTS>(
-            aligner, pattern, quals, text, min_score, checkpoints, checkpoint_id, submatrix, column );
+            aligner, pattern, quals, text, min_score, checkpoints, checkpoint_id, submatrix, column, wfa );
 
         if (priv::alignment_traceback<CHECKPOINTS>(
-            aligner, checkpoints, checkpoint_id, submatrix, submatrix_width, submatrix_height, state, sink, backtracer ))
+            aligner, checkpoints, checkpoint_id, submatrix, submatrix_width, submatrix_height, state, sink, backtracer, wfa ))
             break;
     }
 
@@ -493,7 +515,8 @@ template <
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        backtracer_type>
+    typename        backtracer_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 Alignment<int32> alignment_traceback(
     const aligner_type      aligner,
@@ -501,7 +524,8 @@ Alignment<int32> alignment_traceback(
     const qual_string       quals,
     const text_string       text,
     const int32             min_score,
-    backtracer_type&        backtracer)
+    backtracer_type&        backtracer,
+    wfa_type&               wfa)
 {
     typedef typename checkpoint_storage_type<aligner_type>::type checkpoint_type;
     typedef typename column_storage_type<aligner_type>::type     cell_type;
@@ -525,7 +549,8 @@ Alignment<int32> alignment_traceback(
         backtracer,
         checkpoints,
         submatrix,
-        column );
+        column,
+        wfa );
 }
 
 #if defined(__CUDACC__)
@@ -559,7 +584,8 @@ template <
     typename        pattern_string,
     typename        qual_string,
     typename        text_string,
-    typename        column_type>
+    typename        column_type,
+    typename        wfa_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 int32 alignment_score(
     const aligner_type      aligner,
@@ -568,7 +594,8 @@ int32 alignment_score(
     const text_string       text,
     const  int32            min_score,
           uint2*            sink,
-          column_type       column)
+          column_type       column,
+          wfa_type&         wfa)
 {
     return priv::alignment_score<BLOCKDIM>(
         aligner,
@@ -577,7 +604,8 @@ int32 alignment_score(
         text,
         min_score,
         sink,
-        column );
+        column,
+        wfa );
 }
 
 } // namespace warp

@@ -104,6 +104,7 @@ template <typename T> struct transpose_aligner {};
 
 struct SmithWatermanTag {}; ///< the Smith-Waterman aligner tag
 struct GotohTag {};         ///< the Gotoh aligner tag
+struct WfahTag {};          ///< the Wfah aligner tag
 struct EditDistanceTag {};  ///< the Edit Distance aligner tag
 struct HammingDistanceTag {};  ///< the Hamming Distance aligner tag
 
@@ -143,6 +144,7 @@ enum DirectionVector {
     SINK           = 3u,
     INSERTION_EXT  = 4u,
     DELETION_EXT   = 8u,
+
     // MASKS
     HMASK          = 3u,
     EMASK          = 4u,
@@ -167,6 +169,7 @@ enum State
 ///     - EditDistanceAligner
 ///     - SmithWatermanAligner
 ///     - GotohAligner
+///     - WfaAligner
 ///@{
 ///
 
@@ -215,6 +218,7 @@ EditDistanceAligner<TYPE,PatternBlockingTag> transpose(const EditDistanceAligner
 {
     return EditDistanceAligner<TYPE,PatternBlockingTag>();
 }
+
 
 /// A Gotoh alignment algorithm, see \ref Aligner
 /// \anchor GotohAligner
@@ -295,6 +299,87 @@ template <AlignmentType TYPE, typename scoring_scheme_type>
 GotohAligner<TYPE,scoring_scheme_type,PatternBlockingTag> transpose(const GotohAligner<TYPE,scoring_scheme_type,TextBlockingTag>& aligner)
 {
     return GotohAligner<TYPE,scoring_scheme_type,PatternBlockingTag>( aligner.scheme );
+}
+
+/// A Wfah alignment algorithm, see \ref Aligner
+/// \anchor WfahAligner
+///
+/// \tparam T_TYPE                  specifies whether the alignment is LOCAL/SEMI_GLOBAL/GLOBAL
+/// \tparam scoring_scheme_type     specifies the scoring scheme, a model of \ref WfahScoringScheme
+/// \tparam AlgorithmType           specifies the \ref AlgorithmTag "Algorithm Tag"
+///
+///\section WfahScoringScheme Wfah Scoring Scheme
+/// A Gotoh scoring scheme is a class exposing the following interface:
+///
+/// \code
+/// struct WfahScoringScheme
+/// {
+///     // the maximum match bonus at a given quality q 
+///     int32 match(const uint8 q = 0) const;
+///
+///     // the substitution score of text and pattern bases (t,p),
+///     // at positions (t_i,p_j), with a given pattern quality q
+///     int32 substitution(
+///         const uint32 t_i, const uint32 p_j,
+///         const uint8  t,   const uint8  p,   const uint8 q = 0) const;
+///
+///     // the pattern gap open cost
+///     int32 pattern_gap_open()       const;
+///
+///     // the pattern gap extension cost
+///     int32 pattern_gap_extension()  const;
+///
+///     // the text gap open cost
+///     int32 text_gap_open()          const;
+///
+///     // the text gap extension cost
+///     int32 text_gap_extension()     const;
+/// };
+/// \endcode
+///
+template <AlignmentType T_TYPE, typename scoring_scheme_type, typename AlgorithmType = PatternBlockingTag>
+struct WfahAligner
+{
+    static const AlignmentType TYPE =   T_TYPE;         ///< the AlignmentType
+
+    typedef WfahTag                    aligner_tag;    ///< the \ref AlignerTag "Aligner Tag"
+    typedef AlgorithmType               algorithm_tag;  ///< the \ref AlgorithmTag "Algorithm Tag"
+ 
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+    WfahAligner(const scoring_scheme_type _scheme) : scheme(_scheme) {}
+
+    scoring_scheme_type scheme;
+};
+
+template <AlignmentType T_TYPE, typename scoring_scheme_type, typename AlgorithmTag>
+struct transpose_aligner< WfahAligner<T_TYPE, scoring_scheme_type, AlgorithmTag> >
+{
+    typedef WfahAligner<T_TYPE, scoring_scheme_type, typename transpose_tag<AlgorithmTag>::type> type;
+};
+
+template <AlignmentType TYPE, typename scoring_scheme_type>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+WfahAligner<TYPE,scoring_scheme_type> make_wfah_aligner(const scoring_scheme_type& scheme)
+{
+    return WfahAligner<TYPE,scoring_scheme_type>( scheme );
+}
+
+template <AlignmentType TYPE, typename algorithm_tag, typename scoring_scheme_type>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+WfahAligner<TYPE,scoring_scheme_type,algorithm_tag> make_wfah_aligner(const scoring_scheme_type& scheme)
+{
+    return WfahAligner<TYPE,scoring_scheme_type,algorithm_tag>( scheme );
+}
+
+template <AlignmentType TYPE, typename scoring_scheme_type>
+WfahAligner<TYPE,scoring_scheme_type,TextBlockingTag> transpose(const WfahAligner<TYPE,scoring_scheme_type,PatternBlockingTag>& aligner)
+{
+    return WfahAligner<TYPE,scoring_scheme_type,TextBlockingTag>( aligner.scheme );
+}
+template <AlignmentType TYPE, typename scoring_scheme_type>
+WfahAligner<TYPE,scoring_scheme_type,PatternBlockingTag> transpose(const WfahAligner<TYPE,scoring_scheme_type,TextBlockingTag>& aligner)
+{
+    return WfahAligner<TYPE,scoring_scheme_type,PatternBlockingTag>( aligner.scheme );
 }
 
 /// A Smith-Waterman alignment algorithm, see \ref Aligner

@@ -46,10 +46,11 @@ namespace aln {
 template <typename aligner_type> struct checkpoint_storage_type {
     typedef null_type type;    ///< the type of the checkpoint cells
 };
-template <AlignmentType TYPE, typename algorithm_tag>                        struct checkpoint_storage_type< EditDistanceAligner<TYPE,algorithm_tag> >                  { typedef  int16 type; };
+template <AlignmentType TYPE, typename algorithm_tag>                        struct checkpoint_storage_type< EditDistanceAligner<TYPE,algorithm_tag> >                  { typedef  int16 type; };                   
 template <AlignmentType TYPE, typename scoring_type, typename algorithm_tag> struct checkpoint_storage_type< HammingDistanceAligner<TYPE,scoring_type,algorithm_tag> >  { typedef int16 type; };
 template <AlignmentType TYPE, typename scoring_type, typename algorithm_tag> struct checkpoint_storage_type< SmithWatermanAligner<TYPE,scoring_type,algorithm_tag> >    { typedef  int16 type; };
 template <AlignmentType TYPE, typename scoring_type, typename algorithm_tag> struct checkpoint_storage_type< GotohAligner<TYPE,scoring_type,algorithm_tag> >            { typedef short2 type; };
+template <AlignmentType TYPE, typename scoring_type, typename algorithm_tag> struct checkpoint_storage_type< WfahAligner<TYPE,scoring_type,algorithm_tag> >             { typedef  int16 type; };
 
 /// A meta-function returning the type of the column cells for a given \ref Aligner "Aligner"
 ///
@@ -62,6 +63,7 @@ template <AlignmentType TYPE, typename algorithm_tag>                        str
 template <AlignmentType TYPE, typename scoring_type, typename algorithm_tag> struct column_storage_type< HammingDistanceAligner<TYPE,scoring_type,algorithm_tag> >  { typedef  int16 type; };
 template <AlignmentType TYPE, typename scoring_type, typename algorithm_tag> struct column_storage_type< SmithWatermanAligner<TYPE,scoring_type,algorithm_tag> >    { typedef  int16 type; };
 template <AlignmentType TYPE, typename scoring_type, typename algorithm_tag> struct column_storage_type< GotohAligner<TYPE,scoring_type,algorithm_tag> >            { typedef short2 type; };
+template <AlignmentType TYPE, typename scoring_type, typename algorithm_tag> struct column_storage_type< WfahAligner<TYPE,scoring_type,algorithm_tag> >             { typedef  int16 type; };
 
 /// A meta-function returning the number of bits required to represent the direction vectors
 /// for a given \ref Aligner "Aligner"
@@ -80,6 +82,16 @@ template <typename aligner_type> struct direction_vector_traits {
 template <AlignmentType TYPE, typename scoring_type, typename algorithm_tag> struct direction_vector_traits<GotohAligner<TYPE,scoring_type,algorithm_tag> > {
     static const uint32 BITS = 4;   ///< the number of bits needed to encode direction vectors
 };
+
+/// A meta-function returning the number of bits required to represent the direction vectors
+/// for a WfahAligner.
+///
+/// \tparam aligner_type        the queries \ref Aligner "Aligner" type
+///
+template <AlignmentType TYPE, typename scoring_type, typename algorithm_tag> struct direction_vector_traits<WfahAligner<TYPE,scoring_type,algorithm_tag> > {
+    static const uint32 BITS = 4;   ///< the number of bits needed to encode direction vectors
+};
+
 
 ///@}
 
@@ -126,6 +138,42 @@ struct SimpleGotohScheme
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 pattern_gap_extension()       const { return m_gap_ext; };
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 text_gap_open()               const { return m_gap_open; };
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 text_gap_extension()          const { return m_gap_ext; };
+
+    int32 m_match;
+    int32 m_mismatch;
+    int32 m_gap_open;
+    int32 m_gap_ext;
+};
+
+///
+/// A simple implementation of the \ref WfahScoringScheme model
+///
+struct SimpleWfahScheme
+{
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE SimpleWfahScheme() {}
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE SimpleWfahScheme(
+        const int32 match, const int32 mm, const int32 gap_open, const int32 gap_ext) :
+        m_match(match), m_mismatch(mm), m_gap_open(gap_open), m_gap_ext(gap_ext) {}
+
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 match(const uint8 q = 0)      const { return m_match; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 mismatch(const uint8 q = 0)   const { return m_mismatch; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 mismatch(const uint8 a, const uint8 b, const uint8 q = 0)   const { return m_mismatch; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 substitution(const uint32 r_i, const uint32 q_j, const uint8 r, const uint8 q, const uint8 qq = 0) const { return q == r ? m_match : m_mismatch; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 pattern_gap_open()            const { return m_gap_open; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 pattern_gap_extension()       const { return m_gap_ext; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 text_gap_open()               const { return m_gap_open; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 text_gap_extension()          const { return m_gap_ext; };
+
+    /*NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 match(const uint8 q = 0)      const { return  0; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 mismatch(const uint8 q = 0)   const { return -1; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 mismatch(const uint8 a, const uint8 b, const uint8 q = 0)   const { return -1; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 substitution(const uint32 r_i, const uint32 q_j, const uint8 r, const uint8 q, const uint8 qq = 0) const { return q == r ? 0 : -1; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 deletion()                    const { return -1; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 insertion()                   const { return -1; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 pattern_gap_open()            const { return m_gap_open; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 pattern_gap_extension()       const { return m_gap_ext; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 text_gap_open()               const { return m_gap_open; };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 text_gap_extension()          const { return m_gap_ext; };*/
 
     int32 m_match;
     int32 m_mismatch;
@@ -196,6 +244,28 @@ template <AlignmentType TYPE, typename scoring_scheme_type, typename algorithm_t
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE 
 uint32 max_text_gaps(
     const GotohAligner<TYPE,scoring_scheme_type,algorithm_tag>& aligner,
+	int32                                                       min_score,
+    int32                                                       pattern_len);
+
+///
+/// Calculate the maximum possible number of pattern gaps that could occur in a
+/// given score boundary
+///
+template <AlignmentType TYPE, typename scoring_scheme_type, typename algorithm_tag>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE 
+uint32 max_pattern_gaps(
+    const WfahAligner<TYPE,scoring_scheme_type,algorithm_tag>& aligner,
+	int32                                                       min_score,
+    int32                                                       pattern_len);
+
+///
+/// Calculate the maximum possible number of reference gaps that could occur in a
+/// given score boundary
+///
+template <AlignmentType TYPE, typename scoring_scheme_type, typename algorithm_tag>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE 
+uint32 max_text_gaps(
+    const WfahAligner<TYPE,scoring_scheme_type,algorithm_tag>& aligner,
 	int32                                                       min_score,
     int32                                                       pattern_len);
 

@@ -27,14 +27,24 @@
 
 #include <nvBowtie/bowtie2/cuda/aligner.h>
 #include <nvbio/basic/primitives.h>
+#include <nvbio/alignment/wfa.h>
 
 namespace nvbio {
 namespace bowtie2 {
 namespace cuda {
 
 template <typename T>
-T* resize(bool do_alloc, thrust::device_vector<T>& vec, const uint32 size, uint64& bytes)
+uint64 correct(uint64 size)
 {
+    size *=  sizeof(T);  
+    size +=  (4 - (size % 4));
+    return size / sizeof(T);
+}
+
+template <typename T>
+T* resize(bool do_alloc, thrust::device_vector<T>& vec, uint32 size, uint64& bytes)
+{
+    size = correct<T>(size);
     bytes += size * sizeof(T);
     if (do_alloc)
     {
@@ -45,8 +55,9 @@ T* resize(bool do_alloc, thrust::device_vector<T>& vec, const uint32 size, uint6
 }
 
 template <typename T>
-T* resize(bool do_alloc, thrust::host_vector<T>& vec, const uint32 size, uint64& bytes)
+T* resize(bool do_alloc, thrust::host_vector<T>& vec, uint32 size, uint64& bytes)
 {
+    size = correct<T>(size);
     bytes += size * sizeof(T);
     if (do_alloc)
     {
@@ -57,8 +68,9 @@ T* resize(bool do_alloc, thrust::host_vector<T>& vec, const uint32 size, uint64&
 }
 
 template <typename T>
-T* resize(bool do_alloc, std::vector<T>& vec, const uint32 size, uint64& bytes)
+T* resize(bool do_alloc, std::vector<T>& vec, uint32 size, uint64& bytes)
 {
+    size = correct<T>(size);
     bytes += size * sizeof(T);
     if (do_alloc)
     {
@@ -67,6 +79,8 @@ T* resize(bool do_alloc, std::vector<T>& vec, const uint32 size, uint64& bytes)
     }
     return NULL;
 }
+
+
 
 bool Aligner::init_alloc(const uint32 BATCH_SIZE, const Params& params, const EndType type, bool do_alloc, std::pair<uint64,uint64>* mem_stats)
 {
@@ -130,6 +144,33 @@ bool Aligner::init_alloc(const uint32 BATCH_SIZE, const Params& params, const En
         hits_range_scan_dptr = resize( do_alloc, hits_range_scan_dvec,     params.max_hits * BATCH_SIZE+1,     d_allocated_bytes );
     }
 
+    if (params.scoring_mode == WfaMode)
+    {
+        if (do_alloc)
+        {
+            log_verbose(stderr, "[%u]     allocating %3.1f MB of wfa storage  (BATCH=%d)\n",
+            ID, (3.0f * (DIM_Y_SHARED + 2.0f * WFA_BAND_LEN2_Y)  + WFA_BAND_LEN2_Y) * (float)sizeof(int16) * (BATCH_SIZE + 1.0f) / (1024.0f * 1024.0f), BATCH_SIZE);
+        }
+
+        {
+            uint32 b = (BATCH_SIZE + 1);
+            wfa_H_dptr = resize(do_alloc, wfa_H_dvec, DIM_Y_SHARED * b, d_allocated_bytes);
+            wfa_H_lo_dptr = resize(do_alloc, wfa_H_lo_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
+            wfa_H_hi_dptr = resize(do_alloc, wfa_H_hi_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
+            wfa_H_null_dptr = resize(do_alloc, wfa_H_null_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
+            wfa_E_dptr = resize(do_alloc, wfa_E_dvec, DIM_Y_SHARED * b, d_allocated_bytes);
+            wfa_E_lo_dptr = resize(do_alloc, wfa_E_lo_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
+            wfa_E_hi_dptr = resize(do_alloc, wfa_E_hi_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
+            wfa_E_null_dptr = resize(do_alloc, wfa_E_null_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
+            wfa_F_dptr = resize(do_alloc, wfa_F_dvec, DIM_Y_SHARED * b, d_allocated_bytes);
+            wfa_F_lo_dptr = resize(do_alloc, wfa_F_lo_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
+            wfa_F_hi_dptr = resize(do_alloc, wfa_F_hi_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
+            wfa_F_null_dptr = resize(do_alloc, wfa_F_null_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
+            wfa_PointeurH_dptr = resize(do_alloc, wfa_PointeurH_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
+        }
+        nvbio::cuda::check_error("allocating wfa buffers");
+    }
+
     //const uint32 n_cigar_entries = BATCH_SIZE*(MAXIMUM_BAND_LEN_MULT*band_len+1);
     //const uint32 n_mds_entries   = BATCH_SIZE*MAX_READ_LEN;
     const uint32 n_cigar_entries = (128 * BATCH_SIZE)/sizeof(io::Cigar);    // 256MB
@@ -177,9 +218,18 @@ bool Aligner::init_alloc(const uint32 BATCH_SIZE, const Params& params, const En
         if (do_alloc)
             cudaMemGetInfo(&free, &total);
         else if (free >= d_allocated_bytes + guard_band + min_dp_storage)
-            free -= d_allocated_bytes;
+            {
+                free -= d_allocated_bytes;
+                        
+            }
         else
             return false;
+
+            if (params.scoring_mode == WfaMode)
+                {
+                    if (free >= d_allocated_bytes + guard_band + min_dp_storage)
+                        return false;
+                }        
 
         const uint32 free_words    = uint32( free / 4u );
         const uint32 min_free_words = uint32( guard_band / 4u );

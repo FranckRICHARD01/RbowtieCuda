@@ -206,6 +206,14 @@ struct AlignmentStream
         m_scores[i] = context->sink.score;
     }
 
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+    bool test_read_id(
+        const uint32        id,
+        const context_type* context) const
+    {
+       if (context->read_id == id) return true; else return false;
+    }
+
     aligner_type                m_aligner;
     uint32                      m_count;
     uint32                      m_max_pattern_len;
@@ -452,7 +460,8 @@ enum AlignmentTest
     ED_BANDED           = 8u,
     SW_BANDED           = 16u,
     GOTOH_BANDED        = 32u,
-    SSW                 = 64u
+    SSW                 = 64u,
+    WFA                 = 128u
 };
 
 int main(int argc, char* argv[])
@@ -494,6 +503,8 @@ int main(int argc, char* argv[])
                     TEST_MASK |= SW;
                 else if (strcmp( temp, "gotoh" ) == 0)
                     TEST_MASK |= GOTOH;
+                else if (strcmp( temp, "wfa" ) == 0)
+                    TEST_MASK |= WFA;
                 else if (strcmp( temp, "ssw" ) == 0)
                     TEST_MASK |= SSW;
 
@@ -629,6 +640,56 @@ int main(int argc, char* argv[])
             {
                 batch_score_profile_all(
                     aln::make_gotoh_aligner<aln::LOCAL,aln::TextBlockingTag>( scoring ),
+                    d_read_data.size(),
+                    nvbio::plain_view( d_read_data ).sequence_index(),
+                    nvbio::plain_view( d_read_data ).sequence_storage(),
+                    d_read_data.max_sequence_len(),
+                    n_read_symbols,
+                    nvbio::raw_pointer( d_ref_storage ),
+                    ref_length,
+                    nvbio::raw_pointer( score_dvec ) );
+            }
+        }
+        if (false && TEST_MASK & WFA)
+        {
+            aln::SimpleWfahScheme scoring;
+            scoring.m_match    =  0;
+            scoring.m_mismatch = 1;
+            scoring.m_gap_open = 1;
+            scoring.m_gap_ext  = 1;
+
+            fprintf(stderr,"  testing Wfa scoring speed...\n");
+            fprintf(stderr,"    %15s : ", "global");
+            {
+                batch_score_profile_all(
+                    aln::make_wfah_aligner<aln::GLOBAL,aln::TextBlockingTag>( scoring ),
+                    d_read_data.size(),
+                    nvbio::plain_view( d_read_data ).sequence_index(),
+                    nvbio::plain_view( d_read_data ).sequence_storage(),
+                    d_read_data.max_sequence_len(),
+                    n_read_symbols,
+                    nvbio::raw_pointer( d_ref_storage ),
+                    ref_length,
+                    nvbio::raw_pointer( score_dvec ) );
+            }
+
+            fprintf(stderr,"    %15s : ", "semi-global");
+            {
+                batch_score_profile_all(
+                    aln::make_wfah_aligner<aln::SEMI_GLOBAL,aln::TextBlockingTag>( scoring ),
+                    d_read_data.size(),
+                    nvbio::plain_view( d_read_data ).sequence_index(),
+                    nvbio::plain_view( d_read_data ).sequence_storage(),
+                    d_read_data.max_sequence_len(),
+                    n_read_symbols,
+                    nvbio::raw_pointer( d_ref_storage ),
+                    ref_length,
+                    nvbio::raw_pointer( score_dvec ) );
+            }
+            fprintf(stderr,"    %15s : ", "local");
+            {
+                batch_score_profile_all(
+                    aln::make_wfah_aligner<aln::LOCAL,aln::TextBlockingTag>( scoring ),
                     d_read_data.size(),
                     nvbio::plain_view( d_read_data ).sequence_index(),
                     nvbio::plain_view( d_read_data ).sequence_storage(),

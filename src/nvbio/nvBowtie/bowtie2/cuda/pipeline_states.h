@@ -88,7 +88,20 @@ struct BaseScoringPipelineState
         dp_buffer               ( _aligner.dp_buffer_dptr ),
         dp_buffer_size          ( _aligner.dp_buffer_dvec.size() ),
         scoring_scheme          ( _scoring_scheme ),
-        score_limit             ( _score_limit )
+        score_limit             ( _score_limit ),
+        wfa_H_buffer            ( _aligner.wfa_H_dptr ),
+        wfa_H_hi_buffer         ( _aligner.wfa_H_hi_dptr ),
+        wfa_H_lo_buffer         ( _aligner.wfa_H_lo_dptr ),
+        wfa_H_null_buffer       ( _aligner.wfa_H_null_dptr ),
+        wfa_E_buffer            ( _aligner.wfa_E_dptr ),
+        wfa_E_hi_buffer         ( _aligner.wfa_E_hi_dptr ),
+        wfa_E_lo_buffer         ( _aligner.wfa_E_lo_dptr ),
+        wfa_E_null_buffer       ( _aligner.wfa_E_null_dptr ),
+        wfa_F_buffer            ( _aligner.wfa_F_dptr ),
+        wfa_F_hi_buffer         ( _aligner.wfa_F_hi_dptr ),
+        wfa_F_lo_buffer         ( _aligner.wfa_F_lo_dptr ),
+        wfa_F_null_buffer       ( _aligner.wfa_F_null_dptr ),
+        wfa_PointeurH_buffer    ( _aligner.wfa_PointeurH_dptr )
     {}
 
     /// return the set of reads corresponding to a given mate
@@ -118,6 +131,20 @@ struct BaseScoringPipelineState
 
     uint8*                          dp_buffer;
     uint64                          dp_buffer_size;
+
+    int16*                          wfa_H_buffer = nullptr;
+    int16*                          wfa_H_hi_buffer = nullptr;
+    int16*                          wfa_H_lo_buffer = nullptr;
+    bool*                           wfa_H_null_buffer = nullptr;
+    int16*                          wfa_E_buffer = nullptr;
+    int16*                          wfa_E_hi_buffer = nullptr;
+    int16*                          wfa_E_lo_buffer = nullptr;
+    bool*                           wfa_E_null_buffer = nullptr;
+    int16*                          wfa_F_buffer = nullptr;
+    int16*                          wfa_F_hi_buffer = nullptr;
+    int16*                          wfa_F_lo_buffer = nullptr;
+    bool*                           wfa_F_null_buffer = nullptr;
+    int16*                          wfa_PointeurH_buffer = nullptr;
 
     const ScoringScheme             scoring_scheme;
     const int32                     score_limit;
@@ -162,7 +189,20 @@ struct BestApproxScoringPipelineState : public BaseScoringPipelineState<ScoringS
         rseeds                  ( _aligner.rseeds_dptr ),
         best_alignments         ( _aligner.best_data_dptr ),
         best_alignments_o       ( _aligner.best_data_dptr_o ),
-        best_stride             ( _aligner.BATCH_SIZE )
+        best_stride             ( _aligner.BATCH_SIZE ),
+        wfa_H_buffer            ( _aligner.wfa_H_dptr ),
+        wfa_H_hi_buffer         ( _aligner.wfa_H_hi_dptr ),
+        wfa_H_lo_buffer         ( _aligner.wfa_H_lo_dptr ),
+        wfa_H_null_buffer       ( _aligner.wfa_H_null_dptr ),
+        wfa_E_buffer            ( _aligner.wfa_E_dptr ),
+        wfa_E_hi_buffer         ( _aligner.wfa_E_hi_dptr ),
+        wfa_E_lo_buffer         ( _aligner.wfa_E_lo_dptr ),
+        wfa_E_null_buffer       ( _aligner.wfa_E_null_dptr ),
+        wfa_F_buffer            ( _aligner.wfa_F_dptr ),
+        wfa_F_hi_buffer         ( _aligner.wfa_F_hi_dptr ),
+        wfa_F_lo_buffer         ( _aligner.wfa_F_lo_dptr ),
+        wfa_F_null_buffer       ( _aligner.wfa_F_null_dptr ),
+        wfa_PointeurH_buffer    ( _aligner.wfa_PointeurH_dptr )
     {}
 
     uint32*                         trys;
@@ -171,6 +211,20 @@ struct BestApproxScoringPipelineState : public BaseScoringPipelineState<ScoringS
     io::Alignment*                  best_alignments;
     io::Alignment*                  best_alignments_o;
     uint32                          best_stride;
+
+    int16*                          wfa_H_buffer = nullptr;
+    int16*                          wfa_H_hi_buffer = nullptr;
+    int16*                          wfa_H_lo_buffer = nullptr;
+    bool*                           wfa_H_null_buffer = nullptr;
+    int16*                          wfa_E_buffer = nullptr;
+    int16*                          wfa_E_hi_buffer = nullptr;
+    int16*                          wfa_E_lo_buffer = nullptr;
+    bool*                           wfa_E_null_buffer = nullptr;
+    int16*                          wfa_F_buffer = nullptr;
+    int16*                          wfa_F_hi_buffer = nullptr;
+    int16*                          wfa_F_lo_buffer = nullptr;
+    bool*                           wfa_F_null_buffer = nullptr;
+    int16*                          wfa_PointeurH_buffer = nullptr;
 };
 
 ///
@@ -215,7 +269,20 @@ struct AllMappingPipelineState : public BaseScoringPipelineState<ScoringScheme>
         cigar_coords            ( nvbio::device_view( _aligner.cigar_coords_dvec ) ),
         mds                     ( nvbio::device_view( _aligner.mds ) ),
         dp_buffer               ( nvbio::device_view( _aligner.dp_buffer_dvec ) ),
-        dp_buffer_size          ( _aligner.dp_buffer_dvec.size() )
+        dp_buffer_size          ( _aligner.dp_buffer_dvec.size() ),
+        wfa_H_buffer            ( _aligner.wfa_H_dptr ),
+        wfa_H_hi_buffer         ( _aligner.wfa_H_hi_dptr ),
+        wfa_H_lo_buffer         ( _aligner.wfa_H_lo_dptr ),
+        wfa_H_null_buffer       ( _aligner.wfa_H_null_dptr ),
+        wfa_E_buffer            ( _aligner.wfa_E_dptr ),
+        wfa_E_hi_buffer         ( _aligner.wfa_E_hi_dptr ),
+        wfa_E_lo_buffer         ( _aligner.wfa_E_lo_dptr ),
+        wfa_E_null_buffer       ( _aligner.wfa_E_null_dptr ),
+        wfa_F_buffer            ( _aligner.wfa_F_dptr ),
+        wfa_F_hi_buffer         ( _aligner.wfa_F_hi_dptr ),
+        wfa_F_lo_buffer         ( _aligner.wfa_F_lo_dptr ),
+        wfa_F_null_buffer       ( _aligner.wfa_F_null_dptr ),
+        wfa_PointeurH_buffer    ( _aligner.wfa_PointeurH_dptr )
     {}
 
     uint32*                                         output_read_info;
@@ -228,6 +295,20 @@ struct AllMappingPipelineState : public BaseScoringPipelineState<ScoringScheme>
 
     uint8*                                          dp_buffer;      ///< DP buffer
     uint64                                          dp_buffer_size; ///< DP buffer size
+
+    int16*                                          wfa_H_buffer = nullptr;
+    int16*                                          wfa_H_hi_buffer = nullptr;
+    int16*                                          wfa_H_lo_buffer = nullptr;
+    bool*                                           wfa_H_null_buffer = nullptr;
+    int16*                                          wfa_E_buffer = nullptr;
+    int16*                                          wfa_E_hi_buffer = nullptr;
+    int16*                                          wfa_E_lo_buffer = nullptr;
+    bool*                                           wfa_E_null_buffer = nullptr;
+    int16*                                          wfa_F_buffer = nullptr;
+    int16*                                          wfa_F_hi_buffer = nullptr;
+    int16*                                          wfa_F_lo_buffer = nullptr;
+    bool*                                           wfa_F_null_buffer = nullptr;
+    int16*                                          wfa_PointeurH_buffer = nullptr;
 };
 
 ///
@@ -269,7 +350,20 @@ struct TracebackPipelineState
         cigar_coords            ( nvbio::device_view( _aligner.cigar_coords_dvec ) ),
         mds                     ( nvbio::device_view( _aligner.mds ) ),
         dp_buffer               ( nvbio::device_view( _aligner.dp_buffer_dvec ) ),
-        dp_buffer_size          ( _aligner.dp_buffer_dvec.size() )
+        dp_buffer_size          ( _aligner.dp_buffer_dvec.size() ),
+        wfa_H_buffer            ( _aligner.wfa_H_dptr ),
+        wfa_H_hi_buffer         ( _aligner.wfa_H_hi_dptr ),
+        wfa_H_lo_buffer         ( _aligner.wfa_H_lo_dptr ),
+        wfa_H_null_buffer       ( _aligner.wfa_H_null_dptr ),
+        wfa_E_buffer            ( _aligner.wfa_E_dptr ),
+        wfa_E_hi_buffer         ( _aligner.wfa_E_hi_dptr ),
+        wfa_E_lo_buffer         ( _aligner.wfa_E_lo_dptr ),
+        wfa_E_null_buffer       ( _aligner.wfa_E_null_dptr ),
+        wfa_F_buffer            ( _aligner.wfa_F_dptr ),
+        wfa_F_hi_buffer         ( _aligner.wfa_F_hi_dptr ),
+        wfa_F_lo_buffer         ( _aligner.wfa_F_lo_dptr ),
+        wfa_F_null_buffer       ( _aligner.wfa_F_null_dptr ),
+        wfa_PointeurH_buffer    ( _aligner.wfa_PointeurH_dptr )
     {}
 
     /// return the set of reads corresponding to a given mate
@@ -291,6 +385,20 @@ struct TracebackPipelineState
 
     uint8*                                          dp_buffer;      ///< DP buffer
     uint64                                          dp_buffer_size; ///< DP buffer size
+
+    int16*                                          wfa_H_buffer = nullptr;
+    int16*                                          wfa_H_hi_buffer = nullptr;
+    int16*                                          wfa_H_lo_buffer = nullptr;
+    bool*                                           wfa_H_null_buffer = nullptr;
+    int16*                                          wfa_E_buffer = nullptr;
+    int16*                                          wfa_E_hi_buffer = nullptr;
+    int16*                                          wfa_E_lo_buffer = nullptr;
+    bool*                                           wfa_E_null_buffer = nullptr;
+    int16*                                          wfa_F_buffer = nullptr;
+    int16*                                          wfa_F_hi_buffer = nullptr;
+    int16*                                          wfa_F_lo_buffer = nullptr;
+    bool*                                           wfa_F_null_buffer = nullptr;
+    int16*                                          wfa_PointeurH_buffer = nullptr;
 };
 
 ///@}  // group PipelineStates

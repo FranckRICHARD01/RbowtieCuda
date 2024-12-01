@@ -45,19 +45,19 @@ struct SparseMatrix {
 	std::vector<double> matrix;			// nz
 };
 
-bool ReadSparseMatrix(FILE* f, std::auto_ptr<SparseMatrix>* ppMatrix,
+bool ReadSparseMatrix(FILE* f, std::unique_ptr<SparseMatrix>* ppMatrix,
 	std::string& err);
 
 bool ReadSparseMatrix(const char* filename,
-	std::auto_ptr<SparseMatrix>* ppMatrix, std::string& err);
+	std::unique_ptr<SparseMatrix>* ppMatrix, std::string& err);
 
 bool LoadBinaryMatrix(const char* filename,
-	std::auto_ptr<SparseMatrix>* ppMatrix);
+	std::unique_ptr<SparseMatrix>* ppMatrix);
 
 bool StoreBinaryMatrix(const char* filename, const SparseMatrix& matrix);
 
 bool LoadCachedMatrix(const char* filename, 
-	std::auto_ptr<SparseMatrix>* ppMatrix, std::string& err);
+	std::unique_ptr<SparseMatrix>* ppMatrix, std::string& err);
 
 // Multiply the matrix by a vector of 1s.
 template<typename T>
@@ -113,7 +113,7 @@ struct MatrixStats {
 MatrixStats ComputeMatrixStats(const SparseMatrix& m);
 
 int64 MulSparseMatrices(const SparseMatrix& A, const SparseMatrix& B,
-	std::auto_ptr<SparseMatrix>* ppC);
+	std::unique_ptr<SparseMatrix>* ppC);
 
 
 int64 ComputeProductCount(const SparseMatrix& A, const SparseMatrix& B);

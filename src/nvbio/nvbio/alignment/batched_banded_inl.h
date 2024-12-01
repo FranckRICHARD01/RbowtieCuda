@@ -43,7 +43,7 @@ namespace aln {
 template <uint32 BAND_LEN, typename stream_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
 void batched_banded_alignment_score(const stream_type& stream, const uint32 work_id)
-{
+{ 
     typedef typename stream_type::aligner_type  aligner_type;
     typedef typename stream_type::context_type  context_type;
     typedef typename stream_type::strings_type  strings_type;
@@ -52,14 +52,39 @@ void batched_banded_alignment_score(const stream_type& stream, const uint32 work
     context_type context;
     if (stream.init_context( work_id, &context ) == true)
     {
+        // wfa
+
+        aln::wfa_type<int32> wfa;
+
+        wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED * work_id]);
+        wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+        wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+        wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+        wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED  * work_id]);
+        wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+        wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+        wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+        wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED  * work_id]);
+        wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+        wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+        wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+        wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * work_id]);
+
         // compute the end of the current DP matrix window
         const uint32 len = equal<typename aligner_type::algorithm_tag,TextBlockingTag>() ?
             stream.text_length( work_id, &context ) :
             stream.pattern_length( work_id, &context );
 
         // load the strings to be aligned
-        strings_type strings;
-        stream.load_strings( work_id, 0, len, &context, &strings );
+        strings_type strings;    
+        stream.load_strings( work_id, 0, len, &context, &strings ); 
+
+        /*uint32 id = 84;
+        
+        if (stream.test_read_id(id, &context))
+        {
+            strings= strings;
+        }*/
 
         // score the current DP matrix window
         banded_alignment_score<BAND_LEN>(
@@ -68,7 +93,20 @@ void batched_banded_alignment_score(const stream_type& stream, const uint32 work
             strings.quals,
             strings.text,
             context.min_score,
-            context.sink );
+            context.sink,
+            wfa
+        );       
+
+        /*if (stream.test_read_id(id, &context))
+        {
+            char ref_str[1000];
+            char read_str[1000];
+
+            dna_ref_type_to_string(strings.pattern, strings.pattern.length(), ref_str);
+            dna_ref_type_to_string(strings.text, strings.text.length(), read_str);
+
+            NVBIO_CUDA_DEBUG_PRINT("read_id = %d\n1:%s\n2:%s\nscore:%d\npos.x:%d\npos.y:%d\n", id, ref_str, read_str, context.sink.score, context.sink.sink.x, context.sink.sink.y);
+        }*/
     }
 
     // handle the output
@@ -158,7 +196,19 @@ void BatchedBandedAlignmentScore<BAND_LEN,stream_type,DeviceThreadBlockScheduler
 {
     const uint32 n_blocks = (stream.size() + BLOCKDIM-1) / BLOCKDIM;
 
-    batched_banded_alignment_score_kernel<BLOCKDIM,MINBLOCKS,BAND_LEN> <<<n_blocks, BLOCKDIM>>>( stream );
+    // Definir explicitement le type du kernel
+    using KernelType = void(*)(stream_type);
+
+    // Specifie explicitement le kernel avec les parametres concrets
+    KernelType kernel = &batched_banded_alignment_score_kernel<BLOCKDIM, MINBLOCKS, BAND_LEN>;
+
+    // Configurer le cache L1
+    cudaFuncSetCacheConfig((const void*)kernel, cudaFuncCachePreferL1);
+
+    // Lancer le kernel
+    kernel<<<n_blocks, BLOCKDIM>>>(stream);
+
+    //batched_banded_alignment_score_kernel<BLOCKDIM,MINBLOCKS,BAND_LEN> <<<n_blocks, BLOCKDIM>>>( stream );
 }
 
 
@@ -182,6 +232,19 @@ struct BatchedBandedAlignmentScore<BAND_LEN,stream_type,DeviceStagedThreadSchedu
         const uint32 column_size = uint32( BAND_LEN * sizeof(cell_type) );
 
         return align<4>( column_size );
+    }
+
+    /// return the wfa storage size
+    ///
+    static uint32 wfa_storage()
+    {
+        const uint32 matrix_size = 
+            (3 * ( 
+            (uint32)DIM_Y_SHARED +
+            2 * (uint32)WFA_BAND_LEN2_Y)
+            + (uint32)WFA_BAND_LEN2_Y) * sizeof(int16);
+
+        return matrix_size;
     }
 
     /// return the minimum number of bytes required by the algorithm
@@ -262,6 +325,24 @@ void batched_banded_alignment_traceback(stream_type& stream, cell_type* checkpoi
         return;
     }
 
+    // wfa
+
+    aln::wfa_type<int32> wfa;
+
+    wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED  * work_id]);
+    wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED  * work_id]);
+    wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED  * work_id]);
+    wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * work_id]);
+
     // compute the end of the current DP matrix window
     const uint32 len = equal<typename aligner_type::algorithm_tag,PatternBlockingTag>() ?
         stream.pattern_length( work_id, &context ) :
@@ -280,7 +361,7 @@ void batched_banded_alignment_traceback(stream_type& stream, cell_type* checkpoi
     submatrix_storage_type submatrix_storage = submatrix_storage_type( submatrices + thread_id, stride );
     const uint32 BITS = direction_vector_traits<aligner_type>::BITS;
     PackedStream<submatrix_storage_type,uint8,BITS,false> submatrix( submatrix_storage );
-
+    
     // score the current DP matrix window
     context.alignment = banded_alignment_traceback<BAND_LEN, CHECKPOINTS>(
         stream.aligner(),
@@ -290,7 +371,8 @@ void batched_banded_alignment_traceback(stream_type& stream, cell_type* checkpoi
         context.min_score,
         context.backtracer,
         checkpoint,
-        submatrix );
+        submatrix,
+        wfa );
 
     // handle the output
     stream.output( work_id, &context );
@@ -344,7 +426,18 @@ struct BatchedBandedAlignmentTraceback<BAND_LEN,CHECKPOINTS, stream_type,DeviceT
     ///
     static uint32 checkpoint_storage(const uint32 max_pattern_len, const uint32 max_text_len)
     {
-        return align<4>( uint32( BAND_LEN * ((max_pattern_len + CHECKPOINTS-1) / CHECKPOINTS) * sizeof(cell_type) ) );
+        return align<4>( CORRECT_SIZE_MATRIX * uint32( BAND_LEN * ((max_pattern_len + CHECKPOINTS-1) / CHECKPOINTS) * sizeof(cell_type) ) );
+    }
+
+    static uint32 wfa_storage()
+    {
+        const uint32 matrix_size = 
+            (3 * ( 
+            (uint32)DIM_Y_SHARED +
+            2 * (uint32)WFA_BAND_LEN2_Y)
+            + (uint32)WFA_BAND_LEN2_Y) * sizeof(int16);
+
+        return matrix_size;
     }
 
     /// return the per-element submatrix storage size
@@ -354,7 +447,7 @@ struct BatchedBandedAlignmentTraceback<BAND_LEN,CHECKPOINTS, stream_type,DeviceT
         typedef typename stream_type::aligner_type  aligner_type;
         const uint32 BITS = direction_vector_traits<aligner_type>::BITS;
         const uint32 ELEMENTS_PER_WORD = 32 / BITS;
-        return ((BAND_LEN * CHECKPOINTS + ELEMENTS_PER_WORD-1) / ELEMENTS_PER_WORD) * sizeof(uint32);
+        return CORRECT_SIZE_MATRIX * (( BAND_LEN * CHECKPOINTS + ELEMENTS_PER_WORD-1) / ELEMENTS_PER_WORD) * sizeof(uint32);
     }
 
     /// return the per-element storage size

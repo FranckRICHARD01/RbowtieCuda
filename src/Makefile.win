@@ -6,10 +6,14 @@ all:
 	(cd "../build" && cmake -G "Visual Studio 17 2022" "../src/"$(BT2_DIR) && cmake --build . --parallel 4 --config Release)
 	cd "../build" && cp nvBWT/Release/nvBWT.exe ../inst
 	cd "../build" && cp nvBowtie/Release/nvBowtie.exe ../inst
+	cd "../build" && cp nvbio-test/Release/nvbio-test.exe ../inst
 
 clean:
 	(cd "../build")
 	rm -f nvBWT.exe
 	rm -f nvBowtie.exe
+	rm -f nvbio-test.exe
 	rm ../inst/nvBWT.exe
-	rm ../inst/nvBowtie.exe 
+	rm ../inst/nvBowtie.exe
+	rm ../inst/nvbio-test.exe
+

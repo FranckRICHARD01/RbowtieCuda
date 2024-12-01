@@ -38,6 +38,7 @@
 #include <nvbio/io/sequence/sequence.h>
 
 #include <stdio.h>
+//#include <unistd.h>
 
 namespace nvbio {
 namespace io {
@@ -87,6 +88,7 @@ struct HostOutputBatchSE
 {
 public:
     uint32 count;
+    bool cache_writes_enabled;
 
     // we have two alignments, cigar and MDS arrays, one for each mate
     thrust::host_vector<io::Alignment>           alignments;
@@ -98,12 +100,24 @@ public:
     // pointer to the host-side read data for each mate
     const io::SequenceDataHost*                  read_data;
 
+    // write cache
+    char *write_thread_data;   
+
     void readback(const DeviceOutputBatchSE);
 
 public:
     /// constructor
     ///
-    HostOutputBatchSE() : count(0) {}
+    HostOutputBatchSE() : count(0)
+    { 
+        write_thread_data = nullptr;       
+    }
+
+    ~HostOutputBatchSE()
+    {      
+    }
+
+    
 };
 
 /// a batch of alignment results on the CPU
@@ -112,6 +126,7 @@ struct HostOutputBatchPE
 {
 public:
     uint32 count;
+    bool cache_writes_enabled;
 
     // we have two alignments, cigar and MDS arrays, one for each mate
     thrust::host_vector<io::Alignment>           alignments[2];
@@ -123,13 +138,24 @@ public:
     // pointer to the host-side read data for each mate
     const io::SequenceDataHost*                  read_data[2];
 
-    void readback(const DeviceOutputBatchSE, const AlignmentMate mate);
+    // write cache
+    char *write_thread_data;   
+
+    void readback(const DeviceOutputBatchSE, const AlignmentMate mate);  
 
 public:
     /// constructor
     ///
-    HostOutputBatchPE() : count(0) {}
-};
+    HostOutputBatchPE() : count(0)
+    {  
+        write_thread_data = nullptr; 
+    }
+
+    ~HostOutputBatchPE()
+    {          
+    }    
+    
+};  
 
 } // namespace io
 } // namespace nvbio

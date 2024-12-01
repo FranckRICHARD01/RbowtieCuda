@@ -73,6 +73,25 @@ void anchor_score_best(
     anchor_score_best_t( band_len, pipeline, params );
 }
 
+//
+// execute a batch of banded-alignment score calculations for the anchor mates, best mapping
+//
+// \b inputs:
+//  - HitQueues::seed
+//  - HitQueues::loc
+//
+// \b outputs:
+//  - HitQueues::score
+//  - HitQueues::sink
+//
+void anchor_score_best(
+    const uint32                                                            band_len,
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&              pipeline,
+    const ParamsPOD&                                                        params)
+{
+    anchor_score_best_t( band_len, pipeline, params );
+}
+
 void ungapped_opposite_score_best(
     const BestApproxScoringPipelineState<EditDistanceScoringScheme>&        pipeline,
     const ParamsPOD&                                                        params);
@@ -81,12 +100,20 @@ void ungapped_opposite_score_best(
     const BestApproxScoringPipelineState<SmithWatermanScoringScheme<> >&    pipeline,
     const ParamsPOD&                                                        params);
 
+void ungapped_opposite_score_best(
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&              pipeline,
+    const ParamsPOD&                                                        params);
+
 void gapped_opposite_score_best(
     const BestApproxScoringPipelineState<EditDistanceScoringScheme>&        pipeline,
     const ParamsPOD&                                                        params);
 
 void gapped_opposite_score_best(
     const BestApproxScoringPipelineState<SmithWatermanScoringScheme<> >&    pipeline,
+    const ParamsPOD&                                                        params);
+
+void gapped_opposite_score_best(
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&              pipeline,
     const ParamsPOD&                                                        params);
 
 //
@@ -129,6 +156,30 @@ void opposite_score_best(
 //
 void opposite_score_best(
     const BestApproxScoringPipelineState<SmithWatermanScoringScheme<> >&    pipeline,
+    const ParamsPOD&                                                        params)
+{
+    if (params.ungapped_mates)
+        ungapped_opposite_score_best( pipeline, params );
+    else
+        gapped_opposite_score_best( pipeline, params );
+}
+
+//
+// execute a batch of full-DP alignment score calculations for the opposite mates, best mapping
+//
+// \b inputs:
+//  - HitQueues::seed
+//  - HitQueues::loc
+//  - HitQueues::score
+//  - HitQueues::sink
+//
+// \b outputs:
+//  - HitQueues::opposite_score
+//  - HitQueues::opposite_loc
+//  - HitQueues::opposite_sink
+//
+void opposite_score_best(
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&              pipeline,
     const ParamsPOD&                                                        params)
 {
     if (params.ungapped_mates)

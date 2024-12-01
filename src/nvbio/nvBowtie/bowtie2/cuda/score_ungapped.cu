@@ -101,6 +101,27 @@ void ungapped_opposite_score_best(
     ungapped_opposite_score_best_t( pipeline, params );
 }
 
+//
+// execute a batch of full-DP alignment score calculations for the opposite mates, best mapping
+//
+// \b inputs:
+//  - HitQueues::seed
+//  - HitQueues::loc
+//  - HitQueues::score
+//  - HitQueues::sink
+//
+// \b outputs:
+//  - HitQueues::opposite_score
+//  - HitQueues::opposite_loc
+//  - HitQueues::opposite_sink
+//
+void ungapped_opposite_score_best(
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&              pipeline,
+    const ParamsPOD&                                                        params)
+{
+    ungapped_opposite_score_best_t( pipeline, params );
+}
+
 } // namespace cuda
 } // namespace bowtie2
 } // namespace nvbio

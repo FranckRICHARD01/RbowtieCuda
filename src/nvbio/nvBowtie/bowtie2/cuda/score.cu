@@ -74,6 +74,25 @@ void score_best(
 }
 
 //
+// execute a batch of single-ended banded-alignment score calculations, best mapping
+//
+// \b inputs:
+//  - HitQueues::seed
+//  - HitQueues::loc
+//
+// \b outputs:
+//  - HitQueues::score
+//  - HitQueues::sink
+//
+void score_best(
+    const uint32                                                            band_len,
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&              pipeline,
+    const ParamsPOD&                                                        params)
+{
+    score_best_t( band_len, pipeline, params );
+}
+
+//
 // execute a batch of single-ended banded-alignment score calculations, all-mapping
 //
 // \b inputs:
@@ -128,6 +147,33 @@ uint32 score_all(
 }
 
 //
+// execute a batch of single-ended banded-alignment score calculations, all-mapping
+//
+// \b inputs:
+//  - HitQueues::seed
+//  - HitQueues::loc
+//
+// \b outputs:
+//  - HitQueues::score
+//  - HitQueues::sink
+//
+// \param band_len             alignment band length
+// \param pipeline             all mapping pipeline
+// \param params               alignment params
+// \param buffer_offset        ring buffer offset
+// \param buffer_size          ring buffer size
+// \return                     number of valid alignments
+uint32 score_all(
+    const uint32                                                    band_len,
+    const AllMappingPipelineState<WfaScoringScheme<> >&             pipeline,
+    const ParamsPOD&                                                params,
+    const uint32                                                    buffer_offset,
+    const uint32                                                    buffer_size)
+{
+    return score_all_t( band_len, pipeline, params, buffer_offset, buffer_size );
+}
+
+//
 // execute a batch of banded-alignment score calculations for the anchor mates, best mapping
 //
 // \b inputs:
@@ -160,6 +206,25 @@ void anchor_score_best(
 void anchor_score_best(
     const uint32                                                            band_len,
     const BestApproxScoringPipelineState<SmithWatermanScoringScheme<> >&    pipeline,
+    const ParamsPOD&                                                        params)
+{
+    anchor_score_best_t( band_len, pipeline, params );
+}
+
+//
+// execute a batch of banded-alignment score calculations for the anchor mates, best mapping
+//
+// \b inputs:
+//  - HitQueues::seed
+//  - HitQueues::loc
+//
+// \b outputs:
+//  - HitQueues::score
+//  - HitQueues::sink
+//
+void anchor_score_best(
+    const uint32                                                            band_len,
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&              pipeline,
     const ParamsPOD&                                                        params)
 {
     anchor_score_best_t( band_len, pipeline, params );
@@ -202,6 +267,27 @@ void opposite_score_best(
 //
 void opposite_score_best(
     const BestApproxScoringPipelineState<SmithWatermanScoringScheme<> >&    pipeline,
+    const ParamsPOD&                                                        params)
+{
+    opposite_score_best_t( pipeline, params );
+}
+
+//
+// execute a batch of full-DP alignment score calculations for the opposite mates, best mapping
+//
+// \b inputs:
+//  - HitQueues::seed
+//  - HitQueues::loc
+//  - HitQueues::score
+//  - HitQueues::sink
+//
+// \b outputs:
+//  - HitQueues::opposite_score
+//  - HitQueues::opposite_loc
+//  - HitQueues::opposite_sink
+//
+void opposite_score_best(
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&              pipeline,
     const ParamsPOD&                                                        params)
 {
     opposite_score_best_t( pipeline, params );

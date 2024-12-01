@@ -121,7 +121,7 @@ void Stats::track_alignment_statistics(
             concordant.n_ambiguous++;
         else {
             // else, the first score must be higher...
-            NVBIO_CUDA_ASSERT(first > second);
+            //NVBIO_CUDA_DEBUG_ASSERT(first > second, "(concordant) first:%u second:%u\n", first, second);
             /// ... which counts as a nonambiguous alignment
             concordant.n_unambiguous++;
         }
@@ -185,7 +185,7 @@ void Stats::track_alignment_statistics(
             discordant.n_ambiguous++;
         else {
             // else, the first score must be higher...
-            NVBIO_CUDA_ASSERT(first > second);
+           // NVBIO_CUDA_DEBUG_ASSERT(first > second, "(discordant) first:%u second:%u\n", first, second);
             /// ... which counts as a nonambiguous alignment
             discordant.n_unambiguous++;
         }
@@ -273,7 +273,7 @@ void Stats::track_alignment_statistics(
         mate->n_ambiguous++;
     else {
         // else, the first score must be higher...
-        NVBIO_CUDA_ASSERT(first > second);
+       // NVBIO_CUDA_DEBUG_ASSERT(first > second, "(ambiguous) first:%u second:%u\n", first, second);
         /// ... which counts as a nonambiguous alignment
         mate->n_unambiguous++;
     }

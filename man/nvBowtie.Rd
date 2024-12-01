@@ -11,14 +11,14 @@ nvBowtie(index, output_file, options, seq1, seq2 = NULL)
 
 \item{output_file}{\code{Character} vector. The alignment output file (.sam o .bam)}
 
-\item{options}{\code{Character} vector. Indicate additional options here to modify the processing. The complete
-list of available options can be accessed by typing \code{nvBowtie_usage()}.}
+\item{options}{\code{Character} vector. Specify additional options here to customize the processing. 
+For a complete list of available options, type  \code{nvBowtie_usage()}.}
 
 \item{seq1}{\code{Character} vector. For single-end sequencing, it contains sequence file paths.
 For paired-end sequencing, it can be file path with #1 mates paired with file paths in seq2.}
 
 \item{seq2}{\code{Character} vector. It contains file paths with #2 mates paired with file path in seq1.
-For single-end sequencoing files, it must be \code{NULL}.'}
+For single-end sequencoing files, it must be \code{NULL}.}
 }
 \value{
 An invisible \code{Integer} of call
@@ -28,22 +28,32 @@ Otherwise the value is non-zero.
 \description{
 nvBowtie is a GPU-accelerated re-engineering of Bowtie2, a very widely used short-read aligner.
 }
+\details{
+We’ve introduced several new features to nvBowtie. You can now perform alignments using the WFA
+method by including the \code{--wfa (or --scoring wfa)} parameter. The WFA method requires a large amount 
+of RAM on the graphics card. We therefore recommend using an Nvidia card with 8GB or more.
+Please note that this feature is still experimental; 
+it currently supports only end-to-end alignments and does not yet allow customization of scoring parameters. 
+By default, it uses the following scoring: \code{match:0, mismatch:1, gap_open:1 and gap_ext:1}.
+Additionally, the \code{--cache-writes} parameter optimizes disk write operations, resulting in faster alignments.
+This functionality requires 4GB of RAM and is limited to paired-end alignments.
+}
 \examples{
 td <- tempdir()
 
 ## Building index
-fa_file <- system.file(package="RbowtieCuda", "extdata", "bt2", "refs", "lambda_virus.fa")
-nvBWT(myinput=fa_file, output=file.path(td, "index"), options="")
+fa_file <- system.file(package='RbowtieCuda', 'extdata', 'bt2', 'refs', 'lambda_virus.fa')
+nvBWT(myinput=fa_file, output=file.path(td, 'index'), options='')
 
 ## Alignments
-read_1 <- system.file(package="RbowtieCuda", "extdata", "bt2", "reads", "reads_1.fastq")
-read_2 <- system.file(package="RbowtieCuda", "extdata", "bt2", "reads", "reads_2.fastq")
+read_1 <- system.file(package='RbowtieCuda', 'extdata', 'bt2', 'reads', 'reads_1.fastq')
+read_2 <- system.file(package='RbowtieCuda', 'extdata', 'bt2', 'reads', 'reads_2.fastq')
 
 ## Sam file created with paired-end files (paired mates are here reverse-forward)
-nvBowtie(file.path(td, "index"), file.path(td, "my_result.sam"), options="--rf", seq1=read_1, seq2=read_2)
+nvBowtie(file.path(td, 'index'), file.path(td, 'my_result.sam'), options='--rf', seq1=read_1, seq2=read_2)
 
 ## Bam file created with single-end file
-nvBowtie(file.path(td, "index"), file.path(td, "my_result.bam"), options="", seq1=read_1)
+nvBowtie(file.path(td, 'index'), file.path(td, 'my_result.bam'), options='', seq1=read_1)
 }
 \references{
 Langmead, B., & Salzberg, S. L. (2012).

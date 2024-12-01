@@ -8,11 +8,11 @@ nvBowtie_version()
 }
 \value{
 An invisible \code{Integer} of call status.
-The value is 0 when there is not selected
+The value is 0 when there is not any mistakes.
 }
 \description{
-Calling nvBowtie_version() prints the version information of 
-the RBowtieCuda package used.
+Calling nvBowtie_version() displays the version information
+of the RbowtieCuda package in use.
 }
 \examples{
 nvBowtie_version()

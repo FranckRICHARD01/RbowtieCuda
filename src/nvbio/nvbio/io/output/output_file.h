@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <nvBowtie/bowtie2/cuda/defs.h>
 #include <nvbio/io/output/output_types.h>
 #include <nvbio/io/output/output_stats.h>
 #include <nvbio/io/sequence/sequence.h>
@@ -72,7 +73,7 @@ struct OutputFile
 {
 
 protected:
-    OutputFile(const char *file_name, AlignmentType alignment_type, BNT bnt);
+    OutputFile(const char *file_name, AlignmentType alignment_type, BNT bnt, bool cache_writes);
 
 public:
     virtual ~OutputFile();
@@ -111,17 +112,33 @@ public:
     ///
     virtual void process(struct HostOutputBatchSE& batch) {}
 
+    virtual void processCacheWrites(struct HostOutputBatchSE& batch) {}
+
     /// Process a set of alignment results for the current batch.
     ///
     /// \param batch    Handle to the buffers containing the alignment results
     ///
     virtual void process(struct HostOutputBatchPE& batch) {}
 
+    virtual void processCacheWrites(struct HostOutputBatchPE& batch) {}
+
+    virtual uint32 outfile_size() { return 0; };
+
     /// Flush and close the output file
     virtual void close(void);
 
     /// Returns aggregate I/O statistics for this object
     virtual IOStats& get_aggregate_statistics(void);
+    
+    /// get_file_pointer
+    virtual FILE* get_file_pointer() { return nullptr; };
+
+    /// get_file_pointer
+    virtual char* get_write_thread_data() { return nullptr; };
+
+    virtual void reset_data_file() {}
+
+    char *write_thread_data;
 
 protected:
     /// Name of the file we're writing
@@ -130,6 +147,8 @@ protected:
     AlignmentType alignment_type;
     /// Reference genome data handle
     BNT bnt;
+
+    bool cache_writes_enabled;
 
     /// The current mapping quality filter: reads with a mapq below this value will be marked as not aligned
     int mapq_filter;
@@ -144,6 +163,9 @@ protected:
 
     std::string rg_id;
     std::string rg_string;
+    
+    // our file pointer
+    FILE *fp;
 
 public:
     /// Factory method to create OutputFile objects
@@ -152,7 +174,9 @@ public:
     /// \param [in] aln_type The type of alignment (single or paired-end)
     /// \param [in] bnt A handle to the reference genome
     /// \return A pointer to an OutputFile object, or NULL if an error occurs.
-    static OutputFile *open(const char *file_name, AlignmentType aln_type, BNT bnt);
+    static OutputFile *open(const char *file_name, AlignmentType aln_type, BNT bnt, bool cache_writes_enabled);
+
+   
 };
 
 /**

@@ -34,8 +34,8 @@
 namespace nvbio {
 namespace io {
 
-SamOutput::SamOutput(const char *file_name, AlignmentType alignment_type, BNT bnt)
-    : OutputFile(file_name, alignment_type, bnt)
+SamOutput::SamOutput(const char *file_name, AlignmentType alignment_type, BNT bnt, bool cache_writes_enabled)
+    : OutputFile(file_name, alignment_type, bnt, cache_writes_enabled)
 {
     fp = file_name ? fopen(file_name, "wt") : stdout;
 
@@ -48,7 +48,7 @@ SamOutput::SamOutput(const char *file_name, AlignmentType alignment_type, BNT bn
     // set a 256kb output buffer on fp and make sure it's not line buffered
     // this makes sure small fwrites do not land on disk straight away
     // (256kb was chosen based on the default stripe size for Linux mdraid RAID-5 volumes)
-    setvbuf(fp, NULL, _IOFBF, 256 * 1024);
+    setvbuf(fp, NULL, _IOFBF, 256 * 1024);   
 }
 
 SamOutput::~SamOutput()
@@ -68,6 +68,14 @@ void SamOutput::write_formatted_string(const char *fmt, ...)
     fwrite("\t", 1, 1, fp);
     va_start(args, fmt);
     vfprintf(fp, fmt, args);
+}
+
+void SamOutput::write_string(char* result, const char *str, bool tab)
+{
+    if (tab)
+        mystrcat(result, "\t"); 
+
+    mystrcat(result, str);     
 }
 
 void SamOutput::write_string(const char *str, bool tab)
@@ -123,6 +131,19 @@ template <typename T> int itoa(char *buf, T in)
 }
 
 template<typename T>
+void SamOutput::write_int(char* result, T i, bool tab)
+{
+    char str[32];
+
+    itoa(str, i);
+
+    if (tab)
+        mystrcat(result, "\t");
+
+    mystrcat(result, str);    
+}
+
+template<typename T>
 void SamOutput::write_int(T i, bool tab)
 {
     char str[32];
@@ -146,12 +167,33 @@ void SamOutput::write_tag(const char *name, T value)
     write_int(value, false);
 }
 
+template<typename T>
+void SamOutput::write_tag(char * result, const char *name, T value)
+{
+    write_string(result, name);
+    mystrcat(result, ":i:");
+    write_int(result, value, false);
+}
+
 template<>
 void SamOutput::write_tag(const char *name, const char *value)
 {
     write_string(name);
     write_string(":Z:", false);
     write_string(value, false);
+}
+
+template<>
+void SamOutput::write_tag(char * result, const char *name, const char *value)
+{
+    write_string(result, name);
+    mystrcat(result, ":Z:");
+    mystrcat(result, value);
+}
+
+void SamOutput::linebreak(char * result)
+{
+    mystrcat(result, "\n");
 }
 
 void SamOutput::linebreak(void)
@@ -203,10 +245,11 @@ uint32 SamOutput::generate_cigar_string(struct SamAlignment& sam_align,
 {
     char *output = sam_align.cigar;
     uint32 read_len = 0;
+    uint32 n = alignment.cigar_len - 1u;
 
     for(uint32 i = 0; i < alignment.cigar_len; i++)
     {
-        const Cigar& cigar_entry = alignment.cigar[alignment.cigar_len - i - 1u];
+        const Cigar& cigar_entry = alignment.cigar[n - i];
         const char   cigar_op    = "MIDS"[cigar_entry.m_type];
         int len;
 
@@ -316,6 +359,59 @@ uint32 SamOutput::generate_md_string(SamAlignment& sam_align, const AlignmentDat
 }
 
 // output a SAM alignment (but not tags)
+void SamOutput::output_alignment(char* result, const struct SamAlignment& sam_align)
+{ 
+    write_string(result, sam_align.qname, false);
+    write_int(result, (uint32)sam_align.flags);
+
+//    log_verbose(stderr, "%s: ed(NM)=%d score(AS)=%d second_score(XS)=%d mm(XM)=%d gapo(XO)=%d gape(XG)=%d\n",
+//                sam_align.qname,
+//                sam_align.ed, sam_align.score, sam_align.second_score, sam_align.mm, sam_align.gapo, sam_align.gape);
+    if (sam_align.flags & SAM_FLAGS_UNMAPPED)
+    {
+        // output * or 0 for every other required field
+        write_string(result, "*\t0\t0\t*\t*\t0\t0");
+        write_string(result, sam_align.seq);
+        write_string(result, sam_align.qual);
+
+        linebreak(result);
+
+        return;
+    }
+
+    write_string(result, sam_align.rname);
+    write_int(result, sam_align.pos);
+    write_int(result, sam_align.mapq);
+    write_string(result, sam_align.cigar);
+
+    if (sam_align.rnext)
+        write_string(result, sam_align.rnext);
+    else
+        write_string(result, "*");
+
+    write_int(result, sam_align.pnext);
+    write_int(result, sam_align.tlen);
+
+    write_string(result, sam_align.seq);
+    write_string(result, sam_align.qual);
+
+    write_tag(result, "NM", sam_align.ed);
+    write_tag(result, "AS", sam_align.score);
+    if (sam_align.second_score_valid)
+        write_tag(result, "XS", sam_align.second_score);
+
+    write_tag(result, "XM", sam_align.mm);
+    write_tag(result, "XO", sam_align.gapo);
+    write_tag(result, "XG", sam_align.gape);
+    if (sam_align.md_string[0])
+        write_tag(result, "MD", sam_align.md_string);
+    else
+        write_tag(result, "MD", "*");
+
+    linebreak(result);
+}
+
+// output a SAM alignment (but not tags)
 void SamOutput::output_alignment(const struct SamAlignment& sam_align)
 {
     write_string(sam_align.qname, false);
@@ -388,32 +484,34 @@ uint32 SamOutput::process_one_alignment(const AlignmentData& alignment,
     // fill out read name
     sam_align.qname = alignment.read_name;
 
+    uint8 s;
+    uint32 n = alignment.read_len - 1;
+
     // fill out sequence data
     for(uint32 i = 0; i < alignment.read_len; i++)
     {
-        uint8 s;
-
         if (alignment.aln->m_rc)
         {
             nvbio::complement_functor<4> complement;
             s = complement(alignment.read_data[i]);
         }
         else
-            s = alignment.read_data[alignment.read_len - i - 1];
+            s = alignment.read_data[n - i];
 
         sam_align.seq[i] = dna_to_char(s);
     }
     sam_align.seq[alignment.read_len] = '\0';
 
+    char q;
+    uint32 t = alignment.aln[MATE_1].m_rc;
+
     // fill out quality data
     for(uint32 i = 0; i < alignment.read_len; i++)
     {
-        char q;
-
-        if (alignment.aln[MATE_1].m_rc)
+        if (t)
             q = alignment.qual[i];
         else
-            q = alignment.qual[alignment.read_len - i - 1];
+            q = alignment.qual[n - i];
 
         sam_align.qual[i] = q + 33;
     }
@@ -423,14 +521,22 @@ uint32 SamOutput::process_one_alignment(const AlignmentData& alignment,
     sam_align.mapq = alignment.mapq;
 
     // if we didn't map, or mapped with low quality, output an unmapped alignment and return
-    if (!(alignment.aln->is_aligned() || sam_align.mapq < mapq_filter))
+    if (!alignment.aln->is_aligned() || sam_align.mapq < mapq_filter)
     {
         sam_align.flags = SAM_FLAGS_UNMAPPED;
         // mark the md string as empty
         sam_align.md_string[0] = '\0';
 
         // unaligned reads don't need anything else; output and return
-        output_alignment(sam_align);
+        if (write_thread_data)
+        {
+            output_alignment(write_thread_data, sam_align);
+        }
+        else
+        {
+            output_alignment(sam_align);
+        }
+        
         return 0;
     }
 
@@ -529,7 +635,15 @@ uint32 SamOutput::process_one_alignment(const AlignmentData& alignment,
     generate_md_string(sam_align, alignment);
 
     // write out the alignment
-    output_alignment(sam_align);
+
+    if (write_thread_data)
+    {
+        output_alignment(write_thread_data, sam_align);
+    }
+    else
+    {
+        output_alignment(sam_align);
+    }
 
     return sam_align.mapq;
 }
@@ -542,7 +656,7 @@ void SamOutput::process(struct HostOutputBatchSE& batch)
         ScopedLock lock( &mutex );
 
         for(uint32 c = 0; c < batch.count; c++)
-        {
+        {          
             AlignmentData alignment = get(batch, c);
             AlignmentData mate = AlignmentData::invalid();
 
@@ -562,12 +676,65 @@ void SamOutput::process(struct HostOutputBatchPE& batch)
 
         for(uint32 c = 0; c < batch.count; c++)
         {
+          
             AlignmentData alignment = get_anchor_mate(batch,c);
             AlignmentData mate      = get_opposite_mate(batch,c);
 
-            process_one_alignment(alignment, mate);
-            process_one_alignment(mate, alignment);
+            process_one_alignment(alignment, mate);           
+            process_one_alignment(mate, alignment);            
+        }        
+    }
+    iostats.n_reads += batch.count;
+    iostats.output_process_timings.add( batch.count, time );
+}
+
+
+void SamOutput::processCacheWrites(struct HostOutputBatchSE& batch)
+{
+    float time = 0.0f;
+    {
+        ScopedTimer<float> timer( &time );
+        ScopedLock lock( &mutex );
+
+        AlignmentData alignment;
+        AlignmentData mate ;
+        #pragma omp parallel for ordered private(alignment, mate) //schedule(static) num_threads(omp_get_num_procs())
+        for(int32 c = 0; c < (int32)batch.count; c++)
+        {
+            #pragma omp ordered
+            {
+                alignment = get(batch, c);
+                mate = AlignmentData::invalid();
+
+                process_one_alignment(alignment, mate);
+            }
         }
+    }
+    iostats.n_reads += batch.count;
+    iostats.output_process_timings.add( batch.count, time );
+}
+
+void SamOutput::processCacheWrites(struct HostOutputBatchPE& batch)
+{
+    float time = 0.0f;
+    {
+        ScopedTimer<float> timer( &time );
+        ScopedLock lock( &mutex );
+
+        AlignmentData alignment;
+        AlignmentData mate ;
+        #pragma omp parallel for ordered private(alignment, mate) //schedule(static) num_threads(omp_get_num_procs())
+        for(int32 c = 0; c < (int32)batch.count; c++)
+        {
+            #pragma omp ordered
+            {
+                alignment = get_anchor_mate(batch,c);
+                mate      = get_opposite_mate(batch,c);
+
+                process_one_alignment(alignment, mate);           
+                process_one_alignment(mate, alignment);      
+            }     
+        }        
     }
     iostats.n_reads += batch.count;
     iostats.output_process_timings.add( batch.count, time );

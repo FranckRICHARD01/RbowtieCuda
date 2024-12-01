@@ -149,6 +149,20 @@ struct StagedAlignmentUnitBase
                 stream.pattern_length( job_id, &context ) :
                 stream.text_length( job_id, &context );
             stream.load_strings( job_id, 0, len, &context, &strings );
+
+            wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED * job_id]);
+            wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * job_id]);
+            wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * job_id]);
+            wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * job_id]);
+            wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED * job_id]);
+            wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * job_id]);
+            wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * job_id]);
+            wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * job_id]);
+            wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED * job_id]);
+            wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * job_id]);
+            wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * job_id]);
+            wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * job_id]);
+            wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * job_id]);
         }
     }
 
@@ -173,7 +187,8 @@ struct StagedAlignmentUnitBase
                 context.min_score,
                 window_begin,
                 window_end,
-                context.sink );
+                context.sink,
+                wfa);
 
             if (window_end >= len)
                 valid = false;
@@ -197,6 +212,7 @@ struct StagedAlignmentUnitBase
     strings_type    strings;           ///< the strings to be aligned
     volatile uint32 window_begin;      ///< the beginning of the pattern window
     volatile bool   valid;             ///< valid flag
+    aln::wfa_type<int32>   wfa;
 };
 
 ///
@@ -215,7 +231,8 @@ struct StagedScoreUnit :
         typename pattern_string,
         typename qual_string,
         typename text_string,
-        typename sink_type>
+        typename sink_type,
+        typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     bool execute(
         const ScoreStream<stream_type>& score_stream,
@@ -226,7 +243,8 @@ struct StagedScoreUnit :
         const int32                     min_score,
         const uint32                    window_begin,
         const uint32                    window_end,
-        sink_type&                      sink)
+        sink_type&                      sink,
+        wfa_type&                       wfa)
     {
         // fetch this job's temporary storage
         column_type column = score_stream.column( queue_slot );
@@ -241,8 +259,9 @@ struct StagedScoreUnit :
             window_begin,
             window_end,
             sink,
-            column );
-    }
+            column,
+            wfa );
+    }   
 };
 
 ///
@@ -263,7 +282,8 @@ struct BandedScoreUnit :
         typename pattern_string,
         typename qual_string,
         typename text_string,
-        typename sink_type>
+        typename sink_type,
+        typename wfa_type>
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     bool execute(
         const ScoreStream<stream_type>& score_stream,
@@ -274,7 +294,8 @@ struct BandedScoreUnit :
         const int32                     min_score,
         const uint32                    window_begin,
         const uint32                    window_end,
-        sink_type&                      sink)
+        sink_type&                      sink,
+        wfa_type&                       wfa)
     {
         // fetch this job's temporary storage
         column_type column = score_stream.column( queue_slot );
@@ -289,7 +310,8 @@ struct BandedScoreUnit :
             window_begin,
             window_end,
             sink,
-            column );
+            column,
+            wfa );
     }
 };
 

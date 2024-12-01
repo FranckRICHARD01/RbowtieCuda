@@ -38,7 +38,7 @@
 //#define NVBIO_CUDA_NON_BLOCKING_ASSERTS
 //#define NVBIO_CUDA_ASSERTS
 
-#define USE_TEX             1
+#define USE_TEX             0
 #define USE_TEX_READS       1
 #define USE_UINT4_PACKING   0
 
@@ -75,6 +75,8 @@ namespace nvbio {
 namespace bowtie2 {
 namespace cuda {
 
+    #define MAX_CHAR   1500 * 1024 * 1024
+
 ///@addtogroup nvBowtie
 ///@{
 
@@ -109,6 +111,7 @@ enum { LMEM_CACHE_WORDS = 64 };
 
 struct edit_distance_scoring_tag {};
 struct smith_waterman_scoring_tag {};
+struct wfa_scoring_tag {};
 
 ///
 /// A helper class to track debugging info

@@ -73,6 +73,26 @@ void score_best(
     score_best_t( band_len, pipeline, params );
 }
 
+//
+// execute a batch of single-ended banded-alignment score calculations, best mapping
+//
+// \b inputs:
+//  - HitQueues::seed
+//  - HitQueues::loc
+//
+// \b outputs:
+//  - HitQueues::score
+//  - HitQueues::sink
+//
+void score_best(
+    const uint32                                                            band_len,
+    const BestApproxScoringPipelineState<WfaScoringScheme<> >&              pipeline,
+    const ParamsPOD&                                                        params)
+{
+    score_best_t( band_len, pipeline, params );
+}
+
+
 } // namespace cuda
 } // namespace bowtie2
 } // namespace nvbio
