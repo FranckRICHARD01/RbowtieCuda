@@ -1,7 +1,7 @@
 Package: RbowtieCuda
 Type: Package
 Title: An R Wrapper for nvBowtie and nvBWT, a rewritten version of Bowtie2 for cuda
-Version: 0.1.2
+Version: 0.99.0
 Date: 2024-12-01
 Authors@R: 
         c(person(given = "Jacopo", family = "Pantaleoni", role = c("aut"), 
@@ -35,6 +35,5 @@ Author: c(Jacopo Pantaleoni [aut],
   Nuno Subtil  [aut],
   Samuel Simon Sanchez [aut],
   Franck RICHARD [aut, cre])
-Maintainer: Franck RICHARD <franck.richard@winstars.net>
 BugReports: https://github.com/FranckRICHARD01/RbowtieCuda/issues 
 URL: https://github.com/FranckRICHARD01/RbowtieCuda, https://belacqua-labo.ovh/bioinformatic/RbowtieCuda
