@@ -4,11 +4,11 @@
 __________________ Ubuntu 24.04 and more _________________
 
 To compile nvBowtie, it is essential to install the CUDA development suite. A script is provided
-in the 'inst' directory to facilitate the installation of CUDA on Ubuntu 18.04 or later. This script
+in the 'inst/scripts' directory to facilitate the installation of CUDA on Ubuntu 18.04 or later. This script
 installs version 11.8 by default, but older CUDA versions can also be used with this package.
 
 The default architecture supported by nvBowtie is Pascal (sm_60). However, you can modify this parameter
-by editing src/nvbio-1.1.00/CMakefile.txt. Ensure that the selected architecture is compatible with the
+by editing src/nvbio/CMakefile.txt. Ensure that the selected architecture is compatible with the
 installed version of the CUDA software suite. Refer to the compatibility guide for NVIDIA cards here:
 (https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards). 
 
