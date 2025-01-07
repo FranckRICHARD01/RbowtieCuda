@@ -7,10 +7,15 @@
 # verify the installation
 ###
 
+### to verify your gpu is cuda enable check
+if ! lspci | grep -i nvidia; then
+    echo "No NVIDIA GPU detected. Exiting."
+    exit 1
+fi
+
 ### continue ?
 echo "Please note that this script will first delete old nvidia libraries and old nvidia drivers 
-from your system. Be careful if you're using containers that use these components,
-as they may also be deleted during this operation."
+from your system."
 while true; do
     read -p "Do you wish to continue (y/n)?" yn
     case $yn in
@@ -19,9 +24,6 @@ while true; do
         * ) echo "Please answer yes (Y) or no (N).";;
     esac
 done
-
-### to verify your gpu is cuda enable check
-lspci | grep -i nvidia
 
 ### If you have previous installation remove it first. 
 sudo apt-get purge nvidia* libnvidia*
@@ -33,6 +35,9 @@ sudo rm -rf /usr/local/cuda*
 # system update
 sudo apt-get update
 sudo apt-get upgrade
+
+# install headers
+sudo apt install linux-headers-$(uname -r) 
 
 # install other import packages
 sudo apt-get install g++ freeglut3-dev build-essential libx11-dev libxmu-dev libxi-dev libglu1-mesa libglu1-mesa-dev libthrust-dev libcub-dev
@@ -53,7 +58,7 @@ sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/
 sudo apt-get update
 
  # installing CUDA-11.8
-sudo apt install cuda-11-8
+sudo apt install cuda-11-8 nvidia-cuda-toolkit
 
 # setup your paths
 echo 'export PATH=/usr/local/cuda-11.8/bin:$PATH' >> ~/.bashrc
@@ -61,7 +66,6 @@ echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.8/lib64:$LD_LIBRARY_PATH' >> ~/.
 source ~/.bashrc
 sudo ldconfig
 
-# Finally, to verify the installation, check
-nvidia-smi
-nvcc -V
+echo "Please reboot the machine and check that the installation has been completed 
+successfully using the verif_installation_cuda.sh script."
 
