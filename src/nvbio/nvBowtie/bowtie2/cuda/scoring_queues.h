@@ -334,7 +334,7 @@ struct HitQueuesDeviceView
 ///
 struct ScoringQueues
 {
-    typedef nvbio::cuda::PingPongQueues<packed_read>    active_reads_storage_type;
+    typedef nvbio::nvbio_cuda::PingPongQueues<packed_read>    active_reads_storage_type;
     typedef HitQueues                                   hits_storage_type;
     typedef ReadHitsIndex                               read_hits_index_type;
     typedef thrust::device_vector<uint32>               pool_type;

@@ -157,7 +157,7 @@ void do_synthetic_test_device(
     const OccIterator               occ_it,
     const BwtIterator               bwt_it)
 {
-    typedef nvbio::cuda::ldg_pointer<uint32> count_table_type;
+    typedef nvbio::nvbio_cuda::ldg_pointer<uint32> count_table_type;
     const count_table_type count_table( thrust::raw_pointer_cast( &device_data.count_table.front() ) );
 
     typedef PackedStream<BwtIterator,uint8,2u,true,index_type> bwt_type;
@@ -255,7 +255,7 @@ void synthetic_test_device(
 
         // test an FM-index with separate bwt/occ tables
         {
-            typedef nvbio::cuda::ldg_pointer<uint4> iterator_type;
+            typedef nvbio::nvbio_cuda::ldg_pointer<uint4> iterator_type;
 
             iterator_type occ_it( (const uint4*)thrust::raw_pointer_cast( &device_data.occ.front() ) );
             iterator_type bwt_it( (const uint4*)thrust::raw_pointer_cast( &device_data.bwt.front() ) );
@@ -274,7 +274,7 @@ void synthetic_test_device(
         // test an FM-index with interleaved bwt/occ tables
         if (WORDS == OCC_WORDS)
         {
-            typedef nvbio::cuda::ldg_pointer<uint4> bwt_occ_texture;
+            typedef nvbio::nvbio_cuda::ldg_pointer<uint4> bwt_occ_texture;
             bwt_occ_texture bwt_occ_tex( (const uint4*)thrust::raw_pointer_cast( &device_data.bwt_occ.front() ) );
 
             typedef deinterleaved_iterator<2,0,bwt_occ_texture> bwt_iterator;
@@ -322,7 +322,7 @@ void synthetic_test_device(
 
         // test an FM-index with separate bwt/occ tables
         {
-            typedef nvbio::cuda::ldg_pointer<uint64> iterator_type;
+            typedef nvbio::nvbio_cuda::ldg_pointer<uint64> iterator_type;
 
             iterator_type occ_it( (const uint64*)thrust::raw_pointer_cast( &device_data.occ.front() ) );
             iterator_type bwt_it( (const uint64*)thrust::raw_pointer_cast( &device_data.bwt.front() ) );
@@ -341,7 +341,7 @@ void synthetic_test_device(
         // test an FM-index with interleaved bwt/occ tables
         if (WORDS == OCC_WORDS)
         {
-            typedef nvbio::cuda::ldg_pointer<uint64> bwt_occ_texture;
+            typedef nvbio::nvbio_cuda::ldg_pointer<uint64> bwt_occ_texture;
             bwt_occ_texture bwt_occ_tex( (const uint64*)thrust::raw_pointer_cast( &device_data.bwt_occ.front() ) );
 
             typedef deinterleaved_iterator<2,0,bwt_occ_texture> bwt_iterator;
@@ -864,7 +864,7 @@ void backtrack_test(const char* index_file, const char* reads_name, const uint32
                 thrust::raw_pointer_cast( &counter.front() ) );
 
             cudaDeviceSynchronize();
-            nvbio::cuda::check_error("count_kernel");
+            nvbio::nvbio_cuda::check_error("count_kernel");
 
             float time;
             cudaEventRecord( stop, 0 );
@@ -913,7 +913,7 @@ void backtrack_test(const char* index_file, const char* reads_name, const uint32
                 thrust::raw_pointer_cast( &counter.front() ) );
 
             cudaDeviceSynchronize();
-            nvbio::cuda::check_error("count_kernel");
+            nvbio::nvbio_cuda::check_error("count_kernel");
 
             float time;
             cudaEventRecord( stop, 0 );
@@ -963,7 +963,7 @@ void backtrack_test(const char* index_file, const char* reads_name, const uint32
                 thrust::raw_pointer_cast( &counter.front() ) );
 
             cudaDeviceSynchronize();
-            nvbio::cuda::check_error("count_kernel");
+            nvbio::nvbio_cuda::check_error("count_kernel");
 
             float time;
             cudaEventRecord( stop, 0 );

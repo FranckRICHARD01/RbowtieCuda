@@ -53,7 +53,7 @@
 ///
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 ///@addtogroup Basic
 ///@{

@@ -109,7 +109,7 @@ struct BWTParams
 
 ///@addtogroup Sufsort
 ///@{
-namespace cuda {
+namespace nvbio_cuda {
 ///@}
 
 ///@addtogroup Sufsort
@@ -144,7 +144,7 @@ void suffix_sort(
 
 ///\anchor StringSuffixHandler
 /// Sort all the suffixes of a given string using an adaptation of the Blockwise Suffix Sorting
-/// algorithm by J.Kärkkäinen, and can hence work in a confined amount of host and device memory
+/// algorithm by J.Kï¿½rkkï¿½inen, and can hence work in a confined amount of host and device memory
 /// (as specified by \ref BWTParams).
 ///
 /// \tparam string_type             an iterator to the string
@@ -184,7 +184,7 @@ void blockwise_suffix_sort(
 
 /// Compute the bwt of a device-side string.
 /// This function computes the bwt using an adaptation of the Blockwise Suffix Sorting
-/// by J.Kärkkäinen, and can hence work in a confined amount of host and device memory
+/// by J.Kï¿½rkkï¿½inen, and can hence work in a confined amount of host and device memory
 /// (as specified by \ref BWTParams).
 ///
 /// \tparam string_type             an iterator to the string

@@ -299,11 +299,11 @@ struct FMIndexDataDevice : public FMIndexData
 
     // FM-index type interfaces
     //
-    typedef cuda::ldg_pointer<uint4>                                bwt_occ_type;
+    typedef nvbio_cuda::ldg_pointer<uint4>                                bwt_occ_type;
     typedef deinterleaved_iterator<2,0,bwt_occ_type>                bwt_type;
     typedef deinterleaved_iterator<2,1,bwt_occ_type>                occ_type;
-    typedef cuda::ldg_pointer<uint32>                               count_table_type;
-    typedef cuda::ldg_pointer<uint32>                               ssa_ldg_type;
+    typedef nvbio_cuda::ldg_pointer<uint32>                               count_table_type;
+    typedef nvbio_cuda::ldg_pointer<uint32>                               ssa_ldg_type;
     typedef SSA_index_multiple_device<SA_INT>                       ssa_storage_type;
     typedef PackedStream<bwt_type,uint8,BWT_BITS,BWT_BIG_ENDIAN>    bwt_stream_type;
 

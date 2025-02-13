@@ -58,10 +58,10 @@ struct StaticVectorBase<T,2>
     typedef typename vector_type<T,2>::type    base_type;
 
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
-    StaticVectorBase<T,2>() {}
+    StaticVectorBase() {}
 
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
-    StaticVectorBase<T,2>(const base_type v) : data(v) {}
+    StaticVectorBase(const base_type v) : data(v) {}
 
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     const T& operator[] (const uint32 i) const { return (&data.x)[i]; }
@@ -84,10 +84,10 @@ struct StaticVectorBase<T,3>
     typedef typename vector_type<T,3>::type    base_type;
 
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
-    StaticVectorBase<T,3>() {}
+    StaticVectorBase() {}
 
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
-    StaticVectorBase<T,3>(const base_type v) : data(v) {}
+    StaticVectorBase(const base_type v) : data(v) {}
 
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     const T& operator[] (const uint32 i) const { return (&data.x)[i]; }
@@ -110,10 +110,10 @@ struct StaticVectorBase<T,4>
     typedef typename vector_type<T,4>::type    base_type;
 
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
-    StaticVectorBase<T,4>() {}
+    StaticVectorBase() {}
 
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
-    StaticVectorBase<T,4>(const base_type v) : data(v) {}
+    StaticVectorBase(const base_type v) : data(v) {}
 
     NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
     const T& operator[] (const uint32 i) const { return (&data.x)[i]; }

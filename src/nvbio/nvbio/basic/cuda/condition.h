@@ -32,7 +32,7 @@
 #include <thrust/device_vector.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 /// implements a simple inter-CTA condition variable
 ///

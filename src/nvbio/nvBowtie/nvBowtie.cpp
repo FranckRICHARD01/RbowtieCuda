@@ -567,7 +567,7 @@ int main(int argc, char* argv[])
     {
         int device_count;
         cudaGetDeviceCount(&device_count);
-        nvbio::cuda::check_error("cuda-check");
+        nvbio::nvbio_cuda::check_error("cuda-check");
 
         log_verbose(stderr, "  cuda devices : %d\n", device_count);
 

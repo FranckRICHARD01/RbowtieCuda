@@ -400,7 +400,7 @@ struct SequenceDataViewCore : public SequenceDataInfo
 
 typedef SequenceDataViewCore<uint32*,uint32*,char*,char*>                                                   SequenceDataView;           ///< \n A non-const SequenceData view
 typedef SequenceDataViewCore<const uint32*,const uint32*,const char*,const char*>                           ConstSequenceDataView;      ///< \n A const SequenceData view
-typedef SequenceDataViewCore<cuda::ldg_pointer<uint32>,cuda::ldg_pointer<uint32>,const char*,const char*>   LdgSequenceDataView;        ///< \n An LDG-based SequenceData view
+typedef SequenceDataViewCore<nvbio_cuda::ldg_pointer<uint32>,nvbio_cuda::ldg_pointer<uint32>,const char*,const char*>   LdgSequenceDataView;        ///< \n An LDG-based SequenceData view
 
 ///@} // SequenceDataViews
 

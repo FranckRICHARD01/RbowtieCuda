@@ -30,7 +30,7 @@
 #include <nvbio/basic/numbers.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 // make sure a given buffer is big enough
 //

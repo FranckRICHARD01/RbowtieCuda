@@ -111,7 +111,7 @@ void Aligner::best_approx(
     // start timing
     Timer timer;
     Timer global_timer;
-    nvbio::cuda::Timer device_timer;
+    nvbio::nvbio_cuda::Timer device_timer;
 
     const uint32 count = read_data.size();
     /*const*/ uint32 band_len = band_length( params.max_dist );
@@ -173,7 +173,7 @@ void Aligner::best_approx(
                 params.rc );
 
             optional_device_synchronize();
-            nvbio::cuda::check_error("mapping kernel");
+            nvbio::nvbio_cuda::check_error("mapping kernel");
 
             device_timer.stop();
             timer.stop();
@@ -238,7 +238,7 @@ void Aligner::best_approx(
                 params.rc );
 
             optional_device_synchronize();
-            nvbio::cuda::check_error("mapping kernel");
+            nvbio::nvbio_cuda::check_error("mapping kernel");
 
             device_timer.stop();
             timer.stop();
@@ -339,7 +339,7 @@ void Aligner::best_approx(
             params );
 
         optional_device_synchronize();
-        nvbio::cuda::check_error("backtracking kernel");
+        nvbio::nvbio_cuda::check_error("backtracking kernel");
         if (cigar.has_overflown())
             throw nvbio::runtime_error("CIGAR vector overflow\n");
 
@@ -363,7 +363,7 @@ void Aligner::best_approx(
             params );
 
         optional_device_synchronize();
-        nvbio::cuda::check_error("alignment kernel");
+        nvbio::nvbio_cuda::check_error("alignment kernel");
         if (mds.has_overflown())
             throw nvbio::runtime_error("MDS vector overflow\n");
 
@@ -569,7 +569,7 @@ void Aligner::best_approx_score(
 
     Timer timer;
     Timer global_timer;
-    nvbio::cuda::Timer device_timer;
+    nvbio::nvbio_cuda::Timer device_timer;
 
 //    const uint32 count    = read_data.size();
     /*const*/ uint32 band_len = band_length( params.max_dist );
@@ -637,7 +637,7 @@ void Aligner::best_approx_score(
         params );
 
     optional_device_synchronize();
-    nvbio::cuda::check_error("select-init kernel");
+    nvbio::nvbio_cuda::check_error("select-init kernel");
 
     // prepeare the selection context
     SelectBestApproxContext select_context( trys_dptr );
@@ -718,7 +718,7 @@ void Aligner::best_approx_score(
             params );
 
         optional_device_synchronize();
-        nvbio::cuda::check_error("select kernel");
+        nvbio::nvbio_cuda::check_error("select kernel");
 
         // this sync point seems very much needed: if we don't place it, we won't see
         // the right number of hits later on...
@@ -788,7 +788,7 @@ void Aligner::best_approx_score(
         locate_lookup( pipeline, params );
 
         optional_device_synchronize();
-        nvbio::cuda::check_error("locating kernel");
+        nvbio::nvbio_cuda::check_error("locating kernel");
 
         device_timer.stop();
         timer.stop();
@@ -827,7 +827,7 @@ void Aligner::best_approx_score(
             params );
 
         optional_device_synchronize();
-        nvbio::cuda::check_error("score kernel");
+        nvbio::nvbio_cuda::check_error("score kernel");
 
         device_timer.stop();
         timer.stop();
@@ -856,7 +856,7 @@ void Aligner::best_approx_score(
             params );
 
         optional_device_synchronize();
-        nvbio::cuda::check_error("score-reduce kernel");
+        nvbio::nvbio_cuda::check_error("score-reduce kernel");
 
         // keep track of the number of extensions performed for each of the active reads
         n_ext += pipeline.n_hits_per_read;

@@ -287,7 +287,7 @@ uint64 FMIndexFilter<device_tag,fm_index_type>::rank(
         fmindex::rank_functor<fm_index_type,string_set_type>( m_index, string_set ) );
 
     // scan their size to determine the slots
-    cuda::inclusive_scan(
+    nvbio_cuda::inclusive_scan(
         m_n_queries,
         thrust::make_transform_iterator( m_ranges.begin(), fmindex::range_size<range_type>() ),
         m_slots.begin(),

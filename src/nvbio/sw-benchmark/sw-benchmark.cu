@@ -81,7 +81,7 @@ struct AlignmentStream
 {
     typedef t_aligner_type                                                          aligner_type;
 
-    typedef nvbio::cuda::ldg_pointer<uint32>                                        storage_iterator;
+    typedef nvbio::nvbio_cuda::ldg_pointer<uint32>                                        storage_iterator;
 
     typedef nvbio::PackedStringLoader<
         storage_iterator,
@@ -240,7 +240,7 @@ __global__ void alignment_test_kernel(
     const uint32 tid = blockIdx.x * BLOCKDIM + threadIdx.x;
 
     typedef lmem_cache_tag_type                                                 lmem_cache_type;
-    typedef nvbio::cuda::ldg_pointer<uint32>                                    storage_iterator;
+    typedef nvbio::nvbio_cuda::ldg_pointer<uint32>                                    storage_iterator;
 
     typedef nvbio::PackedStringLoader<
         storage_iterator,

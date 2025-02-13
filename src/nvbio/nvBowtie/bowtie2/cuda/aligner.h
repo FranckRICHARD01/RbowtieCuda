@@ -102,7 +102,7 @@ struct Aligner
 
     SeedHitDequeArray                   hit_deques;
 
-    nvbio::cuda::PingPongQueues<uint32> seed_queues;
+    nvbio::nvbio_cuda::PingPongQueues<uint32> seed_queues;
     ScoringQueues                       scoring_queues;
 
     thrust::device_vector<uint32>       idx_queue_dvec;
@@ -185,7 +185,7 @@ struct Aligner
 
     uint32                          batch_number;
 
-    nvbio::cuda::SortEnactor        sort_enactor;
+    nvbio::nvbio_cuda::SortEnactor        sort_enactor;
     // --------------------------------------------------------------------------------------------- //
 
     // file object that we're writing into

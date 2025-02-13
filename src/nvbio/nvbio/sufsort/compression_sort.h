@@ -41,7 +41,7 @@
 #include <moderngpu.cuh>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 ///@addtogroup Sufsort
 ///@{
@@ -388,7 +388,7 @@ void CompressionSort::sort(
                 word_functor );
 
             NVBIO_CUDA_DEBUG_STATEMENT( cudaDeviceSynchronize() );
-            cuda::check_error("CompressionSort::sort() : extract");
+            nvbio_cuda::check_error("CompressionSort::sort() : extract");
 
             timer.stop();
             extract_time += timer.seconds();
@@ -404,7 +404,7 @@ void CompressionSort::sort(
                 d_comp_flags );
 
             NVBIO_CUDA_DEBUG_STATEMENT( cudaDeviceSynchronize() );
-            cuda::check_error("CompressionSort::sort() : pack_flags");
+            nvbio_cuda::check_error("CompressionSort::sort() : pack_flags");
 
             // sort within segments
             NVBIO_CUDA_DEBUG_STATEMENT( log_debug( stderr, "      seg-sort\n" ) );
@@ -416,7 +416,7 @@ void CompressionSort::sort(
                 *m_mgpu );
 
             NVBIO_CUDA_DEBUG_STATEMENT( cudaDeviceSynchronize() );
-            cuda::check_error("CompressionSort::sort() : seg_sort");
+            nvbio_cuda::check_error("CompressionSort::sort() : seg_sort");
 
             timer.stop();
             radixsort_time += timer.seconds();
@@ -436,14 +436,14 @@ void CompressionSort::sort(
                 nvbio::raw_pointer( d_segment_flags ) );
 
             NVBIO_CUDA_DEBUG_STATEMENT( cudaDeviceSynchronize() );
-            cuda::check_error("CompressionSort::sort() : build_head_flags");
+            nvbio_cuda::check_error("CompressionSort::sort() : build_head_flags");
 
             d_segment_flags[0]                 = 1u; // make sure the first flag is a 1
             d_segment_flags[n_active_suffixes] = 1u; // and add a sentinel
 
             // perform a scan to "compress" the keys in place, removing holes between them and reducing their entropy;
             // this operation will produce a 1-based vector of contiguous values of the kind (1, 1, 2, 3, 3, 3, ... )
-            cuda::inclusive_scan(
+            nvbio_cuda::inclusive_scan(
                 n_active_suffixes,
                 thrust::make_transform_iterator( d_segment_flags.begin(), cast_functor<uint8,uint32>() ),
                 d_keys.begin(),
@@ -493,7 +493,7 @@ void CompressionSort::sort(
                 d_copy_flags.begin(),
                 priv::remove_singletons() );
 
-            const uint32 n_partials = cuda::reduce(
+            const uint32 n_partials = nvbio_cuda::reduce(
                 n_active_suffixes,
                 thrust::make_transform_iterator( d_copy_flags.begin() + 1u, cast_functor<uint8,uint32>() ),
                 thrust::plus<uint32>(),
@@ -517,7 +517,7 @@ void CompressionSort::sort(
                 thrust::device_vector<uint32>& d_temp_indices = d_keys;
 
                 // now keep only the indices we are interested in
-                if (uint32 n_active = cuda::copy_flagged(
+                if (uint32 n_active = nvbio_cuda::copy_flagged(
                     n_active_suffixes,
                     d_indices.begin(),
                     d_copy_flags.begin() + 1u,
@@ -528,7 +528,7 @@ void CompressionSort::sort(
                 d_indices.swap( d_temp_indices );
 
                 // as well as their slots
-                if (uint32 n_active = cuda::copy_flagged(
+                if (uint32 n_active = nvbio_cuda::copy_flagged(
                     n_active_suffixes,
                     d_active_slots.begin(),
                     d_copy_flags.begin() + 1u,
@@ -539,7 +539,7 @@ void CompressionSort::sort(
                 d_active_slots.swap( d_temp_indices );
 
                 // and the segment flags
-                if (uint32 n_active = cuda::copy_flagged(
+                if (uint32 n_active = nvbio_cuda::copy_flagged(
                     n_active_suffixes,
                     d_segment_flags.begin(),
                     d_copy_flags.begin() + 1u,
@@ -737,7 +737,7 @@ void CompressionSort::sort(
                     d_comp_flags );
 
                 NVBIO_CUDA_DEBUG_STATEMENT( cudaDeviceSynchronize() );
-                cuda::check_error("CompressionSort::sort() : pack_flags");
+                nvbio_cuda::check_error("CompressionSort::sort() : pack_flags");
 
                 // sort within segments
                 NVBIO_CUDA_DEBUG_STATEMENT( log_debug( stderr, "      seg-sort\n" ) );
@@ -749,7 +749,7 @@ void CompressionSort::sort(
                     *m_mgpu );
 
                 NVBIO_CUDA_DEBUG_STATEMENT( cudaDeviceSynchronize() );
-                cuda::check_error("CompressionSort::sort() : seg_sort");
+                nvbio_cuda::check_error("CompressionSort::sort() : seg_sort");
 
                 timer.stop();
                 radixsort_time += timer.seconds();
@@ -769,14 +769,14 @@ void CompressionSort::sort(
                     nvbio::raw_pointer( d_segment_flags ) );
 
                 NVBIO_CUDA_DEBUG_STATEMENT( cudaDeviceSynchronize() );
-                cuda::check_error("CompressionSort::sort() : build_head_flags");
+                nvbio_cuda::check_error("CompressionSort::sort() : build_head_flags");
 
                 d_segment_flags[0]                = 1u; // make sure the first flag is a 1
                 d_segment_flags[n_active_strings] = 1u; // and add a sentinel
 
                 // perform a scan to "compress" the keys in place, removing holes between them and reducing their entropy;
                 // this operation will produce a 1-based vector of contiguous values of the kind (1, 1, 2, 3, 3, 3, ... )
-                cuda::inclusive_scan(
+                nvbio_cuda::inclusive_scan(
                     n_active_strings,
                     thrust::make_transform_iterator( d_segment_flags.begin(), cast_functor<uint8,uint32>() ),
                     d_keys.begin(),
@@ -845,7 +845,7 @@ void CompressionSort::sort(
                     d_copy_flags.begin(),
                     priv::remove_singletons() );
 
-                const uint32 n_partials = cuda::reduce(
+                const uint32 n_partials = nvbio_cuda::reduce(
                     n_active_strings,
                     thrust::make_transform_iterator( d_copy_flags.begin() + 1u, cast_functor<uint8,uint32>() ),
                     thrust::plus<uint32>(),
@@ -878,7 +878,7 @@ void CompressionSort::sort(
                     thrust::device_vector<uint32>& d_temp_indices = d_keys;
 
                     // now keep only the indices we are interested in
-                    cuda::copy_flagged(
+                    nvbio_cuda::copy_flagged(
                         n_active_strings,
                         d_indices.begin(),
                         d_copy_flags.begin() + 1u,
@@ -888,7 +888,7 @@ void CompressionSort::sort(
                     d_indices.swap( d_temp_indices );
 
                     // as well as their slots
-                    cuda::copy_flagged(
+                    nvbio_cuda::copy_flagged(
                         n_active_strings,
                         d_active_slots.begin(),
                         d_copy_flags.begin() + 1u,
@@ -898,7 +898,7 @@ void CompressionSort::sort(
                     d_active_slots.swap( d_temp_indices );
 
                     // and the segment flags
-                    cuda::copy_flagged(
+                    nvbio_cuda::copy_flagged(
                         n_active_strings,
                         d_segment_flags.begin(),
                         d_copy_flags.begin() + 1u,

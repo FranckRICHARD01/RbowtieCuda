@@ -1068,14 +1068,14 @@ struct SetSuffixFlattener
     {
         const uint32 n = string_set.size();
 
-        cuda::Timer timer;
+        nvbio_cuda::Timer timer;
         timer.start();
 
         // compute the cumulative sum of the string lengths in the set - we will use this for
         // building the map: (global suffix index -> string index)
         alloc_storage( cum_lengths, n );
 
-        cuda::inclusive_scan(
+        nvbio_cuda::inclusive_scan(
             n,
             thrust::make_transform_iterator( thrust::make_counting_iterator(0u), length_functor<string_set_type>( string_set, empty_suffixes ) ),
             cum_lengths.begin(),
@@ -1137,7 +1137,7 @@ struct SetSuffixFlattener
         const string_set_type&  string_set, const bool empty_suffixes = true)
     {
         // compute the maximum string length in the set
-        return cuda::reduce(
+        return nvbio_cuda::reduce(
             uint32( string_set.size() ),
             thrust::make_transform_iterator(
                 thrust::make_counting_iterator<uint32>(0u),
@@ -1157,7 +1157,7 @@ struct SetSuffixFlattener
         // TODO: this function is conservative, in the sense it returns the maximum *string* length;
         // however, each suffix might be shorter than the string it belongs to.
         return indices_end <= indices_begin ? 0u :
-            cuda::reduce(
+            nvbio_cuda::reduce(
                 indices_end - indices_begin,
                 thrust::make_transform_iterator(
                     thrust::make_permutation_iterator( string_ids.begin(), indices_begin ),
@@ -1203,7 +1203,7 @@ struct ChunkLoader<SYMBOL_SIZE,BIG_ENDIAN,storage_type,offsets_iterator,host_tag
     typedef typename std::iterator_traits<storage_type>::value_type     word_type;
     typedef typename std::iterator_traits<offsets_iterator>::value_type index_type;
 
-    typedef cuda::load_pointer<word_type,cuda::LOAD_LDG> word_pointer;
+    typedef nvbio_cuda::load_pointer<word_type,nvbio_cuda::LOAD_LDG> word_pointer;
 
     typedef PackedStream<word_pointer,uint8,SYMBOL_SIZE,BIG_ENDIAN> packed_stream_type;
     typedef typename packed_stream_type::iterator                   packed_stream_iterator;
@@ -1355,7 +1355,7 @@ struct StringSuffixBucketer
         const uint32            string_length,
         const string_type&      string)
     {
-        cuda::Timer timer;
+        nvbio_cuda::Timer timer;
 
         const uint32 n_buckets = 1u << (N_BITS);
 
@@ -1381,8 +1381,8 @@ struct StringSuffixBucketer
         timer.start();
 
         // sort the radices so as to make binning easy
-        cuda::SortBuffers<word_type*>   sort_buffers;
-        cuda::SortEnactor               sort_enactor;
+        nvbio_cuda::SortBuffers<word_type*>   sort_buffers;
+        nvbio_cuda::SortEnactor               sort_enactor;
 
         sort_buffers.selector = 0;
         sort_buffers.keys[0]  = nvbio::device_view( d_radices );
@@ -1428,7 +1428,7 @@ struct StringSuffixBucketer
               output_iterator       output_radices,
               output_iterator       output_indices)
     {
-        cuda::Timer timer;
+        nvbio_cuda::Timer timer;
 
         const uint32 n_buckets  = 1u << N_BITS;
 
@@ -1457,7 +1457,7 @@ struct StringSuffixBucketer
         const priv::in_range_functor in_range = priv::in_range_functor( bucket_begin, bucket_end );
 
         // retain only suffixes whose radix is between the specified buckets
-        const uint32 n_collected = cuda::copy_flagged(
+        const uint32 n_collected = nvbio_cuda::copy_flagged(
             n_suffixes,
             thrust::make_zip_iterator( thrust::make_tuple( suffixes, d_radices.begin() ) ),
             thrust::make_transform_iterator( d_radices.begin(), in_range ),
@@ -1482,8 +1482,8 @@ struct StringSuffixBucketer
         timer.start();
 
         // sort the radices so as to make binning easy
-        cuda::SortBuffers<word_type*,uint64*>   sort_buffers;
-        cuda::SortEnactor                       sort_enactor;
+        nvbio_cuda::SortBuffers<word_type*,uint64*>   sort_buffers;
+        nvbio_cuda::SortEnactor                       sort_enactor;
 
         sort_buffers.selector  = 0;
       //#define SORT_BY_BUCKETS
@@ -2082,7 +2082,7 @@ struct device_copy_dispatch
         const output_iterator       output,
         const index_type            offset)
     {
-        const uint32 batch_size = cuda::max_grid_size();
+        const uint32 batch_size = nvbio_cuda::max_grid_size();
         for (uint32 batch_begin = 0; batch_begin < n; batch_begin += batch_size)
         {
             const uint32 batch_end = nvbio::min( batch_begin + batch_size, n );
@@ -2115,7 +2115,7 @@ struct device_copy_dispatch<
         typedef typename PackedStream<storage_type,uint8,SYMBOL_SIZE,BIG_ENDIAN,index_type>::storage_type word_type;
         const uint32 SYMBOLS_PER_WORD = (8u*sizeof(word_type))/SYMBOL_SIZE;
 
-        const uint32 batch_size = cuda::max_grid_size();
+        const uint32 batch_size = nvbio_cuda::max_grid_size();
         for (uint32 batch_begin = 0; batch_begin < n; batch_begin += batch_size)
         {
             const uint32 batch_end = nvbio::min( batch_begin + batch_size, n );
@@ -2228,7 +2228,7 @@ struct device_scatter_dispatch<
             thrust::equal_to<uint32>(),
             thrust::maximum<uint32>() ).first - d_keys.begin() );
 
-        const uint32 batch_size = cuda::max_grid_size();
+        const uint32 batch_size = nvbio_cuda::max_grid_size();
         for (uint32 batch_begin = 0; batch_begin < n_ranges; batch_begin += batch_size)
         {
             const uint32 batch_end = nvbio::min( batch_begin + batch_size, n_ranges );

@@ -45,7 +45,7 @@ namespace nvbio {
 
 #if defined(__CUDACC__)
 
-namespace cuda {
+namespace nvbio_cuda {
 
 //
 // A kernel to extract string lengths from a generic string set
@@ -129,7 +129,7 @@ void contig_to_concat_kernel(
     OutStringIterator out_string,
     OutOffsetIterator out_offsets)
 {
-    const uint32 NUM_WARPS = BLOCKDIM >> cuda::Arch::LOG_WARP_SIZE;
+    const uint32 NUM_WARPS = BLOCKDIM >> nvbio_cuda::Arch::LOG_WARP_SIZE;
     const uint32 wid = warp_id() + blockIdx.x * NUM_WARPS;
     if (wid >= N_strings)
         return;
@@ -140,7 +140,7 @@ void contig_to_concat_kernel(
 
     const uint32 offset = out_offsets[wid];
 
-    for (uint32 j = warp_tid(); j < length; j += cuda::Arch::WARP_SIZE)
+    for (uint32 j = warp_tid(); j < length; j += nvbio_cuda::Arch::WARP_SIZE)
         out_string[offset + j] = in_string[j];
 }
 
@@ -182,7 +182,7 @@ void generic_to_packed_concat_kernel(
     OutStreamIterator out_stream,
     OutOffsetIterator out_offsets)
 {
-    const uint32 WARP_SIZE        = cuda::Arch::WARP_SIZE;
+    const uint32 WARP_SIZE        = nvbio_cuda::Arch::WARP_SIZE;
     const uint32 WORDS_PER_THREAD = 4u;
 
     const uint32 tid = threadIdx.x + blockIdx.x * BLOCKDIM;
@@ -464,7 +464,7 @@ void contig_to_strided_uint8_kernel(
 
     const uint32 length = tid < N_strings ? in_set[ tid ].size() : 0u;
 
-    const uint32 WARP_SIZE = cuda::Arch::WARP_SIZE;
+    const uint32 WARP_SIZE = nvbio_cuda::Arch::WARP_SIZE;
     const uint32 wid  = warp_id();
     const uint32 wtid = warp_tid();
 
@@ -816,7 +816,7 @@ void contig_to_strided_packed_kernel(
 
     const uint32 length = tid < N_strings ? in_set[ tid ].size() : 0u;
 
-    const uint32 WARP_SIZE = cuda::Arch::WARP_SIZE;
+    const uint32 WARP_SIZE = nvbio_cuda::Arch::WARP_SIZE;
     const uint32 wid  = warp_id();
     const uint32 wtid = warp_tid();
 
@@ -1079,7 +1079,7 @@ struct copy_dispatch<
         #endif
             {
                 // use 1 warp per string
-                const uint32 WARPS_PER_BLOCK = BLOCKDIM >> cuda::Arch::LOG_WARP_SIZE;
+                const uint32 WARPS_PER_BLOCK = BLOCKDIM >> nvbio_cuda::Arch::LOG_WARP_SIZE;
                 const uint32 n_blocks = (in_string_set.size()+1 + WARPS_PER_BLOCK-1)/WARPS_PER_BLOCK;
 
                 contig_to_concat_kernel<BLOCKDIM> <<<n_blocks,BLOCKDIM>>>(

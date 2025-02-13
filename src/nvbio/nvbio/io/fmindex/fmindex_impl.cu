@@ -831,7 +831,7 @@ FMIndexDataDevice::FMIndexDataDevice(const FMIndexData& host_data, const uint32 
         }
     }
 
-    nvbio::cuda::check_error("FMIndexDataDevice");
+    nvbio::nvbio_cuda::check_error("FMIndexDataDevice");
 }
 
 void init_ssa(

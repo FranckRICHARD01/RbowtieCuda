@@ -30,7 +30,7 @@
 #include <cub/cub.cuh>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 SortEnactor::SortEnactor()
 {

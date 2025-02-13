@@ -44,7 +44,7 @@ namespace nvbio {
 namespace condition {
 
 __global__
-void scan_kernel(const uint32 n_tile_grids, cuda::condition_set_view conditions, uint32* block_values, const uint32 initial_state)
+void scan_kernel(const uint32 n_tile_grids, nvbio_cuda::condition_set_view conditions, uint32* block_values, const uint32 initial_state)
 {
     const uint32 prev_block = blockIdx.x ? blockIdx.x-1    : gridDim.x-1;
           uint32 prev_state = blockIdx.x ? initial_state+1 : initial_state;
@@ -76,7 +76,7 @@ void scan_kernel(const uint32 n_tile_grids, cuda::condition_set_view conditions,
 }
 
 __global__
-void chained_kernel(const uint32 n_tile_grids, cuda::condition_set_view conditions, const uint32 initial_state)
+void chained_kernel(const uint32 n_tile_grids, nvbio_cuda::condition_set_view conditions, const uint32 initial_state)
 {
     const uint32 prev_block = blockIdx.x ? blockIdx.x-1    : gridDim.x-1;
           uint32 prev_state = blockIdx.x ? initial_state+1 : initial_state;
@@ -102,7 +102,7 @@ void chained_kernel(const uint32 n_tile_grids, cuda::condition_set_view conditio
 
 template <uint32 BLOCKDIM, bool DO_WORK>
 __global__
-void fast_scan_kernel(const uint32 n_tile_grids, cuda::condition_set_view conditions, volatile uint32* partials, volatile uint32* prefixes, const uint32 initial_state)
+void fast_scan_kernel(const uint32 n_tile_grids, nvbio_cuda::condition_set_view conditions, volatile uint32* partials, volatile uint32* prefixes, const uint32 initial_state)
 {
     //
     // This scan skeleton performs longer range chaining rather than chaining each CTA
@@ -254,10 +254,10 @@ int condition_test()
     log_info( stderr, "condition test... started\n" );
 
     const uint32 blockdim = 128;
-    const uint32 n_blocks = (uint32)cuda::max_active_blocks( condition::scan_kernel, blockdim, 0u );
+    const uint32 n_blocks = (uint32)nvbio_cuda::max_active_blocks( condition::scan_kernel, blockdim, 0u );
 
-    cuda::condition_set_storage condition_st( n_blocks );
-    cuda::condition_set_view    condition_set = condition_st.get();
+    nvbio_cuda::condition_set_storage condition_st( n_blocks );
+    nvbio_cuda::condition_set_view    condition_set = condition_st.get();
 
     log_info( stderr, "  %u blocks\n", n_blocks );
 
@@ -274,7 +274,7 @@ int condition_test()
         condition::scan_kernel<<<n_blocks,blockdim>>>( n_tile_grids, condition_set, dvalues_ptr, i*n_tile_grids );
         cudaDeviceSynchronize();
 
-        nvbio::cuda::thrust_copy_vector(hvalues, dvalues);
+        nvbio::nvbio_cuda::thrust_copy_vector(hvalues, dvalues);
 
         for (uint32 n = 0; n < n_tile_grids*n_blocks; ++n)
         {
@@ -314,10 +314,10 @@ int condition_test()
 
     {
         const uint32 blockdim = 128;
-        const uint32 n_blocks = (uint32)cuda::max_active_blocks( condition::fast_scan_kernel<blockdim,true>, blockdim, 0u );
+        const uint32 n_blocks = (uint32)nvbio_cuda::max_active_blocks( condition::fast_scan_kernel<blockdim,true>, blockdim, 0u );
 
-        cuda::condition_set_storage condition_st( n_blocks*n_tile_grids );
-        cuda::condition_set_view    condition_set = condition_st.get();
+        nvbio_cuda::condition_set_storage condition_st( n_blocks*n_tile_grids );
+        nvbio_cuda::condition_set_view    condition_set = condition_st.get();
         cudaDeviceSynchronize();
 
         log_info( stderr, "  fast scan... started (%u CTAs)\n", n_blocks );
@@ -332,7 +332,7 @@ int condition_test()
             condition::fast_scan_kernel<blockdim,true><<<n_blocks,blockdim>>>( n_tile_grids, condition_set, dpartials_ptr, dvalues_ptr, i*2 );
             cudaDeviceSynchronize();
 
-            nvbio::cuda::thrust_copy_vector(hvalues, dvalues);
+            nvbio::nvbio_cuda::thrust_copy_vector(hvalues, dvalues);
 
             for (uint32 n = 0; n < n_tile_grids*n_blocks; ++n)
             {

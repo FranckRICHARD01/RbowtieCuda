@@ -354,7 +354,7 @@ int string_set_test(int argc, char* argv[])
         timer.start();
 
         for (uint32 i = 0; i < N_tests; ++i)
-            cuda::copy( d_base_string_set, d_out_string_set );
+            nvbio_cuda::copy( d_base_string_set, d_out_string_set );
 
         timer.stop();
 
@@ -397,7 +397,7 @@ int string_set_test(int argc, char* argv[])
         timer.start();
 
         for (uint32 i = 0; i < N_tests; ++i)
-            cuda::copy( d_base_string_set, d_out_string_set );
+            nvbio_cuda::copy( d_base_string_set, d_out_string_set );
 
         timer.stop();
 
@@ -437,7 +437,7 @@ int string_set_test(int argc, char* argv[])
             thrust::raw_pointer_cast( &d_in_offsets.front() ) );
 
         // copy the base string set into the input one
-        cuda::copy( d_base_string_set, d_in_string_set );
+        nvbio_cuda::copy( d_base_string_set, d_in_string_set );
 
         // build the device output string set
         thrust::device_vector<uint32>  d_out_string( N_strings * N_words );
@@ -455,7 +455,7 @@ int string_set_test(int argc, char* argv[])
         timer.start();
 
         for (uint32 i = 0; i < N_tests; ++i)
-            cuda::copy( d_in_string_set, d_out_string_set );
+            nvbio_cuda::copy( d_in_string_set, d_out_string_set );
 
         timer.stop();
 
@@ -497,7 +497,7 @@ int string_set_test(int argc, char* argv[])
         timer.start();
 
         for (uint32 i = 0; i < N_tests; ++i)
-            cuda::copy( d_base_string_set, d_out_string_set );
+            nvbio_cuda::copy( d_base_string_set, d_out_string_set );
 
         timer.stop();
 
@@ -541,7 +541,7 @@ int string_set_test(int argc, char* argv[])
             thrust::raw_pointer_cast( &d_in_offsets.front() ) );
 
         // copy the base string set into the input set
-        cuda::copy( d_base_string_set, d_in_string_set );
+        nvbio_cuda::copy( d_base_string_set, d_in_string_set );
 
         // build the device output string set
         thrust::device_vector<uint8>   d_out_stream( N_strings * N );
@@ -558,7 +558,7 @@ int string_set_test(int argc, char* argv[])
 
         // copy intput set into the output set
         for (uint32 i = 0; i < N_tests; ++i)
-            cuda::copy( d_in_string_set, d_out_string_set );
+            nvbio_cuda::copy( d_in_string_set, d_out_string_set );
 
         timer.stop();
 
@@ -584,7 +584,7 @@ int string_set_test(int argc, char* argv[])
 
         typedef PackedStream<uint32*,uint8,SYMBOL_SIZE,false>                   packed_stream_type;
 
-        typedef PackedStream<cuda::ldg_pointer<uint32>,uint8,SYMBOL_SIZE,false> tex_packed_stream_type;
+        typedef PackedStream<nvbio_cuda::ldg_pointer<uint32>,uint8,SYMBOL_SIZE,false> tex_packed_stream_type;
 
         typedef SparseStringSet<packed_stream_type,const uint2*>         input_set;
         typedef SparseStringSet<tex_packed_stream_type,const uint2*> tex_input_set;
@@ -633,7 +633,7 @@ int string_set_test(int argc, char* argv[])
 
         // copy intput set into the output set
         for (uint32 i = 0; i < N_tests; ++i)
-            cuda::copy( d_in_string_set, d_out_string_set );
+            nvbio_cuda::copy( d_in_string_set, d_out_string_set );
 
         timer.stop();
 
@@ -660,7 +660,7 @@ int string_set_test(int argc, char* argv[])
         fprintf(stderr, "  test packed-sparse (tex) -> strided   copy... started\n");
 
         // bind the texture
-        tex_packed_stream_type d_tex_packed_stream( cuda::ldg_pointer<uint32>( thrust::raw_pointer_cast( &d_in_string.front() ) ) );
+        tex_packed_stream_type d_tex_packed_stream( nvbio_cuda::ldg_pointer<uint32>( thrust::raw_pointer_cast( &d_in_string.front() ) ) );
 
         tex_input_set d_tex_in_string_set(
             N_strings,
@@ -671,7 +671,7 @@ int string_set_test(int argc, char* argv[])
 
         // copy intput set into the output set
         for (uint32 i = 0; i < N_tests; ++i)
-            cuda::copy( d_tex_in_string_set, d_out_string_set );
+            nvbio_cuda::copy( d_tex_in_string_set, d_out_string_set );
 
         timer.stop();
         fprintf(stderr, "  test packed-sparse (tex) -> strided   copy... done:   %.2f GSYMS\n", (1.0e-9f*float(N_strings*N))*(float(N_tests)/timer.seconds()));
@@ -701,7 +701,7 @@ int string_set_test(int argc, char* argv[])
             thrust::raw_pointer_cast( &d_in_lengths.front() ) );
 
         // copy the base string set into the input set
-        cuda::copy( d_base_string_set, d_in_string_set );
+        nvbio_cuda::copy( d_base_string_set, d_in_string_set );
 
         // build the device output string set
         thrust::device_vector<uint8>   d_out_string( N_strings * N );
@@ -717,7 +717,7 @@ int string_set_test(int argc, char* argv[])
         timer.start();
 
         for (uint32 i = 0; i < N_tests; ++i)
-            cuda::copy( d_in_string_set, d_out_string_set );
+            nvbio_cuda::copy( d_in_string_set, d_out_string_set );
 
         timer.stop();
 
@@ -758,7 +758,7 @@ int string_set_test(int argc, char* argv[])
             thrust::raw_pointer_cast( &d_in_offsets.front() ) );
 
         // copy the base string set into the input set
-        cuda::copy( d_base_string_set, d_in_string_set );
+        nvbio_cuda::copy( d_base_string_set, d_in_string_set );
 
         // build the device output string set
         thrust::device_vector<uint32>  d_out_stream( N_strings * N_words );
@@ -775,7 +775,7 @@ int string_set_test(int argc, char* argv[])
 
         // copy intput set into the output set
         for (uint32 i = 0; i < N_tests; ++i)
-            cuda::copy( d_in_string_set, d_out_string_set );
+            nvbio_cuda::copy( d_in_string_set, d_out_string_set );
 
         timer.stop();
 
@@ -822,7 +822,7 @@ int string_set_test(int argc, char* argv[])
             thrust::raw_pointer_cast( &d_in_offsets.front() ) );
 
         // copy the base string set into the input set
-        cuda::copy( d_base_string_set, d_in_string_set );
+        nvbio_cuda::copy( d_base_string_set, d_in_string_set );
 
         // build the device output string set
         thrust::device_vector<uint32>  d_out_stream( N_strings * N_words );
@@ -839,7 +839,7 @@ int string_set_test(int argc, char* argv[])
 
         // copy intput set into the output set
         for (uint32 i = 0; i < N_tests; ++i)
-            cuda::copy( d_in_string_set, d_out_string_set );
+            nvbio_cuda::copy( d_in_string_set, d_out_string_set );
 
         timer.stop();
 
@@ -865,7 +865,7 @@ int string_set_test(int argc, char* argv[])
 
         typedef PackedStream<uint32*,uint8,SYMBOL_SIZE,false> packed_stream_type;
 
-        typedef PackedStream<cuda::ldg_pointer<uint32>,uint8,SYMBOL_SIZE,false> tex_packed_stream_type;
+        typedef PackedStream<nvbio_cuda::ldg_pointer<uint32>,uint8,SYMBOL_SIZE,false> tex_packed_stream_type;
 
         typedef SparseStringSet<packed_stream_type,const uint2*>         input_set;
         typedef SparseStringSet<tex_packed_stream_type,const uint2*> tex_input_set;
@@ -917,7 +917,7 @@ int string_set_test(int argc, char* argv[])
 
         // copy intput set into the output set
         for (uint32 i = 0; i < N_tests; ++i)
-            cuda::copy( d_in_string_set, d_out_string_set );
+            nvbio_cuda::copy( d_in_string_set, d_out_string_set );
 
         timer.stop();
 

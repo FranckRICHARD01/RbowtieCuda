@@ -31,7 +31,7 @@
 #pragma once
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 /// \page ping_pong_queues_page Ping-Pong Queues
 ///
@@ -211,12 +211,12 @@ struct PingPongQueues
 /// return a view of the queues
 ///
 template <typename T>
-cuda::PingPongQueuesView<T> device_view(cuda::PingPongQueues<T>& queues) { return queues.device_view(); }
+nvbio_cuda::PingPongQueuesView<T> device_view(nvbio_cuda::PingPongQueues<T>& queues) { return queues.device_view(); }
 
 ///\relates cuda::PingPongQueues
 /// return a view of the queues
 ///
 template <typename T>
-cuda::PingPongQueuesView<T> plain_view(cuda::PingPongQueues<T>& queues) { return queues.device_view(); }
+nvbio_cuda::PingPongQueuesView<T> plain_view(nvbio_cuda::PingPongQueues<T>& queues) { return queues.device_view(); }
 
 } // namespace nvbio

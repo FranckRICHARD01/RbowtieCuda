@@ -473,7 +473,7 @@ uint32 DollarExtractor::extract(
             priv::alloc_storage( d_dollar_indices, n_suffixes );
 
             // find the dollar signs
-            n_found_dollars = cuda::copy_flagged(
+            n_found_dollars = nvbio_cuda::copy_flagged(
                 n_suffixes,
                 thrust::make_zip_iterator(
                     thrust::make_tuple(
@@ -496,7 +496,7 @@ uint32 DollarExtractor::extract(
         else
         {
             // find the dollar signs
-            n_found_dollars = cuda::copy_flagged(
+            n_found_dollars = nvbio_cuda::copy_flagged(
                 n_suffixes,
                 thrust::make_zip_iterator(
                     thrust::make_tuple(

@@ -38,8 +38,8 @@ namespace cuda {
 struct ReadsDef
 {
     typedef typename binary_switch<uint32,uint4,USE_UINT4_PACKING>::type                                                     read_storage_type;
-    typedef typename binary_switch<const read_storage_type*,nvbio::cuda::ldg_pointer<read_storage_type>,USE_TEX_READS>::type read_base_type;
-    typedef typename binary_switch<const char*,             nvbio::cuda::ldg_pointer<char>,             USE_TEX_READS>::type read_qual_type;
+    typedef typename binary_switch<const read_storage_type*,nvbio::nvbio_cuda::ldg_pointer<read_storage_type>,USE_TEX_READS>::type read_base_type;
+    typedef typename binary_switch<const char*,             nvbio::nvbio_cuda::ldg_pointer<char>,             USE_TEX_READS>::type read_qual_type;
     typedef io::SequenceDataViewCore<const uint32*,read_base_type,read_qual_type,const char*>                                read_view_type;
     typedef io::SequenceDataAccess<DNA_N,read_view_type>                                                                     type;
 };

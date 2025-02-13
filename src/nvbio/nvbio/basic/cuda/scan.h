@@ -35,7 +35,7 @@
 #include <nvbio/basic/numbers.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 /// intra-warp inclusive scan
 ///

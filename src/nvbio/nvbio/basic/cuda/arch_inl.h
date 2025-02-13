@@ -26,7 +26,7 @@
  */
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 // granularity of shared memory allocation
 inline void device_arch(uint32& major, uint32& minor)

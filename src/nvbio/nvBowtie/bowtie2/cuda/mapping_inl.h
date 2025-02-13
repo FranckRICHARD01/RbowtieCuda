@@ -434,7 +434,7 @@ struct seed_mapper<CASE_PRUNING_MAPPING>
 template<typename BatchType, typename FMType, typename rFMType> __global__ 
 void map_whole_read_kernel(
     const BatchType                                 read_batch, const FMType fmi, const rFMType rfmi,
-    const nvbio::cuda::PingPongQueuesView<uint32>   queues,
+    const nvbio::nvbio_cuda::PingPongQueuesView<uint32>   queues,
     uint8*                                          reseed,
     SeedHitDequeArrayDeviceView                     hits,
     const ParamsPOD                                 params,
@@ -512,7 +512,7 @@ template<MappingAlgorithm ALGO, typename BatchType, typename FMType, typename rF
 void map_queues_kernel(
     const BatchType                                 read_batch, const FMType fmi, const rFMType rfmi,
     const uint32                                    retry,
-    const nvbio::cuda::PingPongQueuesView<uint32>   queues,
+    const nvbio::nvbio_cuda::PingPongQueuesView<uint32>   queues,
     uint8*                                          reseed,
     SeedHitDequeArrayDeviceView                     hits,
     const ParamsPOD                                 params,
@@ -702,14 +702,14 @@ template <typename BatchType, typename FMType, typename rFMType>
 void map_case_pruning_t(
     const BatchType&                                read_batch, const FMType fmi, const rFMType rfmi,
     const uint32                                    retry,
-    const nvbio::cuda::PingPongQueuesView<uint32>   queues,
+    const nvbio::nvbio_cuda::PingPongQueuesView<uint32>   queues,
     uint8*                                          reseed,
     SeedHitDequeArrayDeviceView                     hits,
     const ParamsPOD                                 params,
     const bool                                      fw,
     const bool                                      rc)
 {
-    const int blocks = nvbio::cuda::max_active_blocks( detail::map_queues_kernel<detail::CASE_PRUNING_MAPPING,BatchType,FMType,rFMType>, BLOCKDIM, 0 );
+    const int blocks = nvbio::nvbio_cuda::max_active_blocks( detail::map_queues_kernel<detail::CASE_PRUNING_MAPPING,BatchType,FMType,rFMType>, BLOCKDIM, 0 );
     detail::map_queues_kernel<detail::CASE_PRUNING_MAPPING> <<<blocks, BLOCKDIM>>>(
         read_batch, fmi, rfmi, retry, queues, reseed, hits, params, fw, rc );
 }
@@ -721,14 +721,14 @@ template <typename BatchType, typename FMType, typename rFMType>
 void map_approx_t(
     const BatchType&                                read_batch, const FMType fmi, const rFMType rfmi,
     const uint32                                    retry,
-    const nvbio::cuda::PingPongQueuesView<uint32>   queues,
+    const nvbio::nvbio_cuda::PingPongQueuesView<uint32>   queues,
     uint8*                                          reseed,
     SeedHitDequeArrayDeviceView                     hits,
     const ParamsPOD                                 params,
     const bool                                      fw,
     const bool                                      rc)
 {
-    const int blocks = nvbio::cuda::max_active_blocks( detail::map_queues_kernel<detail::APPROX_MAPPING,BatchType,FMType,rFMType>, BLOCKDIM, 0 );
+    const int blocks = nvbio::nvbio_cuda::max_active_blocks( detail::map_queues_kernel<detail::APPROX_MAPPING,BatchType,FMType,rFMType>, BLOCKDIM, 0 );
     detail::map_queues_kernel<detail::APPROX_MAPPING> <<<blocks, BLOCKDIM>>>(
         read_batch, fmi, rfmi, retry, queues, reseed, hits, params, fw, rc );
 }
@@ -745,7 +745,7 @@ void map_approx_t(
     const bool                  fw,
     const bool                  rc)
 {
-    const int blocks = nvbio::cuda::max_active_blocks( detail::map_kernel<detail::APPROX_MAPPING,BatchType,FMType,rFMType>, BLOCKDIM, 0 );
+    const int blocks = nvbio::nvbio_cuda::max_active_blocks( detail::map_kernel<detail::APPROX_MAPPING,BatchType,FMType,rFMType>, BLOCKDIM, 0 );
     detail::map_kernel<detail::APPROX_MAPPING> <<<blocks, BLOCKDIM>>>(
         read_batch, fmi, rfmi, hits, seed_range, params, fw, rc );
 }
@@ -756,14 +756,14 @@ void map_approx_t(
 template <typename BatchType, typename FMType, typename rFMType>
 void map_whole_read_t(
     const BatchType&                                read_batch, const FMType fmi, const rFMType rfmi,
-    const nvbio::cuda::PingPongQueuesView<uint32>   queues,
+    const nvbio::nvbio_cuda::PingPongQueuesView<uint32>   queues,
     uint8*                                          reseed,
     SeedHitDequeArrayDeviceView                     hits,
     const ParamsPOD                                 params,
     const bool                                      fw,
     const bool                                      rc)
 {
-    const uint32 blocks = nvbio::cuda::max_active_blocks( detail::map_whole_read_kernel<BatchType,FMType,rFMType>, BLOCKDIM, 0 );
+    const uint32 blocks = nvbio::nvbio_cuda::max_active_blocks( detail::map_whole_read_kernel<BatchType,FMType,rFMType>, BLOCKDIM, 0 );
     detail::map_whole_read_kernel<<<blocks, BLOCKDIM>>> (
         read_batch, fmi, rfmi, queues, reseed, hits, params, fw, rc );
 }
@@ -775,14 +775,14 @@ template <typename BatchType, typename FMType, typename rFMType>
 void map_exact_t(
     const BatchType&                                read_batch, const FMType fmi, const rFMType rfmi,
     const uint32                                    retry,
-    const nvbio::cuda::PingPongQueuesView<uint32>   queues,
+    const nvbio::nvbio_cuda::PingPongQueuesView<uint32>   queues,
     uint8*                                          reseed,
     SeedHitDequeArrayDeviceView                     hits,
     const ParamsPOD                                 params,
     const bool                                      fw,
     const bool                                      rc)
 {
-    const uint32 blocks = nvbio::cuda::max_active_blocks( detail::map_queues_kernel<detail::EXACT_MAPPING,BatchType,FMType,rFMType>, BLOCKDIM, 0 );
+    const uint32 blocks = nvbio::nvbio_cuda::max_active_blocks( detail::map_queues_kernel<detail::EXACT_MAPPING,BatchType,FMType,rFMType>, BLOCKDIM, 0 );
     detail::map_queues_kernel<detail::EXACT_MAPPING> <<<blocks, BLOCKDIM>>>(
         read_batch, fmi, rfmi, retry, queues, reseed, hits, params, fw, rc );
 }
@@ -799,7 +799,7 @@ void map_exact_t(
     const bool                  fw,
     const bool                  rc)
 {
-    const uint32 blocks = nvbio::cuda::max_active_blocks( detail::map_kernel<detail::EXACT_MAPPING,BatchType,FMType,rFMType>, BLOCKDIM, 0 );
+    const uint32 blocks = nvbio::nvbio_cuda::max_active_blocks( detail::map_kernel<detail::EXACT_MAPPING,BatchType,FMType,rFMType>, BLOCKDIM, 0 );
     detail::map_kernel<detail::EXACT_MAPPING> <<<blocks, BLOCKDIM>>>(
         read_batch, fmi, rfmi, hits, seed_range, params, fw, rc );
 }
@@ -811,7 +811,7 @@ template <typename BatchType, typename FMType, typename rFMType>
 void map_t(
     const BatchType&                                read_batch, const FMType fmi, const rFMType rfmi,
     const uint32                                    retry,
-    const nvbio::cuda::PingPongQueuesView<uint32>   queues,
+    const nvbio::nvbio_cuda::PingPongQueuesView<uint32>   queues,
     uint8*                                          reseed,
     SeedHitDequeArrayDeviceView                     hits,
     const ParamsPOD                                 params,

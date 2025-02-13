@@ -200,7 +200,7 @@ void ComputeThreadSE::do_run()
     if (aligner->init( thread_id, BATCH_SIZE, params, kSingleEnd ) == false)
         return;
 
-    nvbio::cuda::check_error("cuda initializations");
+    nvbio::nvbio_cuda::check_error("cuda initializations");
 
     cudaMemGetInfo(&free, &total);
     log_stats(stderr, "[%u]   ready to start processing: device has %ld MB free\n", thread_id, free/1024/1024);
@@ -557,7 +557,7 @@ void ComputeThreadPE::do_run()
     if (aligner->init( thread_id, BATCH_SIZE, params, kPairedEnds ) == false)
         return;
 
-    nvbio::cuda::check_error("cuda initializations");
+    nvbio::nvbio_cuda::check_error("cuda initializations");
 
     cudaMemGetInfo(&free, &total);
     log_stats(stderr, "[%u]   ready to start processing: device has %ld MB free\n", thread_id, free/1024/1024);

@@ -69,7 +69,7 @@ bool any(
     const uint32            n,
     const PredicateIterator pred)
 {
-    return cuda::any( n, pred );
+    return nvbio_cuda::any( n, pred );
 }
 
 // return true if any item in the range [0,n) evaluates to true
@@ -80,7 +80,7 @@ bool all(
     const uint32            n,
     const PredicateIterator pred)
 {
-    return cuda::all( n, pred );
+    return nvbio_cuda::all( n, pred );
 }
 
 #endif
@@ -462,7 +462,7 @@ typename std::iterator_traits<InputIterator>::value_type reduce(
     BinaryOp                            op,
     nvbio::vector<device_tag,uint8>&    temp_storage)
 {
-    return cuda::reduce( n, in, op, temp_storage );
+    return nvbio_cuda::reduce( n, in, op, temp_storage );
 }
 
 // device-wide inclusive scan
@@ -482,7 +482,7 @@ void inclusive_scan(
     BinaryOp                            op,
     nvbio::vector<device_tag,uint8>&    temp_storage)
 {
-    cuda::inclusive_scan( n, in, out, op, temp_storage );
+    nvbio_cuda::inclusive_scan( n, in, out, op, temp_storage );
 }
 
 // device-wide exclusive scan
@@ -504,7 +504,7 @@ void exclusive_scan(
     Identity                            identity,
     nvbio::vector<device_tag,uint8>&    temp_storage)
 {
-    cuda::exclusive_scan( n, in, out, op, identity, temp_storage );
+    nvbio_cuda::exclusive_scan( n, in, out, op, identity, temp_storage );
 }
 
 #endif
@@ -721,7 +721,7 @@ uint32 copy_flagged(
     OutputIterator                      out,
     nvbio::vector<device_tag,uint8>&    temp_storage)
 {
-    return cuda::copy_flagged( n, in, flags, out, temp_storage );
+    return nvbio_cuda::copy_flagged( n, in, flags, out, temp_storage );
 }
 
 // device-wide copy of predicated items
@@ -743,7 +743,7 @@ uint32 copy_if(
     const Predicate                     pred,
     nvbio::vector<device_tag,uint8>&    temp_storage)
 {
-    return cuda::copy_if( n, in, out, pred, temp_storage );
+    return nvbio_cuda::copy_if( n, in, out, pred, temp_storage );
 }
 
 // system-wide run-length encode
@@ -765,7 +765,7 @@ uint32 runlength_encode(
     CountIterator                       counts,
     nvbio::vector<device_tag,uint8>&    temp_storage)
 {
-    return cuda::runlength_encode( n, in, out, counts, temp_storage );
+    return nvbio_cuda::runlength_encode( n, in, out, counts, temp_storage );
 };
 
 // device-wide run-length encode
@@ -791,7 +791,7 @@ uint32 reduce_by_key(
     ReductionOp                         reduction_op,
     nvbio::vector<device_tag,uint8>&    temp_storage)
 {
-    return cuda::reduce_by_key(
+    return nvbio_cuda::reduce_by_key(
         n,
         keys_in,
         values_in,
@@ -1049,7 +1049,7 @@ void radix_sort(
 {
     typedef typename std::iterator_traits<KeyIterator>::value_type key_type;
 
-    cuda::alloc_temp_storage( temp_storage, 2 * n * sizeof(key_type) );
+    nvbio_cuda::alloc_temp_storage( temp_storage, 2 * n * sizeof(key_type) );
 
     key_type* keys_ptr = reinterpret_cast<key_type*>( raw_pointer( temp_storage ) );
 
@@ -1057,11 +1057,11 @@ void radix_sort(
 
     thrust::copy( keys, keys + n, keys_buf );
 
-    cuda::SortBuffers<key_type*> sort_buffers;
+    nvbio_cuda::SortBuffers<key_type*> sort_buffers;
     sort_buffers.keys[0] = keys_ptr;
     sort_buffers.keys[1] = keys_ptr + n;
 
-    cuda::SortEnactor sort_enactor;
+    nvbio_cuda::SortEnactor sort_enactor;
     sort_enactor.sort( n, sort_buffers );
 
     thrust::copy(
@@ -1089,7 +1089,7 @@ void radix_sort(
 
     const uint32 aligned_key_bytes = align<16>( 2 * n * sizeof(key_type) );
     const uint32 aligned_val_bytes =            2 * n * sizeof(value_type);
-    cuda::alloc_temp_storage( temp_storage, aligned_key_bytes + aligned_val_bytes );
+    nvbio_cuda::alloc_temp_storage( temp_storage, aligned_key_bytes + aligned_val_bytes );
 
     key_type*     keys_ptr = reinterpret_cast<key_type*>( raw_pointer( temp_storage ) );
     value_type* values_ptr = reinterpret_cast<value_type*>( raw_pointer( temp_storage ) + aligned_key_bytes );
@@ -1100,13 +1100,13 @@ void radix_sort(
     thrust::copy( keys,     keys + n,   keys_buf );
     thrust::copy( values,   values + n, values_buf );
 
-    cuda::SortBuffers<key_type*, value_type*> sort_buffers;
+    nvbio_cuda::SortBuffers<key_type*, value_type*> sort_buffers;
     sort_buffers.keys[0]   = keys_ptr;
     sort_buffers.keys[1]   = keys_ptr + n;
     sort_buffers.values[0] = values_ptr;
     sort_buffers.values[1] = values_ptr + n;
 
-    cuda::SortEnactor sort_enactor;
+    nvbio_cuda::SortEnactor sort_enactor;
     sort_enactor.sort( n, sort_buffers );
 
     thrust::copy(
@@ -1395,11 +1395,11 @@ uint32 for_each_enactor<device_tag>::suggested_blocks(KernelFunction kernel, con
 {
 #if defined(__CUDACC__)
     if (m_blocks_hi == 0)
-        return cuda::multiprocessor_count() * cuda::max_active_blocks_per_multiprocessor( kernel, cta_size, 0u );
+        return nvbio_cuda::multiprocessor_count() * nvbio_cuda::max_active_blocks_per_multiprocessor( kernel, cta_size, 0u );
     else if (m_blocks_lo == 0)
-        return cuda::multiprocessor_count();
+        return nvbio_cuda::multiprocessor_count();
     else
-        return cuda::multiprocessor_count() * (m_blocks_lo + m_blocks_hi) / 2;
+        return nvbio_cuda::multiprocessor_count() * (m_blocks_lo + m_blocks_hi) / 2;
 #else
     return 0u;
 #endif
@@ -1414,22 +1414,22 @@ void for_each_enactor<device_tag>::update(const uint32 n_blocks, const float spe
     // carry out a little binary search over the best number of blocks/SM
     if (m_blocks_hi == 0)
     {
-        m_blocks_hi = n_blocks / cuda::multiprocessor_count();
+        m_blocks_hi = n_blocks / nvbio_cuda::multiprocessor_count();
         m_speed_hi  = speed;
     }
     else if (m_blocks_lo == 0)
     {
-        m_blocks_lo = n_blocks / cuda::multiprocessor_count();
+        m_blocks_lo = n_blocks / nvbio_cuda::multiprocessor_count();
         m_speed_lo  = speed;
     }
     else if (m_speed_lo > m_speed_hi)
     {
-        m_blocks_hi = n_blocks / cuda::multiprocessor_count();
+        m_blocks_hi = n_blocks / nvbio_cuda::multiprocessor_count();
         m_speed_hi  = speed;
     }
     else 
     {
-        m_blocks_lo = n_blocks / cuda::multiprocessor_count();
+        m_blocks_lo = n_blocks / nvbio_cuda::multiprocessor_count();
         m_speed_lo  = speed;
     }
     // TODO: once the optimizer settles to a given value, it will never change:
@@ -1450,7 +1450,7 @@ void for_each_enactor<device_tag>::operator () (
     const uint32 blockdim = 128;
     const uint32 n_blocks = suggested_blocks( for_each_kernel<Iterator,Functor>, blockdim );
 
-    cuda::Timer timer;
+    nvbio_cuda::Timer timer;
     timer.start();
 
     for_each_kernel<<<n_blocks,blockdim>>>( n, in, functor );

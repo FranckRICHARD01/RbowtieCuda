@@ -76,7 +76,7 @@ namespace nvbio
         {
             typedef t_aligner_type aligner_type;
 
-            typedef nvbio::cuda::ldg_pointer<uint32> storage_iterator;
+            typedef nvbio::nvbio_cuda::ldg_pointer<uint32> storage_iterator;
 
             typedef nvbio::PackedStringLoader<storage_iterator, 4, false, cache_type> pattern_loader_type;
             typedef typename pattern_loader_type::input_iterator uncached_pattern_iterator;
@@ -214,7 +214,7 @@ namespace nvbio
             const uint32 tid = blockIdx.x * BLOCKDIM + threadIdx.x;
 
             typedef lmem_cache_tag_type lmem_cache_type;
-            typedef nvbio::cuda::ldg_pointer<uint32> storage_iterator;
+            typedef nvbio::nvbio_cuda::ldg_pointer<uint32> storage_iterator;
 
             typedef nvbio::PackedStringLoader<storage_iterator, 4, false, lmem_cache_type> pattern_loader_type;
             typedef typename pattern_loader_type::input_iterator uncached_pattern_iterator;
@@ -1283,10 +1283,10 @@ namespace nvbio
                 //  ACA           ACT AA
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
                 
                 {
                     fprintf(stderr, "  testing Gotoh scoring...\n");
@@ -1321,10 +1321,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1361,10 +1361,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1405,10 +1405,10 @@ namespace nvbio
                 scoring.m_gap_ext  = -1;
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 test.banded<BLOCKDIM, BAND_LEN, N, M>( "global", make_gotoh_aligner<aln::SEMI_GLOBAL>( scoring ), "147M2D3M" );
             }
@@ -1432,10 +1432,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1473,10 +1473,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1513,10 +1513,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1553,10 +1553,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1593,10 +1593,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1633,10 +1633,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1673,10 +1673,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1713,10 +1713,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1755,10 +1755,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1797,10 +1797,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1839,10 +1839,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1881,10 +1881,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1923,10 +1923,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -1967,10 +1967,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -2013,10 +2013,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -2053,10 +2053,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -2093,10 +2093,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     aln::SimpleWfahScheme scoring;
@@ -2137,10 +2137,10 @@ namespace nvbio
                 scoring.m_gap_ext  = -3;
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 test.banded<BLOCKDIM, BAND_LEN, N, M>( "banded-semi-global", make_gotoh_aligner<aln::SEMI_GLOBAL>( scoring ), "147M2D3M" );
             }
@@ -2206,10 +2206,10 @@ namespace nvbio
                 string_to_dna(str, str_hptr);
 
                 SingleTest test;
-                nvbio::cuda::thrust_copy_vector(test.str_hvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
-                nvbio::cuda::thrust_copy_vector(test.str_dvec, str_hvec);
-                nvbio::cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_hvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_hvec, ref_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.str_dvec, str_hvec);
+                nvbio::nvbio_cuda::thrust_copy_vector(test.ref_dvec, ref_hvec);
 
                 {
                     fprintf(stderr, "  testing Wfa scoring...\n");

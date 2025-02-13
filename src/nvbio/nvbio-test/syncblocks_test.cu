@@ -42,7 +42,7 @@
 namespace nvbio {
 
 __global__
-void print_kernel(const uint32 n_barriers, cuda::syncblocks barrier, uint32* queue_ptr, uint2* queue)
+void print_kernel(const uint32 n_barriers, nvbio_cuda::syncblocks barrier, uint32* queue_ptr, uint2* queue)
 {
     for (uint32 i = 0; i < n_barriers; ++i)
     {
@@ -57,7 +57,7 @@ void print_kernel(const uint32 n_barriers, cuda::syncblocks barrier, uint32* que
     }
 }
 __global__
-void speed_kernel(const uint32 n_barriers, cuda::syncblocks barrier, uint2* output)
+void speed_kernel(const uint32 n_barriers, nvbio_cuda::syncblocks barrier, uint2* output)
 {
     for (uint32 i = 0; i < n_barriers; ++i)
         barrier.enact();
@@ -68,9 +68,9 @@ void speed_kernel(const uint32 n_barriers, cuda::syncblocks barrier, uint2* outp
 int syncblocks_test()
 {
     const uint32 n_barriers = 100;
-    cuda::syncblocks_storage barrier_st;
+    nvbio_cuda::syncblocks_storage barrier_st;
 
-    cuda::syncblocks barrier = barrier_st.get();
+    nvbio_cuda::syncblocks barrier = barrier_st.get();
 
     log_info( stderr, "syncblocks test... started\n" );
 
@@ -96,7 +96,7 @@ int syncblocks_test()
         print_kernel<<<n_blocks,blockdim>>>( n_barriers, barrier, dqueue_head_ptr, dqueue_ptr );
         cudaDeviceSynchronize();
 
-        nvbio::cuda::thrust_copy_vector(hqueue, dqueue);
+        nvbio::nvbio_cuda::thrust_copy_vector(hqueue, dqueue);
 
         for (uint32 n = 0; n < n_barriers; ++n)
         {

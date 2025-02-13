@@ -187,7 +187,7 @@ void Aligner::all(
                 params.rc );
 
             optional_device_synchronize();
-            nvbio::cuda::check_error("mapping kernel");
+            nvbio::nvbio_cuda::check_error("mapping kernel");
 
             timer.stop();
             stats.map.add( count, timer.seconds() );
@@ -205,7 +205,7 @@ void Aligner::all(
                 params.rc );
 
             optional_device_synchronize();
-            nvbio::cuda::check_error("mapping kernel");
+            nvbio::nvbio_cuda::check_error("mapping kernel");
 
             timer.stop();
             stats.map.add( count, timer.seconds() );
@@ -368,7 +368,7 @@ void Aligner::score_all(
         hits_range_scan_dptr );
 
     optional_device_synchronize();
-    nvbio::cuda::check_error("gather ranges kernel");
+    nvbio::nvbio_cuda::check_error("gather ranges kernel");
 
     // run a scan on all the SA range sizes
     thrust::inclusive_scan( hits_range_scan_dvec.begin(), hits_range_scan_dvec.begin() + n_hit_ranges, hits_range_scan_dvec.begin() );
@@ -453,7 +453,7 @@ void Aligner::score_all(
             nvbio::device_view( hit_queues ) );
 
         optional_device_synchronize();
-        nvbio::cuda::check_error("selecting kernel");
+        nvbio::nvbio_cuda::check_error("selecting kernel");
 
         timer.stop();
         stats.select.add( hit_count, timer.seconds() );
@@ -482,7 +482,7 @@ void Aligner::score_all(
             params );
 
         optional_device_synchronize();
-        nvbio::cuda::check_error("locate-init kernel");
+        nvbio::nvbio_cuda::check_error("locate-init kernel");
 
         locate_lookup(
             reads, fmi, rfmi,
@@ -492,7 +492,7 @@ void Aligner::score_all(
             params );
 
         optional_device_synchronize();
-        nvbio::cuda::check_error("locate-lookup kernel");
+        nvbio::nvbio_cuda::check_error("locate-lookup kernel");
 
         timer.stop();
         stats.locate.add( hit_count, timer.seconds() );
@@ -516,7 +516,7 @@ void Aligner::score_all(
                 difference_transform<uint64*>( sorting_idx.second ) );
 
             optional_device_synchronize();
-            nvbio::cuda::check_error("dedup kernel");
+            nvbio::nvbio_cuda::check_error("dedup kernel");
 
             flags_dvec[0] = 1u;
 
@@ -531,7 +531,7 @@ void Aligner::score_all(
                 params );
 
             optional_device_synchronize();
-            nvbio::cuda::check_error("mark-straddling kernel");
+            nvbio::nvbio_cuda::check_error("mark-straddling kernel");
 
             pipeline.idx_queue = (sorting_idx.first == idx_queue_dptr) ?
                 idx_queue_dptr + BATCH_SIZE :
@@ -546,7 +546,7 @@ void Aligner::score_all(
                 temp_dvec );
 
             optional_device_synchronize();
-            nvbio::cuda::check_error("copy-flagged kernel");
+            nvbio::nvbio_cuda::check_error("copy-flagged kernel");
 
             log_debug_cont(stderr, " (%u/%u - %.2f)\n", pipeline.hits_queue_size, hit_count, float(pipeline.hits_queue_size)/float(hit_count));
         }
@@ -570,7 +570,7 @@ void Aligner::score_all(
             BATCH_SIZE*2 );
 
         optional_device_synchronize();
-        nvbio::cuda::check_error("score kernel");
+        nvbio::nvbio_cuda::check_error("score kernel");
 
         timer.stop();
         stats.score.add( hit_count, timer.seconds() );
@@ -611,7 +611,7 @@ void Aligner::score_all(
                         output_read_info_dptr );
 
                     optional_device_synchronize();
-                    nvbio::cuda::check_error("ring-buffer copy kernel");
+                    nvbio::nvbio_cuda::check_error("ring-buffer copy kernel");
                 }
 
                 // sort the alignments by read-id & RC flag to gain coherence
@@ -642,7 +642,7 @@ void Aligner::score_all(
                 params );               // global params
 
             optional_device_synchronize();
-            nvbio::cuda::check_error("backtracking kernel");
+            nvbio::nvbio_cuda::check_error("backtracking kernel");
 
             if (cigar.has_overflown())
                 throw nvbio::runtime_error("CIGAR vector overflow\n");
@@ -660,7 +660,7 @@ void Aligner::score_all(
                 params );                   // global params
 
             optional_device_synchronize();
-            nvbio::cuda::check_error("alignment kernel");
+            nvbio::nvbio_cuda::check_error("alignment kernel");
 
             if (mds.has_overflown())
                 throw nvbio::runtime_error("MDS vector overflow\n");

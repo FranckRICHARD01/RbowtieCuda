@@ -35,7 +35,7 @@
 #include <nvbio/basic/cuda/arch.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 #ifdef __CUDACC__
 

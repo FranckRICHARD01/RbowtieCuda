@@ -33,7 +33,7 @@
 #include <thrust/iterator/constant_iterator.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 // constructor
 //

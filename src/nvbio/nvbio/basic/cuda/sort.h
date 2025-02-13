@@ -34,7 +34,7 @@
 #include <nvbio/basic/types.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 /// \page sorting_page Sorting
 ///\par

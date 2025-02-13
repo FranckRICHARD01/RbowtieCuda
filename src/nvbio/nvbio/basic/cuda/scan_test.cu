@@ -41,12 +41,12 @@
 using namespace nvbio;
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 template <uint32 BLOCKDIM, uint32 VECDIM, uint32 N_TESTS>
 __global__ void all_test_kernel(uint32* dst)
 {
-    __shared__ volatile uint8 sm[ BLOCKDIM >> cuda::Arch::LOG_WARP_SIZE ];
+    __shared__ volatile uint8 sm[ BLOCKDIM >> nvbio_cuda::Arch::LOG_WARP_SIZE ];
 
     uint32 r = 0;
     for (uint32 i = 0; i < N_TESTS; ++i)
@@ -59,7 +59,7 @@ __global__ void all_test_kernel(uint32* dst)
 template <uint32 BLOCKDIM, uint32 VECDIM, uint32 N_TESTS>
 __global__ void any_test_kernel(uint32* dst)
 {
-    __shared__ volatile uint8 sm[ BLOCKDIM >> cuda::Arch::LOG_WARP_SIZE ];
+    __shared__ volatile uint8 sm[ BLOCKDIM >> nvbio_cuda::Arch::LOG_WARP_SIZE ];
 
     uint32 r = 0;
     for (uint32 i = 0; i < N_TESTS; ++i)

@@ -50,7 +50,7 @@ uint32* Aligner::sort_hi_bits(
         idx_queue_dvec.begin() );
 
     // Create ping-pong storage wrapper
-    nvbio::cuda::SortBuffers<uint16*,uint32*> double_buffer;
+    nvbio::nvbio_cuda::SortBuffers<uint16*,uint32*> double_buffer;
     double_buffer.keys[0]   = thrust::raw_pointer_cast( &sorting_queue_dvec.front() );
     double_buffer.keys[1]   = thrust::raw_pointer_cast( &sorting_queue_dvec.front() + BATCH_SIZE );
     double_buffer.values[0] = idx_queue_dptr;
@@ -72,7 +72,7 @@ std::pair<uint32*,uint64*> Aligner::sort_64_bits(
         idx_queue_dvec.begin() );
 
     // Create ping-pong storage wrapper
-    nvbio::cuda::SortBuffers<uint64*,uint32*> double_buffer;
+    nvbio::nvbio_cuda::SortBuffers<uint64*,uint32*> double_buffer;
     double_buffer.keys[0]   = reinterpret_cast<uint64*>( raw_pointer( sorting_queue_dvec ) );
     double_buffer.keys[1]   = reinterpret_cast<uint64*>( raw_pointer( sorting_queue_dvec ) ) + BATCH_SIZE;
     double_buffer.values[0] = idx_queue_dptr;
@@ -92,7 +92,7 @@ void Aligner::sort_inplace(
     uint32*         keys)
 {
     // create the ping-pong storage wrapper
-    nvbio::cuda::SortBuffers<uint32*> double_buffer;
+    nvbio::nvbio_cuda::SortBuffers<uint32*> double_buffer;
     double_buffer.keys[0]   = keys;
     double_buffer.keys[1]   = (uint32*)thrust::raw_pointer_cast( &sorting_queue_dvec.front() );
 

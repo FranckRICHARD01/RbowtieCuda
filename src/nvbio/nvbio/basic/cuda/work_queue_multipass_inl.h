@@ -34,7 +34,7 @@
 #include <thrust/scan.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 ///@addtogroup WorkQueue
 ///@{
@@ -226,8 +226,8 @@ void WorkQueue<MultiPassQueueTag,WorkUnitT,BLOCKDIM>::consume(const WorkStream s
 {
     // compute the number of blocks we are going to launch
     const uint32 n_blocks = m_separate_loads ? 
-        (uint32)cuda::max_active_blocks( wq::mk_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream,false>, BLOCKDIM, 0u ) :
-        (uint32)cuda::max_active_blocks( wq::mk_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream,true>, BLOCKDIM, 0u );
+        (uint32)nvbio_cuda::max_active_blocks( wq::mk_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream,false>, BLOCKDIM, 0u ) :
+        (uint32)nvbio_cuda::max_active_blocks( wq::mk_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream,true>, BLOCKDIM, 0u );
     const uint32 grid_threads = n_blocks * BLOCKDIM;
 
     const uint32 n_tile_grids = m_capacity / grid_threads;

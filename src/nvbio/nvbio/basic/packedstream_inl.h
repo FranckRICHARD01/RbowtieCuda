@@ -1356,7 +1356,7 @@ void device_assign(
     const uint32 n_blocks = util::divide_ri( n_words, blockdim );
 
     priv::assign_kernel<<<n_blocks,blockdim>>>( input_len, input_string, packed_string );
-    cuda::check_error("assign_kernel()");
+    nvbio_cuda::check_error("assign_kernel()");
 }
 
 } // namespace priv

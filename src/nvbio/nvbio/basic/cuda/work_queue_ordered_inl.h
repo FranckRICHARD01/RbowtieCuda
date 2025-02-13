@@ -34,7 +34,7 @@
 #include <thrust/copy.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 ///@addtogroup WorkQueue
 ///@{
@@ -516,7 +516,7 @@ void WorkQueue<OrderedQueueTag,WorkUnitT,BLOCKDIM>::consume(const WorkStream str
     //const uint32 stream_size = stream.size();
 
     // compute the number of blocks we are going to launch
-    const uint32 n_blocks = (uint32)cuda::max_active_blocks( wq::work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream,WorkMover>, BLOCKDIM, 0u );
+    const uint32 n_blocks = (uint32)nvbio_cuda::max_active_blocks( wq::work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream,WorkMover>, BLOCKDIM, 0u );
     const uint32 grid_threads = n_blocks * BLOCKDIM;
 
     const uint32 n_tile_grids = m_capacity / grid_threads;

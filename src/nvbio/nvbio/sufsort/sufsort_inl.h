@@ -51,7 +51,7 @@
 
 namespace nvbio {
 
-namespace cuda {
+namespace nvbio_cuda {
 
 // return the position of the primary suffix of a string
 //
@@ -112,8 +112,8 @@ void suffix_sort(
         thrust::make_counting_iterator<uint32>(n_suffixes),
         indices.begin() );
 
-    cuda::SortBuffers<word_type*,uint32*> sort_buffers;
-    cuda::SortEnactor                     sort_enactor;
+    nvbio_cuda::SortBuffers<word_type*,uint32*> sort_buffers;
+    nvbio_cuda::SortEnactor                     sort_enactor;
 
     sort_buffers.selector  = 0;
     sort_buffers.keys[0]   = nvbio::device_view( radices );
@@ -488,7 +488,7 @@ struct LargeBWTSkeleton
 
         suffix_bucketer_type    bucketer( mgpu_ctxt );
         string_set_handler_type string_set_handler( string_set );
-        cuda::CompressionSort   string_sorter( mgpu_ctxt );
+        nvbio_cuda::CompressionSort   string_sorter( mgpu_ctxt );
 
         priv::DollarExtractor   dollars;
 
@@ -821,7 +821,7 @@ struct LargeBWTSkeleton
 
                     NVBIO_CUDA_DEBUG_STATEMENT( log_debug( stderr, "    sort strings\n" ) );
 
-                    cuda::DiscardDelayList delay_list;
+                    nvbio_cuda::DiscardDelayList delay_list;
 
                     string_sorter.sort(
                         string_set_handler,
@@ -907,28 +907,28 @@ void bwt(
         output_handler&             output,
         BWTParams*                  params)
 {
-    typedef cuda::DeviceBWTConfig<16,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_16; // 16-bits bucketing
-    typedef cuda::DeviceBWTConfig<20,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_20; // 20-bits bucketing
-    typedef cuda::DeviceBWTConfig<24,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_24; // 24-bits bucketing
+    typedef nvbio_cuda::DeviceBWTConfig<16,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_16; // 16-bits bucketing
+    typedef nvbio_cuda::DeviceBWTConfig<20,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_20; // 20-bits bucketing
+    typedef nvbio_cuda::DeviceBWTConfig<24,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_24; // 24-bits bucketing
 
-    cuda::LargeBWTStatus status;
+    nvbio_cuda::LargeBWTStatus status;
 
     // try 16-bit bucketing
-    if (status = cuda::LargeBWTSkeleton<config_type_16,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
+    if (status = nvbio_cuda::LargeBWTSkeleton<config_type_16,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
         string_set,
         output,
         params ))
         return;
 
     // try 20-bit bucketing
-    if (status = cuda::LargeBWTSkeleton<config_type_20,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
+    if (status = nvbio_cuda::LargeBWTSkeleton<config_type_20,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
         string_set,
         output,
         params ))
         return;
 
     // try 24-bit bucketing
-    if (status = cuda::LargeBWTSkeleton<config_type_24,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
+    if (status = nvbio_cuda::LargeBWTSkeleton<config_type_24,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
         string_set,
         output,
         params ))
@@ -950,21 +950,21 @@ void large_bwt(
         output_handler&             output,
         BWTParams*                  params)
 {
-    cuda::LargeBWTStatus status;
+    nvbio_cuda::LargeBWTStatus status;
 
     const uint32 bucketing_bits = params ? params->bucketing_bits : 16u;
 
     if (params && params->cpu_bucketing)
     {
-        typedef cuda::HostBWTConfigCPUBucketer<16,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_16; // 16-bits bucketing
-        typedef cuda::HostBWTConfigCPUBucketer<20,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_20; // 20-bits bucketing
-        typedef cuda::HostBWTConfigCPUBucketer<24,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_24; // 24-bits bucketing
-        typedef cuda::HostBWTConfigCPUBucketer<26,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_26; // 26-bits bucketing
+        typedef nvbio_cuda::HostBWTConfigCPUBucketer<16,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_16; // 16-bits bucketing
+        typedef nvbio_cuda::HostBWTConfigCPUBucketer<20,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_20; // 20-bits bucketing
+        typedef nvbio_cuda::HostBWTConfigCPUBucketer<24,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_24; // 24-bits bucketing
+        typedef nvbio_cuda::HostBWTConfigCPUBucketer<26,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_26; // 26-bits bucketing
 
         // try 16-bit bucketing
         if (bucketing_bits <= 16u)
         {
-            if (status = cuda::LargeBWTSkeleton<config_type_16,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
+            if (status = nvbio_cuda::LargeBWTSkeleton<config_type_16,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
                 string_set,
                 output,
                 params ))
@@ -974,7 +974,7 @@ void large_bwt(
         // try 20-bit bucketing
         if (bucketing_bits <= 20u)
         {
-            if (status = cuda::LargeBWTSkeleton<config_type_20,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
+            if (status = nvbio_cuda::LargeBWTSkeleton<config_type_20,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
                 string_set,
                 output,
                 params ))
@@ -984,7 +984,7 @@ void large_bwt(
         // try 24-bit bucketing
         if (bucketing_bits <= 24u)
         {
-            if (status = cuda::LargeBWTSkeleton<config_type_24,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
+            if (status = nvbio_cuda::LargeBWTSkeleton<config_type_24,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
                 string_set,
                 output,
                 params ))
@@ -992,7 +992,7 @@ void large_bwt(
         }
 
         // try 26-bit bucketing
-        if (status = cuda::LargeBWTSkeleton<config_type_26,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
+        if (status = nvbio_cuda::LargeBWTSkeleton<config_type_26,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
             string_set,
             output,
             params ))
@@ -1000,15 +1000,15 @@ void large_bwt(
     }
     else
     {
-        typedef cuda::HostBWTConfigGPUBucketer<16,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_16; // 16-bits bucketing
-        typedef cuda::HostBWTConfigGPUBucketer<20,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_20; // 20-bits bucketing
-        typedef cuda::HostBWTConfigGPUBucketer<24,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_24; // 24-bits bucketing
-        typedef cuda::HostBWTConfigGPUBucketer<26,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_26; // 26-bits bucketing
+        typedef nvbio_cuda::HostBWTConfigGPUBucketer<16,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_16; // 16-bits bucketing
+        typedef nvbio_cuda::HostBWTConfigGPUBucketer<20,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_20; // 20-bits bucketing
+        typedef nvbio_cuda::HostBWTConfigGPUBucketer<24,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_24; // 24-bits bucketing
+        typedef nvbio_cuda::HostBWTConfigGPUBucketer<26,SYMBOL_SIZE,BIG_ENDIAN,storage_type> config_type_26; // 26-bits bucketing
 
         // try 16-bit bucketing
         if (bucketing_bits <= 16u)
         {
-            if (status = cuda::LargeBWTSkeleton<config_type_16,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
+            if (status = nvbio_cuda::LargeBWTSkeleton<config_type_16,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
                 string_set,
                 output,
                 params ))
@@ -1018,7 +1018,7 @@ void large_bwt(
         // try 20-bit bucketing
         if (bucketing_bits <= 20u)
         {
-            if (status = cuda::LargeBWTSkeleton<config_type_20,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
+            if (status = nvbio_cuda::LargeBWTSkeleton<config_type_20,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
                 string_set,
                 output,
                 params ))
@@ -1028,7 +1028,7 @@ void large_bwt(
         // try 24-bit bucketing
         if (bucketing_bits <= 24u)
         {
-            if (status = cuda::LargeBWTSkeleton<config_type_24,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
+            if (status = nvbio_cuda::LargeBWTSkeleton<config_type_24,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
                 string_set,
                 output,
                 params ))
@@ -1036,14 +1036,14 @@ void large_bwt(
         }
 
         // try 26-bit bucketing
-        if (status = cuda::LargeBWTSkeleton<config_type_26,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
+        if (status = nvbio_cuda::LargeBWTSkeleton<config_type_26,SYMBOL_SIZE,BIG_ENDIAN,storage_type>::enact(
             string_set,
             output,
             params ))
             return;
     }
 
-    if (status.code == cuda::LargeBWTStatus::LargeBucket)
+    if (status.code == nvbio_cuda::LargeBWTStatus::LargeBucket)
         throw nvbio::runtime_error("subbucket %u contains %u strings: buffer overflow!\n  please try increasing the device memory limit to at least %u MB\n", status.bucket_index, status.bucket_size, util::divide_ri( status.bucket_size, 1024u*1024u )*32u);
 }
 

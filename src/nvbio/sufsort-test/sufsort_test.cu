@@ -250,7 +250,7 @@ int sufsort_test(int argc, char* argv[])
             Timer timer;
             timer.start();
 
-            cuda::suffix_sort(
+            nvbio_cuda::suffix_sort(
                 N_symbols,
                 d_packed_string,
                 d_sa.begin(),
@@ -318,7 +318,7 @@ int sufsort_test(int argc, char* argv[])
             Timer timer;
             timer.start();
 
-            cuda::suffix_sort(
+            nvbio_cuda::suffix_sort(
                 N_symbols,
                 d_text.begin(),
                 d_sa.begin(),
@@ -400,7 +400,7 @@ int sufsort_test(int argc, char* argv[])
 
             // sort the suffixes
             for (uint32 i = 0; i < N_tests; ++i)
-                cuda::suffix_sort( d_string_set, suffix_hander, &params );
+                nvbio_cuda::suffix_sort( d_string_set, suffix_hander, &params );
 
             cudaDeviceSynchronize();
             timer.stop();
@@ -467,7 +467,7 @@ int sufsort_test(int argc, char* argv[])
         Timer timer;
         timer.start();
 
-        const uint32 primary = cuda::bwt(
+        const uint32 primary = nvbio_cuda::bwt(
             N_symbols,
             d_packed_string,
             d_packed_bwt,
@@ -538,7 +538,7 @@ int sufsort_test(int argc, char* argv[])
         const_packed_stream_type d_packed_string( d_ref_access.sequence_stream() );
               packed_stream_type d_packed_bwt( nvbio::plain_view( d_bwt_storage ) );
 
-        const uint32 primary_ref = cuda::find_primary( N_symbols, d_packed_string );
+        const uint32 primary_ref = nvbio_cuda::find_primary( N_symbols, d_packed_string );
         log_info(stderr, "    primary: %u\n", primary_ref);
         {
             const const_reference_access_type h_ref_access( h_ref );
@@ -552,7 +552,7 @@ int sufsort_test(int argc, char* argv[])
         Timer timer;
         timer.start();
 
-        const uint32 primary = cuda::bwt(
+        const uint32 primary = nvbio_cuda::bwt(
             N_symbols,
             d_packed_string,
             d_packed_bwt,
@@ -626,7 +626,7 @@ int sufsort_test(int argc, char* argv[])
         Timer timer;
         timer.start();
 
-        cuda::bwt(
+        nvbio_cuda::bwt(
             N_symbols,
             d_packed_string,
             d_packed_bwt,
@@ -639,7 +639,7 @@ int sufsort_test(int argc, char* argv[])
     if (TEST_MASK & kGPU_BWT_SET)
     {
         typedef uint32 word_type;
-        typedef cuda::load_pointer<word_type,cuda::LOAD_DEFAULT> storage_type;
+        typedef nvbio_cuda::load_pointer<word_type,nvbio_cuda::LOAD_DEFAULT> storage_type;
 
         typedef PackedStream<word_type*,uint8,SYMBOL_SIZE,true,uint64>      packed_stream_type;
 
@@ -689,7 +689,7 @@ int sufsort_test(int argc, char* argv[])
 
             timer.start();
 
-            cuda::bwt<SYMBOL_SIZE,true>(
+            nvbio_cuda::bwt<SYMBOL_SIZE,true>(
                 d_string_set,
                 output_handler,
                 &params );
@@ -702,7 +702,7 @@ int sufsort_test(int argc, char* argv[])
 
             timer.start();
 
-            cuda::bwt<SYMBOL_SIZE,true>(
+            nvbio_cuda::bwt<SYMBOL_SIZE,true>(
                 d_string_set,
                 output_handler,
                 &params );

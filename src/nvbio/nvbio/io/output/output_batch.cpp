@@ -68,7 +68,7 @@ void DeviceOutputBatchSE::readback_scores(thrust::host_vector<io::Alignment>& ho
 void DeviceOutputBatchSE::readback_cigars(io::HostCigarArray& host_cigar) const
 {
     host_cigar.array = cigar.array;
-    nvbio::cuda::thrust_copy_vector(host_cigar.coords, cigar.coords);
+    nvbio::nvbio_cuda::thrust_copy_vector(host_cigar.coords, cigar.coords);
 }
 
 // copy MD strings back to the host

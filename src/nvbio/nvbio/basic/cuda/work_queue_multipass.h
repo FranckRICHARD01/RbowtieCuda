@@ -33,7 +33,7 @@
 #include <thrust/device_vector.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 ///@addtogroup WorkQueue
 ///@{

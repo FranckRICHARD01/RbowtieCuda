@@ -46,7 +46,7 @@
 
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 ///@addtogroup Sufsort
 ///@{
@@ -481,7 +481,7 @@ void blockwise_build(
 
         const priv::DCS_predicate in_dcs( dcs.Q, nvbio::plain_view( dcs.d_bitmask ) );
 
-        estimated_sample_size += cuda::reduce(
+        estimated_sample_size += nvbio_cuda::reduce(
             uint32( block_end - block_begin ),
             thrust::make_transform_iterator(
                 thrust::make_transform_iterator(
@@ -504,7 +504,7 @@ void blockwise_build(
 
         const priv::DCS_predicate in_dcs( dcs.Q, nvbio::plain_view( dcs.d_bitmask ) );
 
-        sample_size += cuda::copy_if(
+        sample_size += nvbio_cuda::copy_if(
             uint32( block_end - block_begin ),
             thrust::make_counting_iterator<uint32>(0u) + block_begin,
             d_sample.begin() + sample_size,

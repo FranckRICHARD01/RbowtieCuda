@@ -184,9 +184,9 @@ private:
 struct SSA_value_multiple_device
 {
     typedef SSA_value_multiple_context<
-        cuda::ldg_pointer<uint32>,
-        cuda::ldg_pointer<uint32>,
-        cuda::ldg_pointer<uint32> >     context_type;
+        nvbio_cuda::ldg_pointer<uint32>,
+        nvbio_cuda::ldg_pointer<uint32>,
+        nvbio_cuda::ldg_pointer<uint32> >     context_type;
     typedef context_type                device_view_type;
     typedef context_type                plain_view_type;
 
@@ -203,7 +203,7 @@ struct SSA_value_multiple_device
     ///
     context_type get_context() const
     {
-        return context_type( cuda::ldg_pointer<uint32>(m_ssa), cuda::ldg_pointer<uint32>(m_bitmask), cuda::ldg_pointer<uint32>(m_blocks) );
+        return context_type( nvbio_cuda::ldg_pointer<uint32>(m_ssa), nvbio_cuda::ldg_pointer<uint32>(m_bitmask), nvbio_cuda::ldg_pointer<uint32>(m_blocks) );
     }
 
     uint32  m_n;

@@ -31,7 +31,7 @@
 #include <cuda_runtime.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 ///
 /// A CUDA timer

@@ -32,7 +32,7 @@
 #include <thrust/device_vector.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 ///\page work_queue_page Work-Queues
 ///
@@ -309,7 +309,7 @@ struct WorkQueueStats
 
     /// return measured utilization
     ///
-    float utilization(const WorkQueueStatsEvent type) const { return counters[2 + type] ? float(counters[0 + type])/float(counters[2 + type]*cuda::Arch::WARP_SIZE) : 1.0f; }
+    float utilization(const WorkQueueStatsEvent type) const { return counters[2 + type] ? float(counters[0 + type])/float(counters[2 + type]*nvbio_cuda::Arch::WARP_SIZE) : 1.0f; }
 
     /// return measured iterations
     ///

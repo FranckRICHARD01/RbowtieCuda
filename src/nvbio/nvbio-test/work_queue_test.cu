@@ -371,7 +371,7 @@ void BenchmarkStridedWorkMover<PAYLOAD>::move(
 template <uint32 PAYLOAD, uint32 BLOCKDIM>
 void benchmark(const uint32 n_tests, const uint32 min_size, const uint32 max_size)
 {
-    using namespace cuda;
+    using namespace nvbio_cuda;
 
     typedef BenchmarkWorkUnit<PAYLOAD>                                  FatWorkUnit;
     typedef BenchmarkWorkStream<FatWorkUnit>                            FatWorkStream;
@@ -704,7 +704,7 @@ void benchmark(const uint32 n_tests, const uint32 min_size, const uint32 max_siz
 
 int work_queue_test(int argc, char* argv[])
 {
-    using namespace cuda;
+    using namespace nvbio_cuda;
     using namespace wqtest;
 
     log_info( stderr, "work_queue test... started\n" );

@@ -53,7 +53,7 @@
 #endif
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 struct Arch
 {

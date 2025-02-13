@@ -1075,7 +1075,7 @@ void discard_ranges(
         // compute the number of output MEM ranges
         // NOTE: this reduction is necessary as discard_ranges might have changed the
         // number of ranges effectively in use
-        const uint32 n_ranges = cuda::reduce(
+        const uint32 n_ranges = nvbio_cuda::reduce(
             n_items,
             ranges.m_sizes.begin(),
             thrust::plus<uint32>(),
@@ -1437,7 +1437,7 @@ uint64 MEMFilter<device_tag, fm_index_type>::rank(
         thrust::device_vector<uint32>    slots( m_n_queries );
 
         // scan the mem-range array sizes to get the new array slots
-        cuda::exclusive_scan(
+        nvbio_cuda::exclusive_scan(
             m_n_queries,
             m_mem_ranges.m_sizes.begin(),
             slots.begin(),
@@ -1458,7 +1458,7 @@ uint64 MEMFilter<device_tag, fm_index_type>::rank(
         m_mem_ranges.m_arena.swap( arena );
 
         // and now scan the range sizes
-        cuda::inclusive_scan(
+        nvbio_cuda::inclusive_scan(
             n_ranges,
             thrust::make_transform_iterator( m_mem_ranges.m_arena.begin(), mem::range_size<rank_type>() ),
             m_slots.begin(),

@@ -376,7 +376,7 @@ uint64 QGramFilter<device_tag, qgram_index_type, query_iterator, index_iterator>
         m_qgram_index );
 
     // scan their size to determine the slots
-    cuda::inclusive_scan(
+    nvbio_cuda::inclusive_scan(
         n_queries,
         thrust::make_transform_iterator( m_ranges.begin(), qgram::range_size() ),
         m_slots.begin(),
@@ -471,15 +471,15 @@ uint32 QGramFilter<device_tag, qgram_index_type, query_iterator, index_iterator>
 
     primitive_type* raw_diags( (primitive_type*)nvbio::raw_pointer( m_diags ) );
 
-    cuda::SortBuffers<primitive_type*> sort_buffers;
+    nvbio_cuda::SortBuffers<primitive_type*> sort_buffers;
     sort_buffers.keys[0] = raw_diags;
     sort_buffers.keys[1] = raw_diags + buffer_size;
 
-    cuda::SortEnactor sort_enactor;
+    nvbio_cuda::SortEnactor sort_enactor;
     sort_enactor.sort( n_hits, sort_buffers );
 
     // and run-length encode them
-    const uint32 n_merged = cuda::runlength_encode(
+    const uint32 n_merged = nvbio_cuda::runlength_encode(
         n_hits,
         m_diags.begin() + sort_buffers.selector  * buffer_size,
         merged_hits,

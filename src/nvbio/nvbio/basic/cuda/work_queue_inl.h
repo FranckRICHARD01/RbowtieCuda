@@ -34,7 +34,7 @@
 #include <thrust/copy.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 namespace wq {
 
@@ -98,7 +98,7 @@ template <typename WorkStream, typename WorkMover>
 void WorkQueue<PolicyTag,WorkUnitT,BLOCKDIM>::consume(const WorkStream stream, const WorkMover, WorkQueueStats* stats)
 {
     // compute the number of blocks we are going to launch
-    const uint32 n_blocks = (uint32)cuda::max_active_blocks( wq::inplace_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream>, BLOCKDIM, 0u );
+    const uint32 n_blocks = (uint32)nvbio_cuda::max_active_blocks( wq::inplace_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream>, BLOCKDIM, 0u );
 
     // launch the consuming kernel
     wq::inplace_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream> <<<n_blocks,BLOCKDIM>>>( stream, view( stats ) );

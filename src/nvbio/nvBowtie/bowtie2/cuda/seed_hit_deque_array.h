@@ -91,13 +91,13 @@ struct SeedHitDequeArrayHostStorage
     ///
     SeedHitDequeArrayHostStorage& operator=(const SeedHitDequeArrayDeviceStorage& other)
     {
-        nvbio::cuda::thrust_copy_vector( m_hits,        other.m_hits );
-        nvbio::cuda::thrust_copy_vector( m_counts,      other.m_counts );
-        nvbio::cuda::thrust_copy_vector( m_probs,       other.m_probs );
-        nvbio::cuda::thrust_copy_vector( m_index,       other.m_index );
-        nvbio::cuda::thrust_copy_vector( m_probs_index, other.m_probs_index );
-        nvbio::cuda::thrust_copy_vector( m_pool,        other.m_pool );
-        nvbio::cuda::thrust_copy_vector( m_probs_pool,  other.m_probs_pool );
+        nvbio::nvbio_cuda::thrust_copy_vector( m_hits,        other.m_hits );
+        nvbio::nvbio_cuda::thrust_copy_vector( m_counts,      other.m_counts );
+        nvbio::nvbio_cuda::thrust_copy_vector( m_probs,       other.m_probs );
+        nvbio::nvbio_cuda::thrust_copy_vector( m_index,       other.m_index );
+        nvbio::nvbio_cuda::thrust_copy_vector( m_probs_index, other.m_probs_index );
+        nvbio::nvbio_cuda::thrust_copy_vector( m_pool,        other.m_pool );
+        nvbio::nvbio_cuda::thrust_copy_vector( m_probs_pool,  other.m_probs_pool );
         return *this;
     }
 

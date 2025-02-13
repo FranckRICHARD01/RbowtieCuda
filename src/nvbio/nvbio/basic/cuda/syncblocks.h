@@ -32,7 +32,7 @@
 #include <thrust/device_vector.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 /// implements an inter-CTA synchronization primitive which can be called
 /// multiple times from the same grid, or even across multiple kernel

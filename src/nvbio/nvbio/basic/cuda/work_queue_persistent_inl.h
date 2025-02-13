@@ -34,7 +34,7 @@
 #include <thrust/copy.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 ///@addtogroup WorkQueue
 ///@{
@@ -63,7 +63,7 @@ void persistent_warps_work_queue_kernel(uint32* pool, const WorkStreamT stream, 
     // place a work-unit in local memory
     WorkUnit unit;
 
-    const uint32 NUM_WARPS = BLOCKDIM >> cuda::Arch::LOG_WARP_SIZE;
+    const uint32 NUM_WARPS = BLOCKDIM >> nvbio_cuda::Arch::LOG_WARP_SIZE;
 
     // alloc one shared memory integer for each warp
     __shared__ volatile uint32 sm_broadcast[ NUM_WARPS ];
@@ -73,7 +73,7 @@ void persistent_warps_work_queue_kernel(uint32* pool, const WorkStreamT stream, 
     {
         // use the first lane of each warp to fetch a new warp's worth of work
         if (warp_tid() == 0)
-            sm_broadcast[ warp_id() ] = atomicAdd( pool, cuda::Arch::WARP_SIZE );
+            sm_broadcast[ warp_id() ] = atomicAdd( pool, nvbio_cuda::Arch::WARP_SIZE );
 
         // broadcast the work packet to the entire warp
         const uint32 work_base_id = sm_broadcast[ warp_id() ];
@@ -114,7 +114,7 @@ template <typename WorkStream, typename WorkMover>
 void WorkQueue<PersistentWarpsQueueTag,WorkUnitT,BLOCKDIM>::consume(const WorkStream stream, const WorkMover, WorkQueueStats* stats)
 {
     // compute the number of blocks we are going to launch
-    const uint32 max_blocks = (uint32)cuda::max_active_blocks( wq::persistent_warps_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream>, BLOCKDIM, 0u );
+    const uint32 max_blocks = (uint32)nvbio_cuda::max_active_blocks( wq::persistent_warps_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream>, BLOCKDIM, 0u );
     const uint32 n_blocks   = nvbio::max( nvbio::min( max_blocks, m_capacity / BLOCKDIM ), 1u );
 
 
@@ -149,7 +149,7 @@ persistent_threads_work_queue_kernel(uint32* pool, const uint32 max_inactive_lan
     // place a work-unit in local memory
     WorkUnit unit;
 
-    const uint32 NUM_WARPS = BLOCKDIM >> cuda::Arch::LOG_WARP_SIZE;
+    const uint32 NUM_WARPS = BLOCKDIM >> nvbio_cuda::Arch::LOG_WARP_SIZE;
 
     // alloc one shared memory integer for each warp
     __shared__ volatile uint32 sm_broadcast[ NUM_WARPS ];
@@ -182,7 +182,7 @@ persistent_threads_work_queue_kernel(uint32* pool, const uint32 max_inactive_lan
             if (work_id == invalid_unit)
             {
                 // compute this lane's exclusive pop scan
-                const uint32 pop_scan = __popc( pop_mask << (cuda::Arch::WARP_SIZE - warp_tid()) );
+                const uint32 pop_scan = __popc( pop_mask << (nvbio_cuda::Arch::WARP_SIZE - warp_tid()) );
 
                 // get the index of the work unit for this thread
                 work_id   = pop_scan + work_base_id;
@@ -234,7 +234,7 @@ template <typename WorkStream, typename WorkMover>
 void WorkQueue<PersistentThreadsQueueTag,WorkUnitT,BLOCKDIM>::consume(const WorkStream stream, const WorkMover, WorkQueueStats* stats)
 {
     // compute the number of blocks we are going to launch
-    const uint32 max_blocks = (uint32)cuda::max_active_blocks( wq::persistent_threads_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream>, BLOCKDIM, 0u );
+    const uint32 max_blocks = (uint32)nvbio_cuda::max_active_blocks( wq::persistent_threads_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream>, BLOCKDIM, 0u );
     const uint32 n_blocks   = nvbio::max( nvbio::min( max_blocks, m_capacity / BLOCKDIM ), 1u );
 
     // resize and reset the work pool counter
@@ -242,8 +242,8 @@ void WorkQueue<PersistentThreadsQueueTag,WorkUnitT,BLOCKDIM>::consume(const Work
     m_pool[0] = 0u;
 
     // compute the maximum number of tolerated inactive lanes, given the specified minimum utilization
-    const uint32 min_active_lanes   = uint32( m_min_utilization * cuda::Arch::WARP_SIZE );
-    const uint32 max_inactive_lanes = cuda::Arch::WARP_SIZE - min_active_lanes;
+    const uint32 min_active_lanes   = uint32( m_min_utilization * nvbio_cuda::Arch::WARP_SIZE );
+    const uint32 max_inactive_lanes = nvbio_cuda::Arch::WARP_SIZE - min_active_lanes;
 
     // launch the consuming kernel
     wq::persistent_threads_work_queue_kernel<BLOCKDIM,WorkUnit,WorkStream> <<<n_blocks,BLOCKDIM>>>( thrust::raw_pointer_cast( &m_pool.front() ), max_inactive_lanes, stream, view( stats ) );

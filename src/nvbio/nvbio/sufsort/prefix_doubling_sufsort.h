@@ -42,7 +42,7 @@
 #include <cub/cub.cuh>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 ///
 /// A sorting enactor for sorting all suffixes of a given string using a modified parallel version
@@ -156,7 +156,7 @@ __global__ void prefix_doubling_kernel(
     //   - in order to perform prefix-doubling, we want to set K[i] as
     //     the position of suffix SA[i] + j, i.e. K[i] = invSA[ SA[i] + j ]
     //
-    const cuda::ldg_pointer<uint32> inv_keys_ldg( inv_keys );
+    const nvbio_cuda::ldg_pointer<uint32> inv_keys_ldg( inv_keys );
 
   #if !defined(VECTORIZED_PREFIX_DOUBLING) // reference scalar implementation
     const uint32 idx = threadIdx.x + blockIdx.x * blockDim.x;
@@ -522,8 +522,8 @@ void PrefixDoublingSufSort::sort(
 
         timer.start();
 
-        cuda::SortBuffers<uint32*,uint32*> sort_buffers;
-        cuda::SortEnactor                  sort_enactor;
+        nvbio_cuda::SortBuffers<uint32*,uint32*> sort_buffers;
+        nvbio_cuda::SortEnactor                  sort_enactor;
 
         sort_buffers.selector  = 0;
         sort_buffers.keys[0]   = nvbio::raw_pointer( d_sort_keys );

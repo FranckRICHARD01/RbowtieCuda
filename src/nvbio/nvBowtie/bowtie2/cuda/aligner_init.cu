@@ -109,7 +109,7 @@ bool Aligner::init_alloc(const uint32 BATCH_SIZE, const Params& params, const En
     else
                      resize( do_alloc, sorting_queue_dvec,  BATCH_SIZE*2*4, d_allocated_bytes ); // 4x for 64-bit sorting
 
-    nvbio::cuda::check_error("allocating queues");
+    nvbio::nvbio_cuda::check_error("allocating queues");
 
     mapq_dptr = resize( do_alloc, mapq_dvec, BATCH_SIZE, d_allocated_bytes );
 
@@ -133,7 +133,7 @@ bool Aligner::init_alloc(const uint32 BATCH_SIZE, const Params& params, const En
 
         flags_dptr = resize( do_alloc, flags_dvec, BATCH_SIZE, d_allocated_bytes );
     }
-    nvbio::cuda::check_error("allocating output buffers");
+    nvbio::nvbio_cuda::check_error("allocating output buffers");
 
     hits_stats_dptr = resize( do_alloc, hits_stats_dvec, 128, d_allocated_bytes );
                       resize( do_alloc, hits_stats_hvec, 128, d_allocated_bytes );
@@ -168,7 +168,7 @@ bool Aligner::init_alloc(const uint32 BATCH_SIZE, const Params& params, const En
             wfa_F_null_dptr = resize(do_alloc, wfa_F_null_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
             wfa_PointeurH_dptr = resize(do_alloc, wfa_PointeurH_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
         }
-        nvbio::cuda::check_error("allocating wfa buffers");
+        nvbio::nvbio_cuda::check_error("allocating wfa buffers");
     }
 
     //const uint32 n_cigar_entries = BATCH_SIZE*(MAXIMUM_BAND_LEN_MULT*band_len+1);
@@ -189,7 +189,7 @@ bool Aligner::init_alloc(const uint32 BATCH_SIZE, const Params& params, const En
 
     // allocate CIGAR coords
     cigar_coords_dptr = resize( do_alloc, cigar_coords_dvec, BATCH_SIZE, d_allocated_bytes );
-    nvbio::cuda::check_error("allocating CIGARs");
+    nvbio::nvbio_cuda::check_error("allocating CIGARs");
 
     if (type == kPairedEnds)
     {
@@ -247,7 +247,7 @@ bool Aligner::init_alloc(const uint32 BATCH_SIZE, const Params& params, const En
     // allocate a large temporary buffer to for scoring and traceback
     dp_buffer_dptr = resize( do_alloc, dp_buffer_dvec, dp_storage, d_allocated_bytes );
 
-    nvbio::cuda::check_error("allocating alignment buffers");
+    nvbio::nvbio_cuda::check_error("allocating alignment buffers");
 
     if (mem_stats)
     {
@@ -381,9 +381,9 @@ void Aligner::keep_stats(const uint32 count, Stats& stats)
         hits_stats_dptr );
 
     cudaDeviceSynchronize();
-    nvbio::cuda::check_error("hit stats kernel");
+    nvbio::nvbio_cuda::check_error("hit stats kernel");
 
-    nvbio::cuda::thrust_copy_vector(hits_stats_hvec, hits_stats_dvec);
+    nvbio::nvbio_cuda::thrust_copy_vector(hits_stats_hvec, hits_stats_dvec);
 
     // poll until previous stats have been consumed
     //while (output_thread.stats.stats_ready) {}

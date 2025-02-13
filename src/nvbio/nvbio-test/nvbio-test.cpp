@@ -59,7 +59,7 @@ int sequence_test(int argc, char* argv[]);
 int wavelet_test(int argc, char* argv[]);
 int bloom_filter_test(int argc, char* argv[]);
 
-namespace cuda { void scan_test(); }
+namespace nvbio_cuda { void scan_test(); }
 namespace aln { void test(int argc, char* argv[]); }
 namespace html { void test(); }
 
@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
         int cuda_device = -1;
         int device_count;
         cudaGetDeviceCount(&device_count);
-        nvbio::cuda::check_error("cuda-check");
+        nvbio::nvbio_cuda::check_error("cuda-check");
 
         log_verbose(stderr, "  cuda devices : %d\n", device_count);
 
@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
         if (tests & kCondition)     condition_test();
         if (tests & kWorkQueue)     work_queue_test( argc, argv+arg );
         if (tests & kStringSet)     string_set_test( argc, argv+arg );
-        if (tests & kScan)          nvbio::cuda::scan_test();
+        if (tests & kScan)          nvbio::nvbio_cuda::scan_test();
         if (tests & kAlignment)     aln::test( argc, argv+arg );
         if (tests & kSumTree)       sum_tree_test();
         if (tests & kHTML)          html::test();

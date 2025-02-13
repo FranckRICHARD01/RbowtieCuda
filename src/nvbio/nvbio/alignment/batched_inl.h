@@ -208,8 +208,8 @@ void warp_batched_alignment_score(stream_type& stream, cell_type* columns, const
     stream.load_strings( work_id, 0, len, &context, &strings );
 
     // fetch the proper column storage
-    typedef block_strided_iterator<cuda::Arch::WARP_SIZE,cell_type*> column_type;
-    column_type column = column_type( columns + warp_id * cuda::Arch::WARP_SIZE, stride );
+    typedef block_strided_iterator<nvbio_cuda::Arch::WARP_SIZE,cell_type*> column_type;
+    column_type column = column_type( columns + warp_id * nvbio_cuda::Arch::WARP_SIZE, stride );
 
     // score the current DP matrix window
     uint2 sink;
@@ -234,7 +234,7 @@ void warp_batched_alignment_score(stream_type& stream, cell_type* columns, const
 template <uint32 BLOCKDIM, typename stream_type, typename cell_type>
 __global__ void warp_batched_alignment_score_kernel(stream_type stream, cell_type* columns, const uint32 stride)
 {
-    const uint32 wid = (blockIdx.x * BLOCKDIM + threadIdx.x) >> cuda::Arch::LOG_WARP_SIZE;
+    const uint32 wid = (blockIdx.x * BLOCKDIM + threadIdx.x) >> nvbio_cuda::Arch::LOG_WARP_SIZE;
 
     if (wid >= stream.size())
         return;
@@ -245,8 +245,8 @@ __global__ void warp_batched_alignment_score_kernel(stream_type stream, cell_typ
 template <uint32 BLOCKDIM, typename stream_type, typename cell_type>
 __global__ void warp_persistent_batched_alignment_score_kernel(stream_type stream, cell_type* columns, const uint32 stride)
 {
-    const uint32 grid_warps = (gridDim.x * BLOCKDIM) >> cuda::Arch::LOG_WARP_SIZE;
-    const uint32 wid        = (threadIdx.x + blockIdx.x*BLOCKDIM) >> cuda::Arch::LOG_WARP_SIZE;
+    const uint32 grid_warps = (gridDim.x * BLOCKDIM) >> nvbio_cuda::Arch::LOG_WARP_SIZE;
+    const uint32 wid        = (threadIdx.x + blockIdx.x*BLOCKDIM) >> nvbio_cuda::Arch::LOG_WARP_SIZE;
 
     const uint32 stream_end = stream.size();
 
@@ -459,7 +459,7 @@ void BatchedAlignmentScore<stream_type,DeviceThreadBlockScheduler<BLOCKDIM,MINBL
         {
             // compute the number of blocks we are going to launch
             const uint32 n_blocks = nvbio::max( nvbio::min(
-                (uint32)cuda::max_active_blocks( persistent_batched_alignment_score_kernel<BLOCKDIM,MINBLOCKS,stream_type,cell_type>, BLOCKDIM, 0u ),
+                (uint32)nvbio_cuda::max_active_blocks( persistent_batched_alignment_score_kernel<BLOCKDIM,MINBLOCKS,stream_type,cell_type>, BLOCKDIM, 0u ),
                 queue_capacity / BLOCKDIM ), 1u );
 
             persistent_batched_alignment_score_kernel<BLOCKDIM,MINBLOCKS> <<<n_blocks, BLOCKDIM>>>(
@@ -530,12 +530,12 @@ void BatchedAlignmentScore<stream_type,DeviceWarpScheduler>::enact(stream_type s
         temp = nvbio::plain_view( temp_vec );
     }
 
-    NVBIO_VAR_UNUSED static const uint32 WARP_SIZE = cuda::Arch::WARP_SIZE;
+    NVBIO_VAR_UNUSED static const uint32 WARP_SIZE = nvbio_cuda::Arch::WARP_SIZE;
 
     // set the queue capacity based on available memory
     const uint32 queue_capacity = align_down<WARP_SIZE>( uint32( temp_size / (align<WARP_SIZE>( stream.max_text_length() ) * sizeof(cell_type)) ) );
 
-    const uint32 BLOCKWARPS = BLOCKDIM >> cuda::Arch::LOG_WARP_SIZE;
+    const uint32 BLOCKWARPS = BLOCKDIM >> nvbio_cuda::Arch::LOG_WARP_SIZE;
     if (queue_capacity >= stream.size())
     {
         const uint32 n_warps  = stream.size();
@@ -550,7 +550,7 @@ void BatchedAlignmentScore<stream_type,DeviceWarpScheduler>::enact(stream_type s
     {
         // compute the number of blocks we are going to launch
         const uint32 n_blocks = nvbio::max( nvbio::min(
-            (uint32)cuda::max_active_blocks( warp_persistent_batched_alignment_score_kernel<BLOCKDIM,stream_type,cell_type>, BLOCKDIM, 0u ),
+            (uint32)nvbio_cuda::max_active_blocks( warp_persistent_batched_alignment_score_kernel<BLOCKDIM,stream_type,cell_type>, BLOCKDIM, 0u ),
             queue_capacity / BLOCKDIM ), 1u );
 
         warp_persistent_batched_alignment_score_kernel<BLOCKDIM> <<<n_blocks, BLOCKDIM>>>(
@@ -634,8 +634,8 @@ struct BatchedAlignmentScore<stream_type,DeviceStagedThreadScheduler>
     }
 
 private:
-    cuda::WorkQueue<
-        cuda::PersistentThreadsQueueTag,
+    nvbio_cuda::WorkQueue<
+        nvbio_cuda::PersistentThreadsQueueTag,
         StagedScoreUnit<stream_type>,
         BLOCKDIM>                               m_work_queue;
 };
@@ -888,7 +888,7 @@ void BatchedAlignmentTraceback<CHECKPOINTS,stream_type,DeviceThreadBlockSchedule
     {
         // compute the number of blocks we are going to launch
         const uint32 n_blocks = nvbio::max( nvbio::min(
-            (uint32)cuda::max_active_blocks( persistent_batched_alignment_traceback_kernel<BLOCKDIM,MINBLOCKS,CHECKPOINTS,stream_type,cell_type>, BLOCKDIM, 0u ),
+            (uint32)nvbio_cuda::max_active_blocks( persistent_batched_alignment_traceback_kernel<BLOCKDIM,MINBLOCKS,CHECKPOINTS,stream_type,cell_type>, BLOCKDIM, 0u ),
             queue_capacity / BLOCKDIM ), 1u );
 
         cell_type* checkpoints = (cell_type*)(temp);

@@ -951,7 +951,7 @@ struct string_set_length_functor
 ///@} StringSetsModule
 ///@} Strings
 
-namespace cuda {
+namespace nvbio_cuda {
 
 ///@addtogroup Strings
 ///@{

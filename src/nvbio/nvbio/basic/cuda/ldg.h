@@ -35,7 +35,7 @@
 #include <nvbio/basic/iterator.h>
 
 namespace nvbio {
-namespace cuda {
+namespace nvbio_cuda {
 
 ///
 /// Wrapper class to create an __ldg() iterator out of a raw pointer

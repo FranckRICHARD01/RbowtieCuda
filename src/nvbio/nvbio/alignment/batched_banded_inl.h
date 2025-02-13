@@ -297,8 +297,8 @@ struct BatchedBandedAlignmentScore<BAND_LEN,stream_type,DeviceStagedThreadSchedu
     }
 
 private:
-    cuda::WorkQueue<
-        cuda::PersistentThreadsQueueTag,
+    nvbio_cuda::WorkQueue<
+        nvbio_cuda::PersistentThreadsQueueTag,
         BandedScoreUnit<BAND_LEN, stream_type>,
         BLOCKDIM>                               m_work_queue;
 };
@@ -529,7 +529,7 @@ void BatchedBandedAlignmentTraceback<BAND_LEN,CHECKPOINTS,stream_type,DeviceThre
     {
         // compute the number of blocks we are going to launch
         const uint32 n_blocks = nvbio::max( nvbio::min(
-            (uint32)cuda::max_active_blocks( persistent_banded_batched_alignment_traceback_kernel<BLOCKDIM,BAND_LEN,CHECKPOINTS,stream_type,cell_type>, BLOCKDIM, 0u ),
+            (uint32)nvbio_cuda::max_active_blocks( persistent_banded_batched_alignment_traceback_kernel<BLOCKDIM,BAND_LEN,CHECKPOINTS,stream_type,cell_type>, BLOCKDIM, 0u ),
             queue_capacity / BLOCKDIM ), 1u );
 
         cell_type* checkpoints = (cell_type*)(temp);

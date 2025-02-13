@@ -45,8 +45,6 @@ For detailed installation steps, please refer to the INSTALL file included with 
 
 RbowtieCuda is compatible with all Cuda versions greater than or equal to 10.
 
-However, compiling the nvBWT indexing tool results in an error when using CUDA versions 12.5 or later. We are actively working on a solution.
-
 ## An Example Workflow Using RbowtieCuda
 
 ### Installation

@@ -225,7 +225,7 @@ void QGroupIndexDevice::build(
     //
 
     // compute the exclusive prefix sum of the popcount of the words in I
-    cuda::exclusive_scan(
+    nvbio_cuda::exclusive_scan(
         n_qblocks + 1u,
         thrust::make_transform_iterator( I.begin(), popc_functor<uint32>() ),
         S.begin(),
@@ -254,7 +254,7 @@ void QGroupIndexDevice::build(
         setup_SS );
 
     // compute the exclusive prefix sum of SS
-    cuda::exclusive_scan(
+    nvbio_cuda::exclusive_scan(
         n_unique_qgrams + 1u,
         SS.begin(),
         SS.begin(),

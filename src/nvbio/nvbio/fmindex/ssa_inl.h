@@ -422,7 +422,7 @@ void SSA_index_multiple_device<K,index_type>::init(
     //
 
     const uint32 BLOCK_SIZE = 128;
-    const uint32 max_blocks = (uint32)nvbio::cuda::max_active_blocks(
+    const uint32 max_blocks = (uint32)nvbio::nvbio_cuda::max_active_blocks(
         SSA_index_multiple_setup_kernel<K,index_type,FMIndexType>, BLOCK_SIZE, 0);
 
     const uint32 BATCH_SIZE = 128*1024;

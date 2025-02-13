@@ -150,11 +150,11 @@ void setup(
         // copy the input to the temporary sorting string
         thrust::copy( string, string + string_len, sorted_string.begin() );
 
-        cuda::SortBuffers<symbol_type*> sort_buffers;
+        nvbio_cuda::SortBuffers<symbol_type*> sort_buffers;
         sort_buffers.keys[0] = raw_pointer( sorted_string );
         sort_buffers.keys[1] = raw_pointer( sorted_string ) + string_len;
 
-        cuda::SortEnactor sort_enactor;
+        nvbio_cuda::SortEnactor sort_enactor;
 
         // loop through all bit planes in the range [0,symbol_size)
         for (uint32 i = 0; i < symbol_size; ++i)

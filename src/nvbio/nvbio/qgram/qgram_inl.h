@@ -101,7 +101,7 @@ void QGramIndexDevice::build(
     // copy only the unique q-grams and count them
     thrust::device_vector<uint32> d_counts( string_len + 1u );
 
-    n_unique_qgrams = cuda::runlength_encode(
+    n_unique_qgrams = nvbio_cuda::runlength_encode(
         string_len,
         key_buffers.d_buffers[ key_buffers.selector ],
         qgrams.begin(),
@@ -112,7 +112,7 @@ void QGramIndexDevice::build(
     slots.resize( n_unique_qgrams + 1u );
 
     // scan the counts to get the slots
-    cuda::exclusive_scan(
+    nvbio_cuda::exclusive_scan(
         n_unique_qgrams + 1u,
         d_counts.begin(),
         slots.begin(),
@@ -255,7 +255,7 @@ void QGramSetIndexDevice::build(
     // copy only the unique q-grams and count them
     thrust::device_vector<uint32> d_counts( n_qgrams + 1u );
 
-    n_unique_qgrams = cuda::runlength_encode(
+    n_unique_qgrams = nvbio_cuda::runlength_encode(
         n_qgrams,
         key_buffers.d_buffers[ key_buffers.selector ],
         qgrams.begin(),
@@ -266,7 +266,7 @@ void QGramSetIndexDevice::build(
     slots.resize( n_unique_qgrams + 1u );
 
     // scan the counts to get the slots
-    cuda::exclusive_scan(
+    nvbio_cuda::exclusive_scan(
         n_unique_qgrams + 1u,
         d_counts.begin(),
         slots.begin(),
