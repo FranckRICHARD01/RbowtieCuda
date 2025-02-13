@@ -30,7 +30,7 @@ For detailed instructions on installing CUDA on Windows, refer to this guide:
  
 https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html
 
-Note that RbowtieCuda is compatible with Cuda versions >= 6.
+Note that RbowtieCuda is compatible with Cuda versions >= 10.
 
 ** Installing RTools on Windows **
 
