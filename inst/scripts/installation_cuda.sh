@@ -13,25 +13,6 @@ if ! lspci | grep -i nvidia; then
     exit 1
 fi
 
-### continue ?
-echo "Please note that this script will first delete old nvidia libraries and old nvidia drivers 
-from your system."
-while true; do
-    read -p "Do you wish to continue (y/n)?" yn
-    case $yn in
-        [Yy]* ) break;;
-        [Nn]* ) exit;;
-        * ) echo "Please answer yes (Y) or no (N).";;
-    esac
-done
-
-### If you have previous installation remove it first. 
-sudo apt-get purge nvidia* libnvidia*
-sudo apt remove nvidia-*
-sudo rm /etc/apt/sources.list.d/cuda*
-sudo apt-get autoremove && sudo apt-get autoclean
-sudo rm -rf /usr/local/cuda*
-
 # system update
 sudo apt-get update
 sudo apt-get upgrade
