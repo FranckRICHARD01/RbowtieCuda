@@ -8,6 +8,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
+# warning 
+# If find_package(CUDA required) has trouble finding the correct path to the cuda toolkit, uncheck this parameter and specify the correct path.
+#set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-12.8")
+
+# Disable CUB warning
+add_definitions(-DTHRUST_IGNORE_CUB_VERSION_CHECK=1)
+
 # available options
 option(CUDA_VERBOSE_PTXAS
   "Enable verbose output from PTXAS"
@@ -24,6 +31,7 @@ option(WERROR
 set(GPU_ARCHITECTURE "sm_60" CACHE STRING "Target GPU architecture")
 
 set(NVBIO_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+
 
 # import our own nvbio_* macros
 include("${NVBIO_SOURCE_ROOT}/cmake-local/nvbio.cmake")
