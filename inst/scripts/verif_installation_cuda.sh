@@ -16,3 +16,16 @@ if [ -n "$nvcc_path" ]; then
 else
     echo "CUDA is not installed or nvcc is not accessible. Please use the installation script..."
 fi
+
+# Vérification des paquets libthrust-dev et libcub-dev (Debian/Ubuntu)
+if command -v dpkg &>/dev/null; then
+    for pkg in libthrust-dev libcub-dev; do
+        if dpkg -l | grep -q "^ii  $pkg "; then
+            echo "$pkg is installed. ok !"
+        else
+            echo "$pkg is not installed. Please install it with sudo apt install $pkg"
+        fi
+    done
+else
+    echo "Unable to check packages, dpkg not available."
+fi

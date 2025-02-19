@@ -63,7 +63,7 @@ else()
   set(CUDA_NVCC_DEBUG_FLAGS "-Wno-deprecated-declarations -Wno-deprecated-gpu-targets --ptxas-options=-O3 -O3")
   if (UNIX AND NOT APPLE)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-enum-enum-conversion -O3")
   endif()
 endif()
 

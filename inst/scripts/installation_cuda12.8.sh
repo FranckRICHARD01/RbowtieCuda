@@ -47,9 +47,9 @@ sudo add-apt-repository ppa:graphics-drivers/ppa
 sudo apt update
 
 # install nvidia driver with dependencies
-sudo apt install libnvidia-common-570
-sudo apt install libnvidia-gl-570
-sudo apt install nvidia-driver-570
+#sudo apt install libnvidia-common-570
+#sudo apt install libnvidia-gl-570
+#sudo apt install nvidia-driver-570
 
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-ubuntu2404.pin
 sudo mv cuda-ubuntu2404.pin /etc/apt/preferences.d/cuda-repository-pin-600
