@@ -1,8 +1,11 @@
 project(moderngpu)
 cmake_minimum_required(VERSION 3.22)
 
-find_package(CUDA)
+find_package(CUDAToolkit REQUIRED)
 include_directories(${CUDA_INCLUDE_DIRS})
+include_directories(${CUDAToolkit_INCLUDE_DIRS})
+
+enable_language(CUDA)
 
 set(INSTALL_BIN_DIR "${CMAKE_INSTALL_PREFIX}/bin" CACHE PATH "Installation directory for executables")
 set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/lib" CACHE PATH "Installation directory for libraries")
@@ -21,5 +24,6 @@ set(SRCS
 
 set(SOURCES ${SRCS})
 
-cuda_add_library(moderngpu STATIC ${SRCS})
+add_library(moderngpu STATIC ${SRCS})
+target_link_libraries(moderngpu PRIVATE ${CUDAToolkit_LIBRARIES})
 

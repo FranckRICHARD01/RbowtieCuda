@@ -3,10 +3,13 @@ cmake_minimum_required(VERSION 3.22)
 project(nvBio)
 
 message(STATUS "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "CMAKE_CUDA_COMPILER_ID: ${CMAKE_CUDA_COMPILER_ID}")
+
+#set(CMAKE_CXX_COMPILER_ID NVHPC)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
     message(STATUS "Detected NVHPC Compiler")
-    set(USING_NVHPC FALSE)
+    set(USING_NVHPC TRUE)
 else()
     set(USING_NVHPC FALSE)
 endif()
@@ -14,10 +17,10 @@ endif()
 if (USING_NVHPC)
     #set(CMAKE_C_COMPILER nvc)
     #set(CMAKE_CXX_COMPILER nvc++)
-    #set(CMAKE_CUDA_COMPILER nvc++)
+    set(CMAKE_CUDA_COMPILER nvc++)
+else()
+    set(CMAKE_CUDA_COMPILER nvcc)
 endif()
-
-set(CMAKE_CUDA_COMPILER nvcc)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -89,16 +92,20 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "Intel" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x8
 add_definitions(-DPLATFORM_X86)
 endif()
 
-find_package(CUDA REQUIRED)
+find_package(CUDAToolkit REQUIRED)
 find_package(Thrust REQUIRED)
 find_package(CUB REQUIRED)
 find_package(Doxygen)
 
-find_package(OpenMP)
+enable_language(CUDA)
+
+find_package(OpenMP REQUIRED)
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
+
+
 
 # set up required system libs
 set(SYSTEM_LINK_LIBRARIES "")
