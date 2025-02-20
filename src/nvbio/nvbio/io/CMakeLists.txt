@@ -4,8 +4,8 @@ alignments_inl.h
 bam_format.h
 bufferedtextfile.h
 utils.h
-vcf.cpp
+vcf.cu
 vcf.h
-output_stream.cpp
+output_stream.cu
 output_stream.h
 )

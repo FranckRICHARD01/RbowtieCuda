@@ -6,10 +6,11 @@ message(STATUS "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "CMAKE_CUDA_COMPILER_ID: ${CMAKE_CUDA_COMPILER_ID}")
 
 # *** FIX: Set CMAKE_CUDA_COMPILER unconditionally and BEFORE find_package(CUDA) ***
-set(CMAKE_CUDA_COMPILER /software/u24/nvhpc/24.7/Linux_x86_64/24.7/compilers/bin/nvcc)  # Correct path to your nvcc
+#set(CMAKE_CUDA_COMPILER /software/u24/nvhpc/24.7/Linux_x86_64/24.7/compilers/bin/nvcc)
 #set(CMAKE_CUDA_COMPILER /opt/nvidia/hpc_sdk/Linux_x86_64/25.1/cuda/12.6/bin/nvcc)
 #set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.8/bin/nvcc)
-set(CUDA_NVCC_FLAGS "-gencode arch=compute_70,code=sm_70") # Replace sm_80 with your GPU arch
+#set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.5/bin/nvcc)
+set(CUDA_NVCC_FLAGS "-Xcompiler -DCUB_STDNS -gencode arch=compute_70,code=sm_70")
 
 find_package(CUDAToolkit REQUIRED) # Must be AFTER setting CMAKE_CUDA_COMPILER
 
@@ -27,7 +28,7 @@ if (USING_NVHPC)
     #set(CMAKE_CXX_COMPILER nvc++)
     set(CMAKE_CUDA_COMPILER nvc++)
 else()
-    #set(CMAKE_CUDA_COMPILER nvcc)
+    set(CMAKE_CUDA_COMPILER nvcc)
 endif()
 
 set(CMAKE_CXX_STANDARD 20)

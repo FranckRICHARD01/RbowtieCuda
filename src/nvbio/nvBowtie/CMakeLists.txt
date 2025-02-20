@@ -6,7 +6,7 @@ find_package(OpenMP REQUIRED)
 enable_language(CUDA)
 
 addsources(
-nvBowtie.cpp
+nvBowtie.cu
 )
 
 nvbio_add_module_directory(bowtie2)

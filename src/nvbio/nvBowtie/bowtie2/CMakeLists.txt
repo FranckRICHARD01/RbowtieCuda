@@ -1,4 +1,4 @@
 addsources(
-quality_coeffs.cpp
+quality_coeffs.cu
 quality_coeffs.h
 )

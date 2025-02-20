@@ -3,7 +3,7 @@ bwt.h
 fmindex_device.h
 fmindex.h
 fmindex_inl.h
-paged_text.cpp
+paged_text.cu
 paged_text.h
 paged_text_inl.h
 rank_dictionary.h

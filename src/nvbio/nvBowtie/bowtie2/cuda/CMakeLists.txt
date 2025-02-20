@@ -22,9 +22,9 @@ checksums.cu
 checksums.h
 defs.h
 fmindex_def.h
-input_thread.cpp
+input_thread.cu
 input_thread.h
-output_thread.cpp
+output_thread.cu
 output_thread.h
 locate.h
 locate_inl.h
@@ -32,10 +32,10 @@ mapping.cu
 mapping.h
 mapping_impl.h
 mapping_inl.h
-mapq.cpp
+mapq.cu
 mapq.h
 params.h
-params.cpp
+params.cu
 persist.cu
 persist.h
 pipeline_states.h
@@ -71,7 +71,7 @@ seed_hit_deque_array.cu
 seed_hit_deque_array.h
 seed_hit_deque_array_inl.h
 seed_hit_deque_array_test.cu
-stats.cpp
+stats.cu
 stats.h
 traceback.cu
 traceback.h
