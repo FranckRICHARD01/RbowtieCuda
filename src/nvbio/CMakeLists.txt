@@ -2,18 +2,22 @@ cmake_minimum_required(VERSION 3.22)
 
 project(nvBio)
 
+message(STATUS "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
     message(STATUS "Detected NVHPC Compiler")
-    set(USING_NVHPC TRUE)
+    set(USING_NVHPC FALSE)
 else()
     set(USING_NVHPC FALSE)
 endif()
 
 if (USING_NVHPC)
-    set(CMAKE_C_COMPILER nvc)
-    set(CMAKE_CXX_COMPILER nvc++)
-    set(CMAKE_CUDA_COMPILER nvc++)
+    #set(CMAKE_C_COMPILER nvc)
+    #set(CMAKE_CXX_COMPILER nvc++)
+    #set(CMAKE_CUDA_COMPILER nvc++)
 endif()
+
+set(CMAKE_CUDA_COMPILER nvcc)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
