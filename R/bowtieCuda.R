@@ -208,6 +208,7 @@ nvBowtie_version <- function() {
 #' @references Langmead, B., & Salzberg, S. L. (2012). Fast gapped-read
 #' alignment with Bowtie 2. Nature methods, 9(4), 357-359.
 #' @export nvBowtie_usage
+#' @importFrom methods show
 #' @examples
 #' nvBowtie_usage()
 

@@ -5,7 +5,7 @@ __________________ Ubuntu 22.04 and more _________________
 
 To compile nvBowtie, it is essential to install the CUDA development suite. You can find many pages explaining how to install cuda on your linux distribution. If you're using Ubuntu 22.04 or higher, you can also use the cuda 11.8, 12.4 or 12.8 installation scripts located in the 'inst/scripts' directory. 
 
-An additional script, called verif_installation_cuda.sh, checks your installation and determines if everything went smoothly. 
+An additional script, called check_requirements.sh, checks your installation and determines if everything went smoothly. 
 
 The default architecture supported by nvBowtie is Pascal (sm_60). However, you can modify this parameter
 by editing src/nvbio/CMakefile.txt. Ensure that the selected architecture is compatible with the

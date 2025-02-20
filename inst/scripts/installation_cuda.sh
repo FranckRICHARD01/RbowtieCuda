@@ -13,6 +13,36 @@ if ! lspci | grep -i nvidia; then
     exit 1
 fi
 
+### continue ?
+echo ""
+echo "Do you want to delete all nvidia libraries and drivers before you start?
+This allows you to start from scratch.
+To be used only if previous executions of this script have failed to install cuda properly."
+
+while true; do
+    read -p "Do you wish to continue (y/n)? " yn
+    case $yn in
+        [Yy]* ) 
+            echo "Removing old NVIDIA drivers and libraries..."
+            sudo apt-get purge -y nvidia* libnvidia*
+            sudo apt-get remove -y nvidia-*
+            sudo rm -f /etc/apt/sources.list.d/cuda*
+            sudo apt-get autoremove -y && sudo apt-get autoclean -y
+            sudo rm -rf /usr/local/cuda*
+            echo "Old NVIDIA drivers and libraries have been removed."
+            break
+            ;;
+        [Nn]* ) 
+            break
+            ;;
+        * ) 
+            echo "Please answer yes (Y) or no (N)."
+            ;;
+    esac
+done
+
+echo "Cuda installation..."
+
 # system update
 sudo apt-get update
 sudo apt-get upgrade
@@ -21,7 +51,7 @@ sudo apt-get upgrade
 sudo apt install linux-headers-$(uname -r) 
 
 # install other import packages
-sudo apt-get install g++ freeglut3-dev build-essential libx11-dev libxmu-dev libxi-dev libglu1-mesa libglu1-mesa-dev libthrust-dev libcub-dev
+sudo apt install g++ freeglut3-dev build-essential libx11-dev libxmu-dev libxi-dev libglu1-mesa libglu1-mesa-dev 
 
 # NVidia repository
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-ubuntu2404.pin
@@ -31,7 +61,7 @@ sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/
 sudo apt-get update
 
 # installing CUDA
-sudo apt install nvidia-cuda-dev nvidia-cuda-toolkit
+sudo apt install nvidia-cuda-dev nvidia-cuda-toolkit libthrust-dev libcub-dev
 
 # setup your paths
 echo 'Please modify your .bashrc file located at the root of your account by adding the lines :'
@@ -44,5 +74,5 @@ echo '  source ~/.bashrc'
 echo '  sudo ldconfig'
 echo ' '
 echo 'Please reboot the machine and check that the installation has been completed 
-successfully using the verif_installation_cuda.sh script.'
+successfully using the check_requirements.sh script.'
 
