@@ -5,6 +5,14 @@ project(nvBio)
 message(STATUS "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "CMAKE_CUDA_COMPILER_ID: ${CMAKE_CUDA_COMPILER_ID}")
 
+# *** FIX: Set CMAKE_CUDA_COMPILER unconditionally and BEFORE find_package(CUDA) ***
+set(CMAKE_CUDA_COMPILER /software/u24/nvhpc/24.7/Linux_x86_64/24.7/compilers/bin/nvcc)  # Correct path to your nvcc
+#set(CMAKE_CUDA_COMPILER /opt/nvidia/hpc_sdk/Linux_x86_64/25.1/cuda/12.6/bin/nvcc)
+#set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.8/bin/nvcc)
+set(CUDA_NVCC_FLAGS "-gencode arch=compute_70,code=sm_70") # Replace sm_80 with your GPU arch
+
+find_package(CUDAToolkit REQUIRED) # Must be AFTER setting CMAKE_CUDA_COMPILER
+
 #set(CMAKE_CXX_COMPILER_ID NVHPC)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
@@ -19,7 +27,7 @@ if (USING_NVHPC)
     #set(CMAKE_CXX_COMPILER nvc++)
     set(CMAKE_CUDA_COMPILER nvc++)
 else()
-    set(CMAKE_CUDA_COMPILER nvcc)
+    #set(CMAKE_CUDA_COMPILER nvcc)
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -48,7 +56,7 @@ option(WERROR
   "Treat compiler warnings as errors"
   OFF)
 
-set(GPU_ARCHITECTURE "sm_60" CACHE STRING "Target GPU architecture")
+set(GPU_ARCHITECTURE "sm_70" CACHE STRING "Target GPU architecture")
 
 set(NVBIO_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -130,11 +138,8 @@ if (APPLE AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 if (USING_NVHPC)
-    # NVHPC options
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fast")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fast")
-
-    # CUDA options
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} "-gpu=cc${GPU_ARCHITECTURE} -fastmath")
 else()
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} --gpu-architecture=${GPU_ARCHITECTURE} -use_fast_math )
@@ -198,6 +203,7 @@ add_subdirectory(nvbio-test)
 ##add_subdirectory(examples/qmap)
 #add_subdirectory(examples/mem)
 
+#Install targets
 install(TARGETS ${NVBIO_BIN_LIST} DESTINATION bin)
 install(FILES ${NVBIO_WRAPPER_SCRIPTS}
     PERMISSIONS OWNER_REAK OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE DESTINATION bin)
