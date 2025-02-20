@@ -2,6 +2,19 @@ cmake_minimum_required(VERSION 3.22)
 
 project(nvBio)
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
+    message(STATUS "Detected NVHPC Compiler")
+    set(USING_NVHPC TRUE)
+else()
+    set(USING_NVHPC FALSE)
+endif()
+
+if (USING_NVHPC)
+    set(CMAKE_C_COMPILER nvc)
+    set(CMAKE_CXX_COMPILER nvc++)
+    set(CMAKE_CUDA_COMPILER nvc++)
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -52,20 +65,21 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug")
   set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   #set(CUDA_NVCC_DEBUG_FLAGS "-O0 -g -lineinfo ")
-  set(CUDA_NVCC_DEBUG_FLAGS "-O0 -g -G -Wno-deprecated-gpu-targets --ptxas-options=-O0")
+  set(CUDA_NVCC_DEBUG_FLAGS "-O0 -g -G --ptxas-options=-O0")
   #set(CMAKE_CUDA_DEVICE_LINK_LIBRARY "${CMAKE_CUDA_DEVICE_LINK_LIBRARY}" -lcudart)
   #set(CUDA_RESOLVE_DEVICE_SYMBOLS ON)
-  if (UNIX AND NOT APPLE)
+  if (UNIX AND NOT APPLE AND NOT USING_NVHPC)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
   endif()
 else()
   set(CUDA_NVCC_DEBUG_FLAGS "-Wno-deprecated-declarations -Wno-deprecated-gpu-targets --ptxas-options=-O3 -O3")
-  if (UNIX AND NOT APPLE)
+  if (UNIX AND NOT APPLE AND NOT USING_NVHPC)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-enum-enum-conversion -O3")
   endif()
 endif()
+
 
 if (CMAKE_SYSTEM_PROCESSOR MATCHES "Intel" OR CMAKE_SYSTEM_PROCESSOR MATCHES "x86")
 add_definitions(-DPLATFORM_X86)
@@ -104,7 +118,18 @@ if (APPLE AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
 endif()
 
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} --gpu-architecture=${GPU_ARCHITECTURE} -use_fast_math )
+if (USING_NVHPC)
+    # NVHPC options
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fast")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fast")
+
+    # CUDA options
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} "-gpu=cc${GPU_ARCHITECTURE} -fastmath")
+else()
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} --gpu-architecture=${GPU_ARCHITECTURE} -use_fast_math )
+endif()
+
+
 
 set(cudpp_INCLUDE_DIRS ${NVBIO_SOURCE_ROOT})
 
