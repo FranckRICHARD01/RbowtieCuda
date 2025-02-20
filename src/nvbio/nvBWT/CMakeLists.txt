@@ -10,7 +10,7 @@ nvBWT.cu
 filelist.cpp
 )
 
-add_library(nvBWT STATIC ${nvBWT_srcs})
+add_executable(nvBWT ${nvBWT_srcs})
 target_link_libraries(nvBWT PRIVATE nvbio zlibstatic crcstatic moderngpu ${SYSTEM_LINK_LIBRARIES} CUDA::cuda_driver CUDA::cudart)
 set_target_properties(nvBWT PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
