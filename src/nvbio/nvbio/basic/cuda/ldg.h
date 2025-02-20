@@ -28,6 +28,7 @@
 #pragma once
 
 #if defined(__CUDACC__)
+#include <cuda_runtime.h>
 #include <cub/cub.cuh>
 #endif
 

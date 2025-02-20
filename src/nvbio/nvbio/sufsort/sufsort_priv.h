@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <cuda_runtime.h>
 #include <cub/cub.cuh>
 #include <mgpuhost.cuh>
 #include <moderngpu.cuh>

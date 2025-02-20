@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <cuda_runtime.h>
 #include <nvbio/basic/types.h>
 #include <nvbio/basic/console.h>
 #include <nvbio/basic/thrust_view.h>

@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <cuda_runtime.h>
 #include <nvbio/basic/types.h>
 #include <nvbio/basic/numbers.h>
 #include <nvbio/basic/cuda/arch.h>

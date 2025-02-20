@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <cuda_runtime.h>
 #include <nvbio/sufsort/sufsort_priv.h>
 #include <nvbio/strings/string_set.h>
 #include <nvbio/basic/thrust_view.h>

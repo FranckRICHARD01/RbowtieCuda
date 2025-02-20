@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <vector>
 #include <algorithm>
+#include <cuda_runtime.h>
 #include <nvbio/basic/timer.h>
 #include <nvbio/basic/console.h>
 #include <nvbio/basic/vector.h>

@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <cuda_runtime.h>
 #include <nvbio/basic/cuda/sort.h>
 #include <nvbio/basic/thrust_view.h>
 #include <cub/cub.cuh>

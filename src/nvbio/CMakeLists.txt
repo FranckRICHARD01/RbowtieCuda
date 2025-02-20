@@ -73,7 +73,7 @@ endif()
 
 find_package(CUDA REQUIRED)
 find_package(Thrust REQUIRED)
-find_package(Cub REQUIRED)
+find_package(CUB REQUIRED)
 find_package(Doxygen)
 
 find_package(OpenMP)
