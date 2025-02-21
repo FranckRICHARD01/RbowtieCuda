@@ -10,7 +10,7 @@ message(STATUS "CMAKE_CUDA_COMPILER_ID: ${CMAKE_CUDA_COMPILER_ID}")
 #set(CMAKE_CUDA_COMPILER /opt/nvidia/hpc_sdk/Linux_x86_64/25.1/cuda/12.6/bin/nvcc)
 #set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.8/bin/nvcc)
 #set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.5/bin/nvcc)
-set(CUDA_NVCC_FLAGS "-Xcompiler -DCUB_STDNS -gencode arch=compute_70,code=sm_70")
+
 
 find_package(CUDAToolkit REQUIRED) # Must be AFTER setting CMAKE_CUDA_COMPILER
 
@@ -89,10 +89,10 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
   endif()
 else()
-  set(CUDA_NVCC_DEBUG_FLAGS "-Wno-deprecated-declarations -Wno-deprecated-gpu-targets --ptxas-options=-O3 -O3")
+  set(CUDA_NVCC_DEBUG_FLAGS "--ptxas-options=-O3 -O3")
   if (UNIX AND NOT APPLE AND NOT USING_NVHPC)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-enum-enum-conversion -O3")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
   endif()
 endif()
 
@@ -145,7 +145,7 @@ if (USING_NVHPC)
 else()
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} --gpu-architecture=${GPU_ARCHITECTURE} -use_fast_math )
 endif()
-
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-unused-result -Wno-deprecated-enum-enum-conversion -Wno-deprecated-declarations -Wno-deprecated-gpu-targets -diag-suppress 20014 -diag-suppress 68 -diag-suppress 1650 -diag-suppress 177 -diag-suppress 186")
 
 
 set(cudpp_INCLUDE_DIRS ${NVBIO_SOURCE_ROOT})
