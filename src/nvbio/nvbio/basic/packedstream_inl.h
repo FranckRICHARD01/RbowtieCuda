@@ -1101,7 +1101,7 @@ namespace priv {
 // assign a sequence to a packed stream
 //
 template <typename InputIterator, typename InputStream, typename Symbol, uint32 SYMBOL_SIZE_T, bool BIG_ENDIAN_T, typename IndexType>
-NVBIO_HOST_DEVICE
+NVBIO_DEVICE
 void serial_assign(
     const IndexType                                                                                 input_len,
     InputIterator                                                                                   input_string,

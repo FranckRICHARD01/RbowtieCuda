@@ -2,17 +2,13 @@ cmake_minimum_required(VERSION 3.22)
 
 project(nvBio)
 
-message(STATUS "CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
-message(STATUS "CMAKE_CUDA_COMPILER_ID: ${CMAKE_CUDA_COMPILER_ID}")
-
 # *** FIX: Set CMAKE_CUDA_COMPILER unconditionally and BEFORE find_package(CUDA) ***
 #set(CMAKE_CUDA_COMPILER /software/u24/nvhpc/24.7/Linux_x86_64/24.7/compilers/bin/nvcc)
 #set(CMAKE_CUDA_COMPILER /opt/nvidia/hpc_sdk/Linux_x86_64/25.1/cuda/12.6/bin/nvcc)
 #set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.8/bin/nvcc)
 #set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.5/bin/nvcc)
 
-
-find_package(CUDAToolkit REQUIRED) # Must be AFTER setting CMAKE_CUDA_COMPILER
+find_package(CUDAToolkit REQUIRED)
 
 #set(CMAKE_CXX_COMPILER_ID NVHPC)
 
@@ -61,12 +57,10 @@ set(GPU_ARCHITECTURE "sm_70" CACHE STRING "Target GPU architecture")
 
 set(NVBIO_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
-
 # import our own nvbio_* macros
 include("${NVBIO_SOURCE_ROOT}/cmake-local/nvbio.cmake")
 # grab gcc flags
 include("${NVBIO_SOURCE_ROOT}/cmake-local/gcc.cmake")
-
 
 # default to release builds
 if (NOT CMAKE_BUILD_TYPE)
@@ -82,8 +76,6 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug")
   set(CMAKE_POSITION_INDEPENDENT_CODE ON)
   #set(CUDA_NVCC_DEBUG_FLAGS "-O0 -g -lineinfo ")
   set(CUDA_NVCC_DEBUG_FLAGS "-O0 -g -G --ptxas-options=-O0")
-  #set(CMAKE_CUDA_DEVICE_LINK_LIBRARY "${CMAKE_CUDA_DEVICE_LINK_LIBRARY}" -lcudart)
-  #set(CUDA_RESOLVE_DEVICE_SYMBOLS ON)
   if (UNIX AND NOT APPLE AND NOT USING_NVHPC)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -O0")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O0")
@@ -91,8 +83,8 @@ if (CMAKE_BUILD_TYPE MATCHES "Debug")
 else()
   set(CUDA_NVCC_DEBUG_FLAGS "--ptxas-options=-O3 -O3")
   if (UNIX AND NOT APPLE AND NOT USING_NVHPC)
-    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+    set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-old-style-definition -O3")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-enum-enum-conversion -O3")
   endif()
 endif()
 
@@ -113,8 +105,6 @@ if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
-
-
 
 # set up required system libs
 set(SYSTEM_LINK_LIBRARIES "")
@@ -145,7 +135,8 @@ if (USING_NVHPC)
 else()
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} --gpu-architecture=${GPU_ARCHITECTURE} -use_fast_math )
 endif()
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-unused-result -Wno-deprecated-enum-enum-conversion -Wno-deprecated-declarations -Wno-deprecated-gpu-targets -diag-suppress 20014 -diag-suppress 68 -diag-suppress 1650 -diag-suppress 177 -diag-suppress 186")
+
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-unused-result -Wno-deprecated-enum-enum-conversion -Wno-deprecated-declarations -Wno-deprecated-gpu-targets  -diag-suppress 68 -diag-suppress 1650 -diag-suppress 177 -diag-suppress 186")
 
 
 set(cudpp_INCLUDE_DIRS ${NVBIO_SOURCE_ROOT})
@@ -154,7 +145,6 @@ set(INCLUDE_DIRS
         ${NVBIO_SOURCE_ROOT}
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${NVBIO_SOURCE_ROOT}/contrib
-        #${CMAKE_BINARY_DIR}/contrib/zlib-1.2.7
         ${NVBIO_SOURCE_ROOT}/contrib/crc
         ${NVBIO_SOURCE_ROOT}/contrib/bamtools
         ${NVBIO_SOURCE_ROOT}/contrib/moderngpu/include
@@ -162,13 +152,10 @@ set(INCLUDE_DIRS
 
 include_directories(${NVBIO_SOURCE_ROOT})
 include_directories("${NVBIO_SOURCE_ROOT}/contrib")
-#include_directories("${CMAKE_BINARY_DIR}/contrib/zlib-1.2.7")
 include_directories("${NVBIO_SOURCE_ROOT}/contrib/crc")
 include_directories("${NVBIO_SOURCE_ROOT}/contrib/bamtools")
 include_directories("${CUDA_TOOLKIT_ROOT_DIR}/targets/x86_64-linux/include")
 include_directories(SYSTEM "${NVBIO_SOURCE_ROOT}/contrib/moderngpu/include")
-
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -iquote ${CMAKE_CURRENT_SOURCE_DIR}")
 
 # export our include directories in the cache for external projects to pick up
 set(nvBio_INCLUDE_DIRECTORIES
@@ -183,7 +170,6 @@ add_subdirectory(contrib/bamtools)
 add_subdirectory(contrib/moderngpu)
 #add_subdirectory(contrib/htslib)
 
-
 add_subdirectory(nvbio)
 add_subdirectory(nvBowtie) 
 #add_subdirectory(nvFM-server)
@@ -195,7 +181,7 @@ add_subdirectory(nvbio-test)
 #add_subdirectory(nvbio-aln-diff)
 #add_subdirectory(nvMicroAssembly)
 #add_subdirectory(sufsort-test)
-#add_subdirectory(sw-benchmark) //
+#add_subdirectory(sw-benchmark)
 
 ##add_subdirectory(examples/waveletfm)
 #add_subdirectory(examples/proteinsw)
@@ -211,4 +197,3 @@ install(FILES ${NVBIO_WRAPPER_SCRIPTS}
 
 nvbio_module(nvbio-project)
 nvbio_doxygen()
-
