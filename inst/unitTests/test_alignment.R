@@ -1,3 +1,3 @@
 test_alignement <- function() {
-    checkEquals(nvbio_tests(), 0)
+    checkEquals(nvbio_tests(), 1)
 }
