@@ -176,7 +176,7 @@ nvbio_tests <- function() {
         return("nvbio_tests is not available for 32bit, please use 64bit R instead")
     }
 
-    .callbinary2(bin1 = "nvbio-test", args1 = "-aln wfa", code = 0)
+    .callbinary2(bin1 = "nvbio-test", args1 = " ", code = 0)
 }
 
 #' @name nvBowtie_version
