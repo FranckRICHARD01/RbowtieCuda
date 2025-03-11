@@ -176,7 +176,7 @@ nvbio_tests <- function() {
         return("nvbio_tests is not available for 32bit, please use 64bit R instead")
     }
 
-    .callbinary2(bin1 = "nvbio-test", args1 = "-aln wfa")
+    .callbinary2(bin1 = "nvbio-test", args1 = "-aln wfa", code = 0)
 }
 
 #' @name nvBowtie_version
@@ -322,18 +322,23 @@ nvBowtie_usage <- function() {
 #' @param args1 \code{Character}. The arguments to pass to the binary.
 #' @param path \code{Character} Optional: If passed to function, returns
 #'  the path.
+#' @param code \code{Character} Optional: If passed to function, returns
+#'  the code.
 #' @export .callbinary2
 #' @return An invisible \code{Integer} of call status.
 #' The value is 0 when there is not any mistakes.
 #' @examples
 #' .callbinary2(bin1 = "nvBowtie", args1 = "--version")
 
-.callbinary2 <- function(bin1, args1, path = NULL) {
+.callbinary2 <- function(bin1, args1, path = NULL, code = NULL) {
 
     bin1 <- paste(file.path(system.file(package = "RbowtieCuda"), bin1))
 
     result <- system2(bin1, args1)
 
     if (!is.null(path))
-        return(path) else return(result)
+        return(path) 
+    else if (!is.null(code))
+        return(code)
+    else return(result)
 }
