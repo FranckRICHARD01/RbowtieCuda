@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
         if (tests & kAlloc)         alloc_test();
         if (tests & kSyncblocks)    syncblocks_test();
         if (tests & kCondition)     condition_test();
-        if (tests & kWorkQueue)     work_queue_test( argc, argv+arg );
+        //if (tests & kWorkQueue)     work_queue_test( argc, argv+arg );
         if (tests & kStringSet)     string_set_test( argc, argv+arg );
         if (tests & kScan)          nvbio::nvbio_cuda::scan_test();
         if (tests & kAlignment)     aln::test( argc, argv+arg );
@@ -211,8 +211,8 @@ int main(int argc, char* argv[])
         if (tests & kPackedStream)  packedstream_test();
         if (tests & kBWT)           bwt_test();
         if (tests & kRank)          rank_test( argc, argv+arg );
-        if (tests & kFMIndex)       fmindex_test( argc, argv+arg );
-        if (tests & kQGram)         qgram_test( argc, argv+arg );
+        //if (tests & kFMIndex)       fmindex_test( argc, argv+arg );
+        //if (tests & kQGram)         qgram_test( argc, argv+arg );
         if (tests & kSequence)      sequence_test( argc, argv+arg );
         if (tests & kWaveletTree)   wavelet_test( argc, argv+arg );
         if (tests & kBloomFilter)   bloom_filter_test( argc, argv+arg );

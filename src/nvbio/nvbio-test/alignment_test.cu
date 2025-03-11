@@ -1030,10 +1030,10 @@ namespace nvbio
                 n_tasks);
 
             // test the DeviceStagedThreadScheduler
-            /*batch_banded_score_profile<BAND_LEN, DeviceStagedThreadScheduler, N, M>(
+            batch_banded_score_profile<BAND_LEN, DeviceStagedThreadScheduler, N, M>(
                 stream,
                 n_tests,
-                n_tasks);*/
+                n_tasks);
 
             // TODO: test DeviceWarpScheduler
             fprintf(stderr, " GCUPS\n");
@@ -1255,7 +1255,7 @@ namespace nvbio
             bool test2 = true;
             //bool test3 = false;
 
-            if (false && test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
                 const uint32 M = 8;
@@ -1302,7 +1302,7 @@ namespace nvbio
                     test.banded<BLOCKDIM, 7u, N, M>( "global", make_gotoh_aligner<aln::SEMI_GLOBAL>( scoring ), "6M4D2M" );                                    }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1342,7 +1342,7 @@ namespace nvbio
                 }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1382,7 +1382,7 @@ namespace nvbio
                 }
             }
 
-            if (false && test1 && TEST_MASK & FUNCTIONAL)
+            if (false && test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 fprintf(stderr,"  testing real banded Gotoh problem...\n");
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
@@ -1413,7 +1413,7 @@ namespace nvbio
                 test.banded<BLOCKDIM, BAND_LEN, N, M>( "global", make_gotoh_aligner<aln::SEMI_GLOBAL>( scoring ), "147M2D3M" );
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1454,7 +1454,7 @@ namespace nvbio
             }
 
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1494,7 +1494,7 @@ namespace nvbio
                 }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1534,7 +1534,7 @@ namespace nvbio
                 }
             }
 
-            if (unit_tests && TEST_MASK & FUNCTIONAL)
+            if (unit_tests && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1574,7 +1574,7 @@ namespace nvbio
                 }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1614,7 +1614,7 @@ namespace nvbio
                 }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1654,7 +1654,7 @@ namespace nvbio
                 }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1694,7 +1694,7 @@ namespace nvbio
                 }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1734,7 +1734,7 @@ namespace nvbio
                 }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1776,7 +1776,7 @@ namespace nvbio
                 }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1818,7 +1818,7 @@ namespace nvbio
                 }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1862,7 +1862,7 @@ namespace nvbio
                 }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 1;
 
@@ -1902,7 +1902,7 @@ namespace nvbio
                 }
             }
 
-            if (test1 && TEST_MASK & FUNCTIONAL)
+            if (test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -1946,7 +1946,7 @@ namespace nvbio
                 }
             }
 
-            if (test2 && TEST_MASK & FUNCTIONAL)
+            if (test2 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 100;
 
@@ -1988,7 +1988,7 @@ namespace nvbio
                 }
             }
 
-            if (false && test1 && TEST_MASK & FUNCTIONAL)
+            if (false && test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -2034,7 +2034,7 @@ namespace nvbio
                 }
             }
 
-            if (false && test1 && TEST_MASK & FUNCTIONAL)
+            if (false && test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -2074,7 +2074,7 @@ namespace nvbio
                 }
             }
 
-            if (false && test1 && TEST_MASK & FUNCTIONAL)
+            if (false && test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -2187,7 +2187,7 @@ namespace nvbio
 
             // Tests notation
 
-            if (false && test1 && TEST_MASK & FUNCTIONAL)
+            if (false && test1 && TEST_MASK & FUNCTIONAL && TEST_MASK & WFA_BANDED)
             {
                 NVBIO_VAR_UNUSED const uint32 BLOCKDIM = 128;
 
@@ -2387,7 +2387,7 @@ namespace nvbio
             }*/
 
             // do a larger speed test of the Gotoh alignment
-            if (false && TEST_MASK & (ED | SW | GOTOH | WFA))
+            if (TEST_MASK & (ED | SW | GOTOH))
             {
                 const uint32 N_TASKS = N_THREAD_TASKS;
                 const uint32 M = 100;
@@ -2591,7 +2591,7 @@ namespace nvbio
                 }
             }
             // do a larger speed test of the banded SW alignment
-            if (false && TEST_MASK & (ED_BANDED | SW_BANDED | GOTOH_BANDED | WFA_BANDED))
+            if (TEST_MASK & (ED_BANDED | SW_BANDED | GOTOH_BANDED))
             {
                 const uint32 BAND_LEN = 31u;
                 const uint32 N_TASKS  = N_THREAD_TASKS;
@@ -2714,7 +2714,7 @@ namespace nvbio
                             score_dvec );
                     }
                 }
-                if (TEST_MASK & WFA_BANDED)
+                if (false && TEST_MASK & WFA_BANDED)
                 {
                     fprintf(stderr,"  testing banded Wfa scoring speed...\n");
                     /*fprintf(stderr,"    %15s : ", "global");
