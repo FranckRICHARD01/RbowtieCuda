@@ -44,6 +44,19 @@ fi
 cuda_version=$($nvcc_path --version | grep "release" | sed -E ' s/.*release ([0-9.]+),.*/\1/')
 cuda_version_short=$(echo "$cuda_version" | cut -d'.' -f1,2)
 
+# Get the driver-supported CUDA version
+driver_cuda_version=$($nvidia_smi_path | grep -oP 'CUDA Version: \K[0-9]+\.[0-9]+')
+
+echo ""
+echo "Detected CUDA version: $cuda_version_short"
+echo "Driver-supported CUDA version: $driver_cuda_version"
+
+# Check for incompatibility between CUDA and the driver
+if [[ $(echo "$cuda_version_short > $driver_cuda_version" | bc -l) -eq 1 ]]; then
+    echo "⚠️ Incompatibility detected: CUDA $cuda_version_short was compiled, but the driver only supports up to CUDA $driver_cuda_version."
+    echo "You should either downgrade CUDA to $driver_cuda_version or upgrade the NVIDIA driver."
+fi
+
 # Get the GCC version (only major and minor)
 gcc_version=$(gcc --version | head -n1 | awk '{print $3}')
 gcc_version_short=$(echo "$gcc_version" | cut -d'.' -f1,2)
