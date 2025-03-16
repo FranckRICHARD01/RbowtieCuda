@@ -134,7 +134,7 @@ if (USING_NVHPC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fast")
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} "-gpu=cc${GPU_ARCHITECTURE} -fastmath")
 else()
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} -arch=${COMPUTE_ARCHITECTURE} -code=${GPU_ARCHITECTURE},${COMPUTE_ARCHITECTURE} -use_fast_math )
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} -arch=${COMPUTE_ARCHITECTURE} -code=${GPU_ARCHITECTURE} -use_fast_math )
 endif()
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-unused-result -Wno-deprecated-enum-enum-conversion -Wno-deprecated-declarations -Wno-deprecated-gpu-targets -diag-suppress 20014 -diag-suppress 68 -diag-suppress 1650 -diag-suppress 177 -diag-suppress 186")
