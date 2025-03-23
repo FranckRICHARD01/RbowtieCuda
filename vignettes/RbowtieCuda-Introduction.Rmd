@@ -87,6 +87,8 @@ index.ann
 index.amb
 ```
 
+Warning: if you run the command in a directory that already contains these files, they will be deleted and new files will be generated.
+
 nvBWT supports the following command options:
 ```
 -v       | --verbosity     int (0-6) [5]     // select the verbosity level
