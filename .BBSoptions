@@ -1,2 +1,2 @@
-GPU: required
+GPU_reliance: required
 UnsupportedPlatforms: win, mac
