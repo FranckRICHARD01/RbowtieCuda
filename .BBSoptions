@@ -1,0 +1,2 @@
+GPU: required
+UnsupportedPlatforms: win, mac
