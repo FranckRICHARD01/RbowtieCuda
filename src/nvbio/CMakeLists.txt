@@ -37,6 +37,30 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 # If find_package(CUDA required) has trouble finding the correct path to the cuda toolkit, uncheck this parameter and specify the correct path.
 #set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-12.8")
 
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    # Retrieve glibc version using ldd
+    execute_process(
+        COMMAND ldd --version
+        OUTPUT_VARIABLE LDD_OUTPUT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+
+    # Extract major and minor version numbers
+    string(REGEX MATCH "ldd \\(.*\\) ([0-9]+)\\.([0-9]+)" _ UNUSED "${LDD_OUTPUT}")
+    set(GLIBC_MAJOR ${CMAKE_MATCH_1})
+    set(GLIBC_MINOR ${CMAKE_MATCH_2})
+
+    # Display a warning if glibc >= 2.41
+    if(GLIBC_MAJOR GREATER 2 OR (GLIBC_MAJOR EQUAL 2 AND GLIBC_MINOR GREATER_EQUAL 41))
+        message(WARNING "
+Attention, the glibc library on your distribution is greater than or equal to 2.41.
+An incompatibility with the Cuda library currently prevents compilation of this package with this version of glibc.
+If you still want to address this issue before NVIDIA releases a patch, you can follow this method:
+https://github.com/FranckRICHARD01/RbowtieCuda/issues/2
+        ")
+    endif()
+endif()
+
 # Disable CUB warning
 add_definitions(-DTHRUST_IGNORE_CUB_VERSION_CHECK=1)
 
