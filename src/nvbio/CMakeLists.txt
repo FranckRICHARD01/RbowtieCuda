@@ -156,9 +156,16 @@ endif()
 if (USING_NVHPC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fast")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fast")
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} "-gpu=cc${GPU_ARCHITECTURE} -fastmath")
+    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} 
+    -gpu=cc70,cc75,cc80,cc86,cc89
+    -fastmath")
 else()
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} -arch=${COMPUTE_ARCHITECTURE} -code=${GPU_ARCHITECTURE} -use_fast_math )
+    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} 
+    -gencode=arch=compute_60,code=sm_60     # Pascal
+    -gencode=arch=compute_75,code=sm_75     # Turing
+    -gencode=arch=compute_86,code=sm_86     # Ampere
+    -gencode=arch=compute_90,code=compute_90 # (PTX for Hopper or more)
+    -use_fast_math")
 endif()
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Wno-unused-result -Wno-deprecated-enum-enum-conversion -Wno-deprecated-declarations -Wno-deprecated-gpu-targets -diag-suppress 20011 -diag-suppress 20014 -diag-suppress 68 -diag-suppress 1650 -diag-suppress 177 -diag-suppress 186")
