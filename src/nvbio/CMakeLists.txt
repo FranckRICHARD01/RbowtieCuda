@@ -121,7 +121,7 @@ else()
   set(CUDA_NVCC_DEBUG_FLAGS "--ptxas-options=-O3 -O3")
   if (UNIX AND NOT APPLE AND NOT USING_NVHPC)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-old-style-definition -O3")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-enum-enum-conversion -O3")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-enum-enum-conversion -Wno-deprecated-declarations -O3")
   endif()
 endif()
 

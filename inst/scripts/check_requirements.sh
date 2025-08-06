@@ -63,12 +63,13 @@ gcc_version_short=$(echo "$gcc_version" | cut -d'.' -f1,2)
 
 # Define exact compatibility mappings (only using major.minor for CUDA and GCC)
 declare -A cuda_gcc_compat=(
+    ["13.0"]="15.9"
+    ["12.8"]="14.9"
+    ["12.9"]="14.9"
     ["12.4"]="13.2"
     ["12.5"]="13.2"
     ["12.6"]="13.2"
     ["12.7"]="13.2"
-    ["12.8"]="14.2"
-    ["12.9"]="14.2"
     ["12.1"]="12.2"
     ["12.2"]="12.2"
     ["12.3"]="12.2"
