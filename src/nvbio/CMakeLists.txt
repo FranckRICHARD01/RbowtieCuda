@@ -2,6 +2,17 @@ cmake_minimum_required(VERSION 3.22)
 
 project(nvBio)
 
+execute_process(
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../inst/scripts/check_requirements.sh
+    OUTPUT_VARIABLE DIAGNOSTIC_OUTPUT
+    ERROR_VARIABLE DIAGNOSTIC_ERROR
+    RESULT_VARIABLE DIAGNOSTIC_RESULT
+)
+
+message(STATUS "--- CUDA Environment Diagnostic ---")
+message(STATUS "${DIAGNOSTIC_OUTPUT}")
+message(STATUS "-----------------------------------")
+
 # *** FIX: Set CMAKE_CUDA_COMPILER unconditionally and BEFORE find_package(CUDA) ***
 #set(CMAKE_CUDA_COMPILER /software/u24/nvhpc/24.7/Linux_x86_64/24.7/compilers/bin/nvcc)
 #set(CMAKE_CUDA_COMPILER /opt/nvidia/hpc_sdk/Linux_x86_64/25.1/cuda/12.6/bin/nvcc)
@@ -16,6 +27,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
     message(STATUS "Detected NVHPC Compiler")
     set(USING_NVHPC TRUE)
 else()
+    message(STATUS "Detected NVCC Compiler")
     set(USING_NVHPC FALSE)
 endif()
 
@@ -153,18 +165,65 @@ if (APPLE AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
 endif()
 
+# Automatic GPU architecture detection
+execute_process(
+  COMMAND nvidia-smi --query-gpu=compute_cap --format=csv,noheader
+  OUTPUT_VARIABLE GPU_ARCHS
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
+)
+
+# Optimal configuration for NVHPC
+if(USING_NVHPC)
+  set(BASE_NVHPC_ARCH_FLAGS "-gpu=nordc,cc70,cc75,cc80,cc86,cc89")
+  
+  if(GPU_ARCHS)
+    # Extract specific architectures
+    list(REMOVE_DUPLICATES GPU_ARCHS)
+    string(REPLACE "." "" GPU_ARCHS_CLEAN ${GPU_ARCHS})
+    list(TRANSFORM GPU_ARCHS_CLEAN PREPEND "cc")
+    
+    # Combine with base flags
+    string(JOIN "," ARCH_STRING ${GPU_ARCHS_CLEAN})
+    set(NVHPC_ARCH_FLAGS "${BASE_NVHPC_ARCH_FLAGS},${ARCH_STRING}")
+  else()
+    set(NVHPC_ARCH_FLAGS ${BASE_NVHPC_ARCH_FLAGS})
+  endif()
+  
+  message(STATUS "NVHPC Configuration: ${NVHPC_ARCH_FLAGS}")
+endif()
+
+# Configuration for nvcc
+if(NOT USING_NVHPC)
+  if(GPU_ARCHS)
+    # Processing for nvcc
+    list(REMOVE_DUPLICATES GPU_ARCHS)
+    string(REPLACE "." "" GPU_ARCHS_CLEAN ${GPU_ARCHS})
+    list(TRANSFORM GPU_ARCHS_CLEAN PREPEND "sm_")
+    
+    foreach(ARCH IN LISTS GPU_ARCHS_CLEAN)
+      string(SUBSTRING ${ARCH} 3 -1 ARCH_NUM)
+      list(APPEND NVCC_ARCH_FLAGS "-gencode=arch=compute_${ARCH_NUM},code=${ARCH}")
+    endforeach()
+  else()
+    set(NVCC_ARCH_FLAGS
+      "-gencode=arch=compute_70,code=sm_70
+      -gencode=arch=compute_75,code=sm_75
+      -gencode=arch=compute_80,code=sm_80
+      -gencode=arch=compute_86,code=sm_86
+      -gencode=arch=compute_89,code=sm_89")
+  endif()
+endif()
+
 if (USING_NVHPC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fast")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fast")
-    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} 
-    -gpu=cc70,cc75,cc80,cc86,cc89
+    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS}
+    ${NVHPC_ARCH_FLAGS}
     -fastmath")
 else()
     set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${CUDA_NVCC_DEBUG_FLAGS} 
-    -gencode=arch=compute_60,code=sm_60     # Pascal
-    -gencode=arch=compute_75,code=sm_75     # Turing
-    -gencode=arch=compute_86,code=sm_86     # Ampere
-    -gencode=arch=compute_90,code=compute_90 # (PTX for Hopper or more)
+    ${NVCC_ARCH_FLAGS}
     -use_fast_math")
 endif()
 
@@ -221,6 +280,18 @@ add_subdirectory(nvbio-test)
 #add_subdirectory(examples/fmmap)
 ##add_subdirectory(examples/qmap)
 #add_subdirectory(examples/mem)
+
+message(STATUS "================================================")
+message(STATUS "CUDA Configuration Summary")
+message(STATUS "Compiler:            ${CMAKE_CUDA_COMPILER}")
+message(STATUS "Build type:          ${CMAKE_BUILD_TYPE}")
+message(STATUS "GPU Architectures:   ${GPU_ARCHS}")
+if(USING_NVHPC)
+  message(STATUS "NVHPC Flags:        ${NVHPC_ARCH_FLAGS}")
+else()
+  message(STATUS "NVCC Flags:         ${NVCC_ARCH_FLAGS}")
+endif()
+message(STATUS "================================================")
 
 #Install targets
 install(TARGETS ${NVBIO_BIN_LIST} DESTINATION bin)
