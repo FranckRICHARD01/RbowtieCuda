@@ -4,7 +4,7 @@
 \alias{.callbinary2}
 \title{Make system call for binaries}
 \usage{
-.callbinary2(bin1, args1, path = NULL, code = NULL)
+.callbinary2(bin1, args1, path = NULL)
 }
 \arguments{
 \item{bin1}{\code{Character}. The binary used for the system call.}
@@ -13,8 +13,6 @@
 
 \item{path}{\code{Character} Optional: If passed to function, returns
 the path.}
-\item{code}{\code{Character} Optional: If passed to function, returns
-the code.}
 }
 \value{
 An invisible \code{Integer} of call status.
