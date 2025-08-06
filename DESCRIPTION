@@ -1,8 +1,8 @@
 Package: RbowtieCuda
 Type: Package
 Title: An R Wrapper for nvBowtie and nvBWT, a rewritten version of Bowtie2 for cuda
-Version: 1.0.1
-Date: 2025-04-17
+Version: 1.0.2
+Date: 2025-08-06
 Authors@R: 
         c(person(given = "Jacopo", family = "Pantaleoni", role = c("aut"), 
             email = "jpantaleoni@nvidia.com"),
@@ -16,7 +16,7 @@ Description: This package provides an R wrapper for the popular Bowtie2 sequenci
  optimized to run on NVIDIA graphics cards. It includes wrapper functions that enable both genome 
  indexing and alignment to the generated indexes, ensuring high performance and ease of use within the R environment.
 License: BSD_3_clause + file LICENSE
-Depends: R (>= 4.4.0)
+Depends: R (>= 4.5.0)
 Encoding: UTF-8
 Imports: 
     methods
@@ -35,7 +35,8 @@ NeedsCompilation: yes
 Author: c(Jacopo Pantaleoni [aut],
   Nuno Subtil  [aut],
   Samuel Simon Sanchez [aut],
-  Franck RICHARD [aut, cre])
+  Franck RICHARD [aut, cre],
+  role = c("aut", "cre"))
 Maintainer: Franck RICHARD <franck.richard@winstars.net>
 BugReports: https://github.com/FranckRICHARD01/RbowtieCuda/issues 
 URL: https://github.com/FranckRICHARD01/RbowtieCuda, https://belacqua-labo.ovh/bioinformatic/RbowtieCuda

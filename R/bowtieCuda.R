@@ -66,7 +66,11 @@ nvBWT <- function(myinput, output, options = NULL) {
     if (is.null(options))
         args1 <- paste(myinput, " ", output) else args1 <- paste(myinput, " ", output, options)
 
-    .callbinary2(bin1 = "nvBWT", args1)
+    res <- .callbinary2(bin1 = "nvBWT", args1)
+
+    if (res$status != 0) {
+        stop(paste("nvBWT failed:\n", res$message))
+    }
 }
 
 #' @name nvBowtie
@@ -157,7 +161,11 @@ nvBowtie <- function(index, output_file, options, seq1, seq2 = NULL) {
 
     # show(paste('nvBowtie ', args1))
 
-    .callbinary2(bin1 = "nvBowtie", args1)
+    res <- .callbinary2(bin1 = "nvBowtie", args1)
+
+    if (res$status != 0) {
+        stop(paste("nvBowtie failed:\n", res$message))
+    }
 }
 
 
@@ -176,7 +184,13 @@ nvbio_tests <- function() {
         return("nvbio_tests is not available for 32bit, please use 64bit R instead")
     }
 
-    .callbinary2(bin1 = "nvbio-test", args1 = " ", code = 0)
+    res <- .callbinary2("nvbio-test", args1 = "")
+
+    if (res$status != 0) {
+        stop(paste("nvbio test failed:\n", res$message))
+    }
+
+    return("nvbio test passed.")
 }
 
 #' @name nvBowtie_version
@@ -195,7 +209,11 @@ nvBowtie_version <- function() {
         return("nvBowtie is not available for 32bit, please use 64bit R instead")
     }
 
-    .callbinary2(bin1 = "nvBowtie", args1 = "--version")
+    res <- .callbinary2(bin1 = "nvBowtie", args1 = "--version")
+
+    if (res$status != 0) {
+        stop(paste("nvBowtie_version failed:\n", res$message))
+    }
 }
 
 #' @name nvBowtie_usage
@@ -322,23 +340,25 @@ nvBowtie_usage <- function() {
 #' @param args1 \code{Character}. The arguments to pass to the binary.
 #' @param path \code{Character} Optional: If passed to function, returns
 #'  the path.
-#' @param code \code{Character} Optional: If passed to function, returns
-#'  the code.
 #' @export .callbinary2
 #' @return An invisible \code{Integer} of call status.
 #' The value is 0 when there is not any mistakes.
 #' @examples
 #' .callbinary2(bin1 = "nvBowtie", args1 = "--version")
 
-.callbinary2 <- function(bin1, args1, path = NULL, code = NULL) {
+.callbinary2 <- function(bin1, args1, path = NULL) {
 
     bin1 <- paste(file.path(system.file(package = "RbowtieCuda"), bin1))
 
-    result <- system2(bin1, args1)
+    status <- system2(
+        command = bin1,
+        args = args1,
+        stdout = "",
+        stderr = ""
+    )
 
-    if (!is.null(path))
-        return(path) 
-    else if (!is.null(code))
-        return(code)
-    else return(result)
+    return(list(
+        status = status,
+        message = paste("Process exited with status", status)
+    ))
 }
