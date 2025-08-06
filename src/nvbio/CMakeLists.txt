@@ -9,9 +9,9 @@ execute_process(
     RESULT_VARIABLE DIAGNOSTIC_RESULT
 )
 
-message(STATUS "--- CUDA Environment Diagnostic ---")
-message(STATUS "${DIAGNOSTIC_OUTPUT}")
-message(STATUS "-----------------------------------")
+message(WARNING "--- CUDA Environment Diagnostic ---")
+message(WARNING "${DIAGNOSTIC_OUTPUT}")
+message(WARNING "-----------------------------------")
 
 # *** FIX: Set CMAKE_CUDA_COMPILER unconditionally and BEFORE find_package(CUDA) ***
 #set(CMAKE_CUDA_COMPILER /software/u24/nvhpc/24.7/Linux_x86_64/24.7/compilers/bin/nvcc)
@@ -24,10 +24,10 @@ find_package(CUDAToolkit REQUIRED)
 #set(CMAKE_CXX_COMPILER_ID NVHPC)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
-    message(STATUS "Detected NVHPC Compiler")
+    message(WARNING "Detected NVHPC Compiler")
     set(USING_NVHPC TRUE)
 else()
-    message(STATUS "Detected NVCC Compiler")
+    message(WARNING "Detected NVCC Compiler")
     set(USING_NVHPC FALSE)
 endif()
 
@@ -104,7 +104,7 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-message(STATUS "Building ${CMAKE_BUILD_TYPE}")
+message(WARNING "Building ${CMAKE_BUILD_TYPE}")
 
 if (CMAKE_BUILD_TYPE MATCHES "Debug")
   add_definitions(-DTHRUST_DEBUG)
@@ -190,7 +190,7 @@ if(USING_NVHPC)
     set(NVHPC_ARCH_FLAGS ${BASE_NVHPC_ARCH_FLAGS})
   endif()
   
-  message(STATUS "NVHPC Configuration: ${NVHPC_ARCH_FLAGS}")
+  message(WARNING "NVHPC Configuration: ${NVHPC_ARCH_FLAGS}")
 endif()
 
 # Configuration for nvcc
@@ -281,17 +281,17 @@ add_subdirectory(nvbio-test)
 ##add_subdirectory(examples/qmap)
 #add_subdirectory(examples/mem)
 
-message(STATUS "================================================")
-message(STATUS "CUDA Configuration Summary")
-message(STATUS "Compiler:            ${CMAKE_CUDA_COMPILER}")
-message(STATUS "Build type:          ${CMAKE_BUILD_TYPE}")
-message(STATUS "GPU Architectures:   ${GPU_ARCHS}")
+message(WARNING "================================================")
+message(WARNING "CUDA Configuration Summary")
+message(WARNING "Compiler:            ${CMAKE_CUDA_COMPILER}")
+message(WARNING "Build type:          ${CMAKE_BUILD_TYPE}")
+message(WARNING "GPU Architectures:   ${GPU_ARCHS}")
 if(USING_NVHPC)
-  message(STATUS "NVHPC Flags:        ${NVHPC_ARCH_FLAGS}")
+  message(WARNING "NVHPC Flags:        ${NVHPC_ARCH_FLAGS}")
 else()
-  message(STATUS "NVCC Flags:         ${NVCC_ARCH_FLAGS}")
+  message(WARNING "NVCC Flags:         ${NVCC_ARCH_FLAGS}")
 endif()
-message(STATUS "================================================")
+message(WARNING "================================================")
 
 #Install targets
 install(TARGETS ${NVBIO_BIN_LIST} DESTINATION bin)
