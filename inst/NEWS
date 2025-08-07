@@ -1,13 +1,13 @@
 CHANGES 
 -----------------------
 * 2025-04-01
-  nvBowtieCuda Version: 0.99.0
+  RbowtieCuda Version: 0.99.0
 
 * 2025-04-17
-  nvBowtieCuda Version: 1.0.1
+  RbowtieCuda Version: 1.0.1
 
 * 2025-08-06
-  nvBowtieCuda Version: 1.0.3
+  RbowtieCuda Version: 1.0.3
 
   nvBowtie and nvBWT propagate their error messages to the R interface.
 
