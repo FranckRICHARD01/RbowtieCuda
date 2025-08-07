@@ -96,6 +96,16 @@ declare -A cuda_gcc_compat=(
 expected_gcc_full_version=${cuda_gcc_compat[$cuda_version_short]}
 expected_gcc_major=$(echo "$expected_gcc_full_version" | cut -d'.' -f1)
 
+echo "GCC version short: '$gcc_version_short'"
+echo "Expected max GCC:  '$expected_gcc_full_version'"
+echo "Comparison:        '$gcc_version_short <= $expected_gcc_full_version'"
+echo "Result:            $(echo "$gcc_version_short <= $expected_gcc_full_version" | bc -l)"
+
+if! command -v bc &> /dev/null; then
+    echo "Error: 'bc' command not found. Please install it (e.g., sudo apt install bc)." >&2
+    exit 1
+fi
+
 if [[ -n "$expected_gcc_full_version" ]]; then
     # Use bc for floating-point comparison
     result=$(echo "$gcc_version_short <= $expected_gcc_full_version" | bc -l)
