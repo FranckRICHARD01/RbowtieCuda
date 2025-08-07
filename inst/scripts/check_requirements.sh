@@ -2,7 +2,6 @@
 
 if ! command -v bc &> /dev/null; then
     echo "Error: 'bc' command not found. Please install it (e.g., sudo apt install bc)." >&2
-    exit 1
 fi
 
 # Checking libthrust-dev, libcub-dev packages and cmake (Debian/Ubuntu)
@@ -122,6 +121,8 @@ if [[ -n "$expected_gcc_full_version" ]]; then
             echo "Then, set it as the default version with:"
             echo "  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-$expected_gcc_major 100"
             echo "  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-$expected_gcc_major 100"
+            echo "  sudo update-alternatives --config g++"
+            echo "  sudo update-alternatives --config gcc"
         elif [[ -f /etc/redhat-release ]]; then
             echo "On RHEL/CentOS/Fedora, you can install it with:"
             echo "  sudo dnf install gcc-$expected_gcc_major g++-$expected_gcc_major"
