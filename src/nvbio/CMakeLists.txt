@@ -100,7 +100,7 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-message(WARNING "Building ${CMAKE_BUILD_TYPE}")
+# Building...
 
 if (CMAKE_BUILD_TYPE MATCHES "Debug")
   add_definitions(-DTHRUST_DEBUG)
@@ -184,9 +184,8 @@ if(USING_NVHPC)
     set(NVHPC_ARCH_FLAGS "${BASE_NVHPC_ARCH_FLAGS},${ARCH_STRING}")
   else()
     set(NVHPC_ARCH_FLAGS ${BASE_NVHPC_ARCH_FLAGS})
-  endif()
-  
-  message(WARNING "NVHPC Configuration: ${NVHPC_ARCH_FLAGS}")
+  endif() 
+
 endif()
 
 # Configuration for nvcc
