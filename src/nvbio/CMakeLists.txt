@@ -198,15 +198,15 @@ if(NOT USING_NVHPC)
     
     foreach(ARCH IN LISTS GPU_ARCHS_CLEAN)
       string(SUBSTRING ${ARCH} 3 -1 ARCH_NUM)
-      list(APPEND NVCC_ARCH_FLAGS "-gencode=arch=compute_${ARCH_NUM},code=${ARCH}")
+      list(APPEND NVCC_ARCH_FLAGS "-gencode arch=compute_${ARCH_NUM},code=${ARCH}")
     endforeach()
   else()
     set(NVCC_ARCH_FLAGS
-      "-gencode=arch=compute_70,code=sm_70
-      -gencode=arch=compute_75,code=sm_75
-      -gencode=arch=compute_80,code=sm_80
-      -gencode=arch=compute_86,code=sm_86
-      -gencode=arch=compute_89,code=sm_89")
+      "-gencode arch=compute_70,code=sm_70
+      -gencode arch=compute_75,code=sm_75
+      -gencode arch=compute_80,code=sm_80
+      -gencode arch=compute_86,code=sm_86
+      -gencode arch=compute_89,code=sm_89")
   endif()
 endif()
 
