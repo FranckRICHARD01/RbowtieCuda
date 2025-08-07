@@ -9,9 +9,7 @@ execute_process(
     RESULT_VARIABLE DIAGNOSTIC_RESULT
 )
 
-message(WARNING "--- CUDA Environment Diagnostic ---")
-message(WARNING "${DIAGNOSTIC_OUTPUT}")
-message(WARNING "-----------------------------------")
+message(WARNING "--- CUDA Environment Diagnostic ---\n${DIAGNOSTIC_OUTPUT}\n")
 
 # *** FIX: Set CMAKE_CUDA_COMPILER unconditionally and BEFORE find_package(CUDA) ***
 #set(CMAKE_CUDA_COMPILER /software/u24/nvhpc/24.7/Linux_x86_64/24.7/compilers/bin/nvcc)
@@ -24,10 +22,8 @@ find_package(CUDAToolkit REQUIRED)
 #set(CMAKE_CXX_COMPILER_ID NVHPC)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
-    message(WARNING "Detected NVHPC Compiler")
     set(USING_NVHPC TRUE)
 else()
-    message(WARNING "Detected NVCC Compiler")
     set(USING_NVHPC FALSE)
 endif()
 
@@ -281,18 +277,19 @@ add_subdirectory(nvbio-test)
 ##add_subdirectory(examples/qmap)
 #add_subdirectory(examples/mem)
 
-message(WARNING "================================================")
-message(WARNING "CUDA Configuration Summary")
-message(WARNING "Compiler:            ${CMAKE_CUDA_COMPILER}")
-message(WARNING "Build type:          ${CMAKE_BUILD_TYPE}")
-message(WARNING "GPU Architectures:   ${GPU_ARCHS}")
 if(USING_NVHPC)
-  message(WARNING "NVHPC Flags:        ${NVHPC_ARCH_FLAGS}")
+  set(ARCH_FLAGS "Detected NVHPC Compiler. NVHPC Flags:        ${NVHPC_ARCH_FLAGS}")
 else()
-  message(WARNING "NVCC Flags:         ${NVCC_ARCH_FLAGS}")
+  set(ARCH_FLAGS "Detected NVCC Compiler. NVCC Flags:         ${NVCC_ARCH_FLAGS}")
 endif()
-message(WARNING "================================================")
 
+message(WARNING "================================================\n"
+                "CUDA Configuration Summary\n"
+                "Compiler:            ${CMAKE_CUDA_COMPILER}\n"
+                "Build type:          ${CMAKE_BUILD_TYPE}\n"
+                "GPU Architectures:   ${GPU_ARCHS}\n"
+                "${ARCH_FLAGS}\n"
+                "================================================")
 #Install targets
 install(TARGETS ${NVBIO_BIN_LIST} DESTINATION bin)
 install(FILES ${NVBIO_WRAPPER_SCRIPTS}
