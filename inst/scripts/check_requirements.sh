@@ -53,15 +53,22 @@ echo "Driver-supported CUDA version: $driver_cuda_version"
 
 # Check for incompatibility between CUDA and the driver
 if [[ $(echo "$cuda_version_short > $driver_cuda_version" | bc -l) -eq 1 ]]; then
-    echo "⚠️ Incompatibility detected: CUDA $cuda_version_short was compiled, but the driver only supports up to CUDA $driver_cuda_version."
+    echo "Incompatibility detected: CUDA $cuda_version_short was compiled, but the driver only supports up to CUDA $driver_cuda_version."
     echo "You should either downgrade CUDA to $driver_cuda_version or upgrade the NVIDIA driver."
 fi
 
-# Get the GCC version (only major and minor)
+# --- Get the GCC version (only major and minor) ---
 gcc_version=$(gcc --version | head -n1 | awk '{print $3}')
 gcc_version_short=$(echo "$gcc_version" | cut -d'.' -f1,2)
 
-# Define exact compatibility mappings (only using major.minor for CUDA and GCC)
+# --- Get the CUDA version ---
+# Note: Assumes nvcc is in the PATH
+# Remove the 'V' from the version number
+cuda_version_full=$(nvcc --version | grep "release" | awk '{print $NF}' | sed 's/V//' | sed 's/,//')
+cuda_version_short=$(echo "$cuda_version_full" | cut -d'.' -f1,2)
+
+# --- Define exact compatibility mappings ---
+# The mapping now uses the major.minor version of GCC for more precise comparison
 declare -A cuda_gcc_compat=(
     ["13.0"]="15.9"
     ["12.8"]="14.9"
@@ -86,31 +93,33 @@ declare -A cuda_gcc_compat=(
 )
 
 # Find the maximum supported GCC version
+expected_gcc_full_version=${cuda_gcc_compat[$cuda_version_short]}
+expected_gcc_major=$(echo "$expected_gcc_full_version" | cut -d'.' -f1)
 
-expected_gcc=${cuda_gcc_compat[$cuda_version_short]}
-
-if [[ -n "$expected_gcc" ]]; then
-    if [[ "$(echo "$gcc_version_short <= $expected_gcc" | bc -l)" -eq 1 ]]; then
-        echo "Compatible: CUDA $cuda_version_short with GCC $gcc_version_short ok !"
+if [[ -n "$expected_gcc_full_version" ]]; then
+    # Use bc for floating-point comparison
+    result=$(echo "$gcc_version_short <= $expected_gcc_full_version" | bc -l)
+    if [[ "$result" == 1 ]]; then
+        echo "Compatible: CUDA $cuda_version_short is compatible with GCC $gcc_version_short."
     else
-        echo "Incompatible: CUDA $cuda_version_short requires GCC $expected_gcc max, but found $gcc_version_short."
-        echo "You should install GCC $expected_gcc or lower."
+        echo "Incompatible: CUDA $cuda_version_short requires GCC $expected_gcc_full_version or lower, but found $gcc_version_short."
+        echo "You should install GCC $expected_gcc_major or lower."
 
         # Suggest installation commands based on the OS
         if [[ -f /etc/debian_version ]]; then
             echo "On Debian/Ubuntu, you can install it with:"
-            echo "  sudo apt install gcc-$expected_gcc g++-$expected_gcc"
+            echo "  sudo apt install gcc-$expected_gcc_major g++-$expected_gcc_major"
             echo "Then, set it as the default version with:"
-            echo "  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-$expected_gcc 100"
-            echo "  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-$expected_gcc 100"
+            echo "  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-$expected_gcc_major 100"
+            echo "  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-$expected_gcc_major 100"
         elif [[ -f /etc/redhat-release ]]; then
             echo "On RHEL/CentOS/Fedora, you can install it with:"
-            echo "  sudo dnf install gcc-$expected_gcc g++-$expected_gcc"
+            echo "  sudo dnf install gcc-$expected_gcc_major g++-$expected_gcc_major"
         elif [[ -f /etc/arch-release ]]; then
             echo "On Arch Linux, you can install it with:"
-            echo "  sudo pacman -S gcc$expected_gcc"
+            echo "  sudo pacman -S gcc$expected_gcc_major"
         else
-            echo "Check your package manager for installing GCC $expected_gcc."
+            echo "Check your package manager for installing GCC $expected_gcc_major."
         fi
     fi
 else
