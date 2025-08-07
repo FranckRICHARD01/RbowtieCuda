@@ -4,7 +4,7 @@
 if command -v dpkg &>/dev/null; then
     for pkg in libthrust-dev libcub-dev cmake; do
         if dpkg -l | grep -q "^ii  $pkg "; then
-            echo "$pkg is installed. ok !"
+            echo "$pkg is installed !"
         else
             echo "$pkg is not installed. Please install it with sudo apt install $pkg"
         fi
@@ -40,9 +40,11 @@ else
     echo "CUDA is not installed, nvcc or nvidia-smi are not accessibles. Please use the installation script..."
 fi
 
-# Get the CUDA version (only major and minor)
-cuda_version=$($nvcc_path --version | grep "release" | sed -E ' s/.*release ([0-9.]+),.*/\1/')
-cuda_version_short=$(echo "$cuda_version" | cut -d'.' -f1,2)
+# --- Get the CUDA version ---
+# Note: Assumes nvcc is in the PATH
+# Remove the 'V' from the version number
+cuda_version_full=$(nvcc --version | grep "release" | awk '{print $NF}' | sed 's/V//' | sed 's/,//')
+cuda_version_short=$(echo "$cuda_version_full" | cut -d'.' -f1,2)
 
 # Get the driver-supported CUDA version
 driver_cuda_version=$($nvidia_smi_path | grep -oP 'CUDA Version: \K[0-9]+\.[0-9]+')
@@ -60,12 +62,6 @@ fi
 # --- Get the GCC version (only major and minor) ---
 gcc_version=$(gcc --version | head -n1 | awk '{print $3}')
 gcc_version_short=$(echo "$gcc_version" | cut -d'.' -f1,2)
-
-# --- Get the CUDA version ---
-# Note: Assumes nvcc is in the PATH
-# Remove the 'V' from the version number
-cuda_version_full=$(nvcc --version | grep "release" | awk '{print $NF}' | sed 's/V//' | sed 's/,//')
-cuda_version_short=$(echo "$cuda_version_full" | cut -d'.' -f1,2)
 
 # --- Define exact compatibility mappings ---
 # The mapping now uses the major.minor version of GCC for more precise comparison
@@ -101,7 +97,7 @@ echo "Expected max GCC:  '$expected_gcc_full_version'"
 echo "Comparison:        '$gcc_version_short <= $expected_gcc_full_version'"
 echo "Result:            $(echo "$gcc_version_short <= $expected_gcc_full_version" | bc -l)"
 
-if! command -v bc &> /dev/null; then
+if ! command -v bc &> /dev/null; then
     echo "Error: 'bc' command not found. Please install it (e.g., sudo apt install bc)." >&2
     exit 1
 fi
@@ -113,6 +109,8 @@ if [[ -n "$expected_gcc_full_version" ]]; then
         echo "Compatible: CUDA $cuda_version_short is compatible with GCC $gcc_version_short."
     else
         echo "Incompatible: CUDA $cuda_version_short requires GCC $expected_gcc_full_version or lower, but found $gcc_version_short."
+        expected_gcc_major=$(echo "$expected_gcc_major" | cut -d'.' -f1)
+        expected_gcc_major=$((expected_gcc_major - 1))
         echo "You should install GCC $expected_gcc_major or lower."
 
         # Suggest installation commands based on the OS
