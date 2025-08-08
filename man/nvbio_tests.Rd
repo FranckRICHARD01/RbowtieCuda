@@ -7,7 +7,7 @@
 nvbio_tests()
 }
 \value{
-The value is 0 when there is not any mistakes.
+The return value is the string "nvbio test passed." when there is not any mistakes.
 }
 \description{
 Calling nvbio_tests() performs alignment tests
