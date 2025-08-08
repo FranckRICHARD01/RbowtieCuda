@@ -11,11 +11,24 @@ execute_process(
 
 message(WARNING "--- CUDA Environment Diagnostic ---\n${DIAGNOSTIC_OUTPUT}\n")
 
-# *** FIX: Set CMAKE_CUDA_COMPILER unconditionally and BEFORE find_package(CUDA) ***
-#set(CMAKE_CUDA_COMPILER /software/u24/nvhpc/24.7/Linux_x86_64/24.7/compilers/bin/nvcc)
-#set(CMAKE_CUDA_COMPILER /opt/nvidia/hpc_sdk/Linux_x86_64/25.1/cuda/12.6/bin/nvcc)
-#set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.8/bin/nvcc)
-#set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.5/bin/nvcc)
+# Automatic GPU architecture detection
+execute_process(
+  COMMAND nvidia-smi --query-gpu=compute_cap --format=csv,noheader
+  OUTPUT_VARIABLE GPU_ARCHS
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  ERROR_QUIET
+)
+
+if(GPU_ARCHS)
+    # Convert "8.9" en "89"
+    string(REPLACE "." "" GPU_ARCH_NUM ${GPU_ARCHS})
+    message(WARNING "Detected GPU architecture: ${GPU_ARCH_NUM}")
+    set(CMAKE_CUDA_ARCHITECTURES ${GPU_ARCH_NUM})
+else()
+    # Valeur de secours par défaut
+    message(WARNING "Could not detect GPU architecture. Defaulting to sm_70.")
+    set(CMAKE_CUDA_ARCHITECTURES 70)
+endif()
 
 find_package(CUDAToolkit REQUIRED)
 
@@ -40,10 +53,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-
-# warning 
-# If find_package(CUDA required) has trouble finding the correct path to the cuda toolkit, uncheck this parameter and specify the correct path.
-#set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-12.8")
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     # Retrieve glibc version using ldd
@@ -84,9 +93,6 @@ option(PROFILING
 option(WERROR
   "Treat compiler warnings as errors"
   OFF)
-
-set(GPU_ARCHITECTURE "sm_60" CACHE STRING "Target GPU architecture")
-set(COMPUTE_ARCHITECTURE "compute_60" CACHE STRING "Target COMPUTE architecture")
 
 set(NVBIO_SOURCE_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -160,14 +166,6 @@ if (APPLE AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -stdlib=libstdc++")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
 endif()
-
-# Automatic GPU architecture detection
-execute_process(
-  COMMAND nvidia-smi --query-gpu=compute_cap --format=csv,noheader
-  OUTPUT_VARIABLE GPU_ARCHS
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  ERROR_QUIET
-)
 
 # Optimal configuration for NVHPC
 if(USING_NVHPC)
