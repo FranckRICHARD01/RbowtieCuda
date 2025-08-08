@@ -174,7 +174,7 @@ nvBowtie <- function(index, output_file, options, seq1, seq2 = NULL) {
 #' @title Print unit tests
 #' @description Calling nvbio_tests() performs alignment tests
 #' @author Franck RICHARD
-#' @return The value is 0 when there is not any mistakes.
+#' @return The return value is the string "nvbio test passed." when there is not any mistakes.
 #' @export nvbio_tests
 #' @examples
 #' nvbio_tests()
