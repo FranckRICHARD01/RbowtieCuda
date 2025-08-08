@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(nvBio)
+project(nvBio LANGUAGES CXX CUDA)
 
 execute_process(
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../../inst/scripts/check_requirements.sh
@@ -30,8 +30,6 @@ else()
     set(CMAKE_CUDA_ARCHITECTURES 70)
 endif()
 
-find_package(CUDAToolkit REQUIRED)
-
 #set(CMAKE_CXX_COMPILER_ID NVHPC)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC")
@@ -40,13 +38,13 @@ else()
     set(USING_NVHPC FALSE)
 endif()
 
-if (USING_NVHPC)
-    #set(CMAKE_C_COMPILER nvc)
-    #set(CMAKE_CXX_COMPILER nvc++)
-    set(CMAKE_CUDA_COMPILER nvc++)
-else()
-    set(CMAKE_CUDA_COMPILER nvcc)
-endif()
+#if (USING_NVHPC)
+#    #set(CMAKE_C_COMPILER nvc)
+#    #set(CMAKE_CXX_COMPILER nvc++)
+#    set(CMAKE_CUDA_COMPILER nvc++)
+#else()
+#    set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
+#endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -123,7 +121,7 @@ else()
   set(CUDA_NVCC_DEBUG_FLAGS "--ptxas-options=-O3 -O3")
   if (UNIX AND NOT APPLE AND NOT USING_NVHPC)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-old-style-definition -O3")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-enum-enum-conversion -Wno-deprecated-declarations -O3")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-enum-enum-conversion -Wno-deprecated-declarations -Wno-unused-result -O3")
   endif()
 endif()
 
@@ -137,7 +135,7 @@ find_package(Thrust REQUIRED)
 find_package(CUB REQUIRED)
 find_package(Doxygen)
 
-enable_language(CUDA)
+#enable_language(CUDA)
 
 find_package(OpenMP REQUIRED)
 if (OPENMP_FOUND)
@@ -294,5 +292,5 @@ install(TARGETS ${NVBIO_BIN_LIST} DESTINATION bin)
 install(FILES ${NVBIO_WRAPPER_SCRIPTS}
     PERMISSIONS OWNER_REAK OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE DESTINATION bin)
 
-nvbio_module(nvbio-project)
+#nvbio_module(nvbio-project)
 nvbio_doxygen()
