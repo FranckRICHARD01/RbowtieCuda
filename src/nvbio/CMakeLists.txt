@@ -3,27 +3,35 @@ cmake_minimum_required(VERSION 3.22)
 message(WARNING "CUDACXX=$ENV{CUDACXX}")
 message(WARNING "PATH=$ENV{PATH}")
 
+### IMPROVED COMPILER DETECTION BLOCK ###
+
 if(NOT DEFINED CMAKE_CUDA_COMPILER)
+    # Priority 1: Explicit environment variable
     if(DEFINED ENV{CUDACXX})
         set(CMAKE_CUDA_COMPILER "$ENV{CUDACXX}" CACHE FILEPATH "CUDA compiler")
     else()
-        find_program(NVCC_PATH nvcc HINTS
-            /usr/local/cuda/bin
-            /opt/nvidia/hpc_sdk/Linux_x86_64/*/cuda/*/bin
-            /software/*/bin
+        # Priority 2: Automatic search for known compilers
+        message(WARNING "CUDACXX not set. Searching for 'nvcc' or 'nvc++'...")
+        find_program(CUDA_COMPILER_PATH
+            NAMES nvcc nvc++   # <-- KEY CHANGE: Search for both
+            HINTS
+                # Common paths for nvcc
+                /usr/local/cuda/bin
+                /opt/nvidia/hpc_sdk/Linux_x86_64/*/cuda/*/bin
+                # Common paths for nvc++ (HPC SDK)
+                /opt/nvidia/hpc_sdk/Linux_x86_64/*/compilers/bin
+                # Generic path for installations via modules
+                /software/*/bin
         )
-        if(NVCC_PATH)
-            set(CMAKE_CUDA_COMPILER "${NVCC_PATH}" CACHE FILEPATH "CUDA compiler")
+
+        if(CUDA_COMPILER_PATH)
+            set(CMAKE_CUDA_COMPILER "${CUDA_COMPILER_PATH}" CACHE FILEPATH "CUDA compiler")
+            message(WARNING "Found CUDA compiler: ${CMAKE_CUDA_COMPILER}")
         else()
-            message(FATAL_ERROR "nvcc not found. Set CUDACXX or add nvcc to PATH.")
+            # Error if neither is found
+            message(FATAL_ERROR "CUDA compiler (nvcc or nvc++) not found. Please set the CUDACXX environment variable or add the compiler's directory to your PATH.")
         endif()
     endif()
-endif()
-
-if(NOT DEFINED CUDA_TOOLKIT_ROOT_DIR)
-    get_filename_component(NVCC_BIN_DIR "${CMAKE_CUDA_COMPILER}" DIRECTORY)
-    get_filename_component(CUDA_TOOLKIT_ROOT_DIR "${NVCC_BIN_DIR}/.." ABSOLUTE)
-    set(CUDA_TOOLKIT_ROOT_DIR "${CUDA_TOOLKIT_ROOT_DIR}" CACHE PATH "CUDA Toolkit root")
 endif()
 
 project(nvBio LANGUAGES CXX CUDA)
