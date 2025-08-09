@@ -1,5 +1,31 @@
 cmake_minimum_required(VERSION 3.22)
 
+message(WARNING "CUDACXX=$ENV{CUDACXX}")
+message(WARNING "PATH=$ENV{PATH}")
+
+if(NOT DEFINED CMAKE_CUDA_COMPILER)
+    if(DEFINED ENV{CUDACXX})
+        set(CMAKE_CUDA_COMPILER "$ENV{CUDACXX}" CACHE FILEPATH "CUDA compiler")
+    else()
+        find_program(NVCC_PATH nvcc HINTS
+            /usr/local/cuda/bin
+            /opt/nvidia/hpc_sdk/Linux_x86_64/*/cuda/*/bin
+            /software/*/bin
+        )
+        if(NVCC_PATH)
+            set(CMAKE_CUDA_COMPILER "${NVCC_PATH}" CACHE FILEPATH "CUDA compiler")
+        else()
+            message(FATAL_ERROR "nvcc not found. Set CUDACXX or add nvcc to PATH.")
+        endif()
+    endif()
+endif()
+
+if(NOT DEFINED CUDA_TOOLKIT_ROOT_DIR)
+    get_filename_component(NVCC_BIN_DIR "${CMAKE_CUDA_COMPILER}" DIRECTORY)
+    get_filename_component(CUDA_TOOLKIT_ROOT_DIR "${NVCC_BIN_DIR}/.." ABSOLUTE)
+    set(CUDA_TOOLKIT_ROOT_DIR "${CUDA_TOOLKIT_ROOT_DIR}" CACHE PATH "CUDA Toolkit root")
+endif()
+
 project(nvBio LANGUAGES CXX CUDA)
 
 execute_process(
@@ -10,6 +36,11 @@ execute_process(
 )
 
 message(WARNING "--- CUDA Environment Diagnostic ---\n${DIAGNOSTIC_OUTPUT}\n")
+
+# *** FIX: Set CMAKE_CUDA_COMPILER unconditionally and BEFORE find_package(CUDA) ***
+#set(CMAKE_CUDA_COMPILER /software/u24/nvhpc/24.7/Linux_x86_64/24.7/compilers/bin/nvcc)
+#set(CMAKE_CUDA_COMPILER /opt/nvidia/hpc_sdk/Linux_x86_64/25.1/cuda/12.6/bin/nvcc)
+#set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.9/bin/nvcc)
 
 # Automatic GPU architecture detection
 execute_process(
@@ -51,6 +82,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+
+# warning 
+# If find_package(CUDA required) has trouble finding the correct path to the cuda toolkit, uncheck this parameter and specify the correct path.
+#set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-12.9")
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     # Retrieve glibc version using ldd
