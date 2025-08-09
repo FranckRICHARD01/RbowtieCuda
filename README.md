@@ -11,8 +11,6 @@ The `RbowtieCuda` is built on a modified version of the nvBIO v1.1.50 source cod
 
 We would like to thank Ismael Galve Roperh for his assistance.
 
-Dedicated to the memory of Lilit Tabirian
-
 
 ## Contributors
 
