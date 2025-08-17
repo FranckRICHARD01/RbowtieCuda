@@ -5,8 +5,8 @@ CHANGES
 
   - The package is available on Bioconductor.
 
-* 2025-08-09
-  RbowtieCuda Version: 1.0.6
+* 2025-08-17
+  RbowtieCuda Version: 1.0.7
 
   - nvBowtie and nvBWT propagate their error messages to the R interface.
   - Improved diagnostic messages during package installation.
