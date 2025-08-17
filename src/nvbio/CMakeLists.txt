@@ -45,6 +45,10 @@ execute_process(
 
 message(WARNING "--- CUDA Environment Diagnostic ---\n${DIAGNOSTIC_OUTPUT}\n")
 
+if (NOT DIAGNOSTIC_RESULT EQUAL 0)
+    message(FATAL_ERROR "CUDA environment check failed (code: ${DIAGNOSTIC_RESULT}).")
+endif()
+
 # *** FIX: Set CMAKE_CUDA_COMPILER unconditionally and BEFORE find_package(CUDA) ***
 #set(CMAKE_CUDA_COMPILER /software/u24/nvhpc/24.7/Linux_x86_64/24.7/compilers/bin/nvcc)
 #set(CMAKE_CUDA_COMPILER /opt/nvidia/hpc_sdk/Linux_x86_64/25.1/cuda/12.6/bin/nvcc)

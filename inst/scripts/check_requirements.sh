@@ -10,10 +10,12 @@ if command -v dpkg &>/dev/null; then
             echo "$pkg is installed"
         else
             echo "$pkg is missing; install with: sudo apt install $pkg"
+
+            exit 1
         fi
     done
 else
-    echo "Cannot verify packages: dpkg unavailable"
+    echo "Cannot verify packages: dpkg unavailable."
 fi
 
 nvcc_path=$(command -v nvcc 2>/dev/null)
@@ -22,14 +24,22 @@ nvcc_path=$(command -v nvcc 2>/dev/null)
 nvidia_smi_path=$(command -v nvidia-smi 2>/dev/null)
 [ -z "$nvidia_smi_path" ] && [ -x "/usr/bin/nvidia-smi" ] && nvidia_smi_path=/usr/bin/nvidia-smi
 
-if [ -n "$nvcc_path" ] && [ -n "$nvidia_smi_path" ]; then
-    echo "CUDA detected"
-else
-    echo "CUDA not found or tools missing; please run installer"
+if [ -z "$nvcc_path" ]; then
+    echo "CUDA not found; please run installer."
+    exit 1
+fi
+if [ -z "$nvidia_smi_path" ]; then
+    echo "nvidia_smi missing; Please check your CUDA installation."
+    exit 1
 fi
 
 full_cuda_ver=$("$nvcc_path" --version | grep release | awk '{print $NF}' | tr -d 'V,')
 cuda_short=$(echo "$full_cuda_ver" | cut -d. -f1,2)
+
+if [ -z "$full_cuda_ver" ]; then
+    echo "There does not appear to be an Nvidia driver installed. Try the command sudo apt install nvidia-driver-XXX where XXX is a version number compatible with cuda  '$cuda_short'."
+    exit 1
+fi
 
 driver_cuda_ver=$("$nvidia_smi_path" | grep -oP 'CUDA Version: \K[0-9]+\.[0-9]+')
 
@@ -48,6 +58,7 @@ ver_cmp() {
 if ver_cmp "$cuda_short" gt "$driver_cuda_ver"; then
     echo "*** Incompatibility: compiler $cuda_short vs driver $driver_cuda_ver ***"
     echo "*** Please downgrade CUDA or update NVIDIA driver ***"
+    exit 1
 else
     echo "Compiler '$cuda_short' is compatible with driver"
 fi
