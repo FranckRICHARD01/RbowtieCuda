@@ -43,7 +43,7 @@ Please note that this package requires an NVIDIA graphics card for proper functi
 
 For detailed installation steps, please refer to the INSTALL file included with the package.
 
-RbowtieCuda is compatible with all Cuda versions greater than or equal to 10. A minimum of 32 GB of RAM is recommended for compiling the package.
+RbowtieCuda is compatible with all Cuda versions greater than or equal to 10. A minimum of 16 GB of RAM is recommended for compiling the package.
 
 ## An Example Workflow Using RbowtieCuda
 

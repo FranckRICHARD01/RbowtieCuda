@@ -168,6 +168,7 @@ std::string CudaDevice::DeviceString() const {
 		exit(0);
 	}
 
+	#if __CUDACC_VER_MAJOR__ < 13
 	double memBandwidth = (_prop.memoryClockRate * 1000.0) *
 		(_prop.memoryBusWidth / 8 * 2) / 1.0e9;
 
@@ -183,6 +184,36 @@ std::string CudaDevice::DeviceString() const {
 		_prop.memoryClockRate / 1000.0, _prop.memoryBusWidth, memBandwidth,
 		_prop.ECCEnabled ? "Enabled" : "Disabled");
 	return s;
+
+	#else
+		int memClockKHz = 0;
+		int coreClockKHz = 0;
+		int busWidthBits = 0;
+		int eccEnabled = 0;
+
+		cudaDeviceGetAttribute(&memClockKHz, cudaDevAttrMemoryClockRate, _ordinal);
+		cudaDeviceGetAttribute(&coreClockKHz, cudaDevAttrClockRate, _ordinal);
+		cudaDeviceGetAttribute(&busWidthBits, cudaDevAttrGlobalMemoryBusWidth, _ordinal);
+		cudaDeviceGetAttribute(&eccEnabled, cudaDevAttrEccEnabled, _ordinal);
+
+		// calcul de la bande passante mémoire
+		double memBandwidth = (memClockKHz * 1000.0) *
+                      (busWidthBits / 8.0 * 2) / 1.0e9;
+
+std::string s = stringprintf(
+    "%s : %8.3lf MHz   (Ordinal %d)\n"
+    "%d SMs enabled. Compute Capability sm_%d%d\n"
+    "FreeMem: %6dMB   TotalMem: %6dMB   %2d-bit pointers.\n"
+    "Mem Clock: %8.3lf MHz x %d bits   (%5.1lf GB/s)\n"
+    "ECC %s\n\n",
+    _prop.name, coreClockKHz / 1000.0, _ordinal,
+    _prop.multiProcessorCount, _prop.major, _prop.minor,
+    (int)(freeMem / (1<<20)), (int)(totalMem / (1<<20)), 8 * (int)sizeof(int*),
+    memClockKHz / 1000.0, busWidthBits, memBandwidth,
+    eccEnabled ? "Enabled" : "Disabled");
+    return s;
+
+	#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////

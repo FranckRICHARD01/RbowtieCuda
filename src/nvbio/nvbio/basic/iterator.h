@@ -74,11 +74,13 @@ typedef thrust::forward_device_iterator_tag         forward_device_iterator_tag;
 typedef thrust::bidirectional_device_iterator_tag   bidirectional_device_iterator_tag;
 typedef thrust::random_access_device_iterator_tag   random_access_device_iterator_tag;
 
+#if __CUDACC_VER_MAJOR__ < 13
 typedef thrust::input_universal_iterator_tag           input_universal_iterator_tag;
 typedef thrust::output_universal_iterator_tag          output_universal_iterator_tag;
 typedef thrust::forward_universal_iterator_tag         forward_universal_iterator_tag;
 typedef thrust::bidirectional_universal_iterator_tag   bidirectional_universal_iterator_tag;
 typedef thrust::random_access_universal_iterator_tag   random_access_universal_iterator_tag;
+#endif
 
 template <typename iterator_category> struct iterator_category_system {};
 template <>                           struct iterator_category_system<input_host_iterator_tag>              { typedef host_tag   type; };
@@ -91,12 +93,13 @@ template <>                           struct iterator_category_system<output_dev
 template <>                           struct iterator_category_system<forward_device_iterator_tag>          { typedef device_tag type; };
 template <>                           struct iterator_category_system<bidirectional_device_iterator_tag>    { typedef device_tag type; };
 template <>                           struct iterator_category_system<random_access_device_iterator_tag>    { typedef device_tag type; };
+#if __CUDACC_VER_MAJOR__ < 13
 template <>                           struct iterator_category_system<input_universal_iterator_tag>         { typedef device_tag type; };
 template <>                           struct iterator_category_system<output_universal_iterator_tag>        { typedef device_tag type; };
 template <>                           struct iterator_category_system<forward_universal_iterator_tag>       { typedef device_tag type; };
 template <>                           struct iterator_category_system<bidirectional_universal_iterator_tag> { typedef device_tag type; };
 template <>                           struct iterator_category_system<random_access_universal_iterator_tag> { typedef device_tag type; };
-
+#endif
 
 template<>
 struct iterator_category_system<thrust::detail::iterator_category_with_system_and_traversal<

@@ -584,10 +584,25 @@ int main(int argc, char* argv[])
                 {
                     cudaDeviceProp device_prop;
                     cudaGetDeviceProperties( &device_prop, device );
-                    log_verbose(stderr, "  device %d has compute capability %d.%d\n", device, device_prop.major, device_prop.minor);
-                    log_verbose(stderr, "    SM count          : %u\n", device_prop.multiProcessorCount);
-                    log_verbose(stderr, "    SM clock rate     : %u Mhz\n", device_prop.clockRate / 1000);
-                    log_verbose(stderr, "    memory clock rate : %.1f Ghz\n", float(device_prop.memoryClockRate) * 1.0e-6f);
+
+                    #if __CUDACC_VER_MAJOR__ < 13
+                        log_verbose(stderr, "  device %d has compute capability %d.%d\n", device, device_prop.major, device_prop.minor);
+                        log_verbose(stderr, "    SM count          : %u\n", device_prop.multiProcessorCount);
+                        log_verbose(stderr, "    SM clock rate     : %u Mhz\n", device_prop.clockRate / 1000);
+                        log_verbose(stderr, "    memory clock rate : %.1f Ghz\n", float(device_prop.memoryClockRate) * 1.0e-6f);
+                    #else
+                    	int memClockKHz = 0;
+	                    int coreClockKHz = 0;
+	
+	                    cudaDeviceGetAttribute(&memClockKHz, cudaDevAttrMemoryClockRate, device);
+	                    cudaDeviceGetAttribute(&coreClockKHz, cudaDevAttrClockRate, device);
+
+                        log_verbose(stderr, "  device %d has compute capability %d.%d\n", device, device_prop.major, device_prop.minor);
+                        log_verbose(stderr, "    SM count          : %u\n", device_prop.multiProcessorCount);
+                        log_verbose(stderr, "    SM clock rate     : %u MHz\n", coreClockKHz / 1000);
+                        log_verbose(stderr, "    memory clock rate : %.1f GHz\n", float(memClockKHz) * 1.0e-6f);
+                    #endif
+
 
                     if (device_prop.major >= best_device_prop.major &&
                         device_prop.minor >= best_device_prop.minor)

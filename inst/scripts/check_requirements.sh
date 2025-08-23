@@ -28,16 +28,12 @@ if [ -z "$nvcc_path" ]; then
     echo "CUDA not found; please run installer."
     exit 1
 fi
-if [ -z "$nvidia_smi_path" ]; then
-    echo "nvidia_smi missing; Please check your CUDA installation."
-    exit 1
-fi
 
 full_cuda_ver=$("$nvcc_path" --version | grep release | awk '{print $NF}' | tr -d 'V,')
 cuda_short=$(echo "$full_cuda_ver" | cut -d. -f1,2)
 
-if [ -z "$full_cuda_ver" ]; then
-    echo "There does not appear to be an Nvidia driver installed. Try the command sudo apt install nvidia-driver-XXX where XXX is a version number compatible with cuda  '$cuda_short'."
+if [ -z "$full_cuda_ver" ] || [ -z "$nvidia_smi_path" ]; then
+    echo "There does not appear to be an Nvidia driver installed. Try the command sudo 'apt install nvidia-driver-XXX' where XXX is a version number compatible with cuda '$cuda_short'."
     exit 1
 fi
 

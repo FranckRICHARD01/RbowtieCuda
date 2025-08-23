@@ -3,13 +3,16 @@ CHANGES
 * 2025-04-17
   RbowtieCuda Version: 1.0.1
 
-  - The package is available on Bioconductor.
+  - The package is available on Bioconductor
 
-* 2025-08-17
-  RbowtieCuda Version: 1.0.7
+* 2025-08-23
+  RbowtieCuda Version: 1.0.8
 
-  - nvBowtie and nvBWT propagate their error messages to the R interface.
-  - Improved diagnostic messages during package installation.
-  - Improved program stability.
+  - nvBowtie, nvBWT and nvbio_test propagate their error messages to the R interface
+  - Improved diagnostic messages during package installation
+  - Improved program stability
+  - Faster startup
+  - Compatible with CUDA 13.0
+  - The program needs 16 GB of RAM to be compiled (with Sys.setenv(MAKEFLAGS="-j8"))
 
 

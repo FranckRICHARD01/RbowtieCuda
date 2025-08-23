@@ -299,7 +299,9 @@ struct trivial_quality_string
 {
     static const uint32 SYMBOL_SIZE = 8u;
 
+    #if __CUDACC_VER_MAJOR__ < 13
     typedef random_access_universal_iterator_tag    iterator_category;
+    #endif
     typedef uint8                                   value_type;
     typedef uint8                                   reference;
     typedef const uint8*                            pointer;
