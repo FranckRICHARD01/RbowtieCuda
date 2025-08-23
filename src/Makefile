@@ -1,6 +1,7 @@
 BT2_DIR = nvbio
 
-MAKEFLAGS="-j 4"
+MAKEFLAGS="-j 8"
+export MAKEFLAGS
 
 CXX = g++
 

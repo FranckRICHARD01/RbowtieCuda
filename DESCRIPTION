@@ -1,8 +1,8 @@
 Package: RbowtieCuda
 Type: Package
 Title: An R Wrapper for nvBowtie and nvBWT, a rewritten version of Bowtie2 for cuda
-Version: 1.0.7
-Date: 2025-08-17
+Version: 1.0.8
+Date: 2025-08-23
 Authors@R: 
         c(person(given = "Jacopo", family = "Pantaleoni", role = c("aut"), 
             email = "jpantaleoni@nvidia.com"),

@@ -113,7 +113,11 @@ struct ReadStreamQualities
     static const uint32 SYMBOL_SIZE = 8u;
 
     typedef ReadStreamQualities<ReadStreamType>         this_type;
-    typedef random_access_universal_iterator_tag        iterator_category;
+
+    #if __CUDACC_VER_MAJOR__ < 13
+        typedef random_access_universal_iterator_tag        iterator_category;
+    #endif
+    
     typedef uint8                                       value_type;
     typedef value_type                                  reference;
     typedef const value_type*                           pointer;
@@ -175,7 +179,9 @@ struct ReadStream
     typedef ReadStream<StreamType,QualType>         this_type;
     typedef ReadStreamQualities<this_type>          qual_string_type;
 
+    #if __CUDACC_VER_MAJOR__ < 13
     typedef random_access_universal_iterator_tag    iterator_category;
+    #endif
     typedef value_type                              reference;
     typedef const value_type*                       pointer;
     typedef typename signed_type<index_type>::type  difference_type;

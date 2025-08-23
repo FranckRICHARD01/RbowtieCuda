@@ -227,7 +227,15 @@ bool operator>=(const transform_iterator<T,Transform> it1, const transform_itera
 template <typename T1, typename T2, typename Transform>
 struct binary_transform_iterator
 {
-    typedef typename Transform::result_type                         value_type;
+    #if __CUDACC_VER_MAJOR__ < 13
+    // Problem with C++ 17 and more...
+       typedef typename Transform::result_type                         value_type;
+    #else
+       typedef typename std::invoke_result<Transform,
+                                        typename std::iterator_traits<T1>::value_type,
+                                        typename std::iterator_traits<T2>::value_type>::type value_type;
+    #endif
+
     typedef value_type&                                             reference;
     typedef value_type                                              const_reference;
     typedef value_type*                                             pointer;

@@ -49,7 +49,10 @@ struct string_iterator
     static const uint32 SYMBOL_SIZE = string_traits<StringType>::SYMBOL_SIZE;
 
     typedef StringType                                          string_type;
+
+    #if __CUDACC_VER_MAJOR__ < 13
     typedef random_access_universal_iterator_tag                iterator_category; // TODO: determine the system from the string_traits
+    #endif
     typedef typename string_traits<StringType>::value_type      value_type;
     typedef typename string_traits<StringType>::reference       reference;
     typedef typename string_traits<StringType>::pointer         pointer;
