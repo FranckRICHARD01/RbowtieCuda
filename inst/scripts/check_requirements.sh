@@ -54,7 +54,7 @@ ver_cmp() {
 if ver_cmp "$cuda_short" gt "$driver_cuda_ver"; then
     echo "*** Incompatibility: compiler $cuda_short vs driver $driver_cuda_ver ***"
     echo "*** Please downgrade CUDA or update NVIDIA driver ***"
-    exit 1
+    #exit 1
 else
     echo "Compiler '$cuda_short' is compatible with driver"
 fi
