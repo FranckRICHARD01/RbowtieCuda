@@ -73,7 +73,7 @@ case $choice in
         sudo apt-get update
 
         # installing CUDA
-        sudo apt install cuda-12-8 nvidia-driver-570 libthrust-dev libcub-dev
+        sudo apt install cuda-12-8 nvidia-driver-570-open libthrust-dev libcub-dev
         ;;
     *)
         echo "Invalid choice. Please enter 1 or 2."
@@ -86,7 +86,7 @@ echo ''
 echo 'Please modify your .bashrc file located at the root of your account by adding the lines :'
 echo '  export PATH=/usr/local/cuda-xx.x/bin:$PATH'
 echo '  export LD_LIBRARY_PATH=/usr/local/cuda-xx.x/lib64:$LD_LIBRARY_PATH'
-echo 'Replacing xx.x with the version of cuda installed (e.g. 12.6)'
+echo 'Replacing xx.x with the version of cuda installed (e.g. 12.8)'
 echo ' '
 echo 'then do :'
 echo '  source ~/.bashrc'
