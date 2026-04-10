@@ -74,12 +74,11 @@ case $choice in
         # installing CUDA
         RECOMMENDED_DRIVER=$(ubuntu-drivers devices | grep recommended | awk '{print $3}')
 
-        if [ -z "$RECOMMENDED_DRIVER" ]; then
+        if [ -z "$" ]; then
             echo "No recommended drivers found. Manual installation required."
         else
             echo "Recommended driver installation: $RECOMMENDED_DRIVER"
-            STABLE_DRIVER=$(echo $RECOMMENDED_DRIVER | sed 's/-open//')
-            sudo apt install -y $STABLE_DRIVER
+            sudo apt install -y $RECOMMENDED_DRIVER
         fi
         sudo apt install cuda-13-1 libthrust-dev libcub-dev
         ;;
