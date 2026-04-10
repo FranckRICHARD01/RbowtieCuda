@@ -26,6 +26,7 @@ Suggests:
     RUnit,
     BiocGenerics
 SystemRequirements: C++20, GNU make, cmake, CUDA Toolkit(>=10), MSVC, libthrust-dev, libcub-dev, gcc, g++
+Config/Bioconductor/UnsupportedPlatforms: windows, macosx
 Archs: x64
 RoxygenNote: 7.3.2
 biocViews: Sequencing, Alignment, Preprocessing, Coverage
