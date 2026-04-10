@@ -55,7 +55,7 @@ sudo apt install g++ freeglut3-dev build-essential libx11-dev libxmu-dev libxi-d
 
 echo "Choose an option:"
 echo "1) install the default version of cuda on your distribution "
-echo "2) install the version 12.8 of cuda (do not use if you're not sure)"
+echo "2) install the version 13.1 of cuda (do not use if you're not sure)"
 
 read -p "Your choice (1 or 2): " choice
 
@@ -66,14 +66,22 @@ case $choice in
         ;;
     2)
         # NVidia repository
-        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-ubuntu2404.pin
-        sudo mv cuda-ubuntu2404.pin /etc/apt/preferences.d/cuda-repository-pin-600
-        sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/3bf863cc.pub
-        sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/ /"
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-archive-keyring.gpg
+        sudo mv cuda-archive-keyring.gpg /usr/share/keyrings/cuda-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/cuda-archive-keyring.gpg] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/ /" | sudo tee /etc/apt/sources.list.d/cuda-ubuntu2404-x86_64.list
         sudo apt-get update
 
         # installing CUDA
-        sudo apt install cuda-12-8 nvidia-driver-570-open libthrust-dev libcub-dev
+        RECOMMENDED_DRIVER=$(ubuntu-drivers devices | grep recommended | awk '{print $3}')
+
+        if [ -z "$RECOMMENDED_DRIVER" ]; then
+            echo "No recommended drivers found. Manual installation required."
+        else
+            echo "Recommended driver installation: $RECOMMENDED_DRIVER"
+            STABLE_DRIVER=$(echo $RECOMMENDED_DRIVER | sed 's/-open//')
+            sudo apt install -y $STABLE_DRIVER
+        fi
+        sudo apt install cuda-13-1 libthrust-dev libcub-dev
         ;;
     *)
         echo "Invalid choice. Please enter 1 or 2."
