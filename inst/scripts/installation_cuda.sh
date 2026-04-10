@@ -87,6 +87,32 @@ case $choice in
         ;;
 esac
 
+# 1. Get the CUDA version (e.g., 13.1)
+CUDA_VERSION=$(nvcc --version | grep release | awk '{print $NF}' | tr -d 'V,')
+
+# 2. Check if version is >= 12.9 using sort -V (version-safe comparison)
+if [ "$(printf '%s\n' "12.9" "$CUDA_VERSION" | sort -V | head -n1)" = "12.9" ]; then
+    
+    # Define the header path dynamically based on the detected version
+    HEADER_FILE="/usr/local/cuda-${CUDA_VERSION%.*}/targets/x86_64-linux/include/crt/math_functions.h"
+
+    if [ -f "$HEADER_FILE" ]; then
+        # 3. Check if the patch is already applied to avoid duplicate 'noexcept'
+        if ! grep -q "rsqrt(double x) noexcept;" "$HEADER_FILE"; then
+            echo "Applying glibc 2.41 compatibility patch to: $HEADER_FILE"
+            
+            # Apply the sed commands with sudo
+            sudo sed -i 's/extern __DEVICE_FUNCTIONS_DECL__ __device_builtin__ double                 rsqrt(double x);/extern __DEVICE_FUNCTIONS_DECL__ __device_builtin__ double                 rsqrt(double x) noexcept;/' "$HEADER_FILE"
+            sudo sed -i 's/extern __DEVICE_FUNCTIONS_DECL__ __device_builtin__ float                  rsqrtf(float x);/extern __DEVICE_FUNCTIONS_DECL__ __device_builtin__ float                  rsqrtf(float x) noexcept;/' "$HEADER_FILE"
+            
+            echo "Patch applied successfully."
+        else
+            echo "CUDA header already patched. Skipping."
+        fi
+    else
+        echo "Warning: CUDA header not found at $HEADER_FILE"
+    fi
+fi
 
 # setup your paths
 echo ''
