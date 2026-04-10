@@ -24,7 +24,7 @@ while true; do
     case $yn in
         [Yy]* ) 
             echo "Removing old NVIDIA drivers and libraries..."
-            sudo apt-get purge -y nvidia* libnvidia*
+            sudo apt-get purge -y nvidia* libnvidia* cuda*
             sudo apt-get remove -y nvidia-*
             sudo rm -f /etc/apt/sources.list.d/*cuda*
             sudo apt-get autoremove -y && sudo apt-get autoclean -y
