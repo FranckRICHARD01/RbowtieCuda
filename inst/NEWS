@@ -1,5 +1,10 @@
 CHANGES 
 -----------------------
+* 2026-05-04
+  RbowtieCuda version 1.0.12
+
+  - problem with a recent change to the thust library
+
 * 2026-04-10
   RbowtieCuda version 1.0.11
 
