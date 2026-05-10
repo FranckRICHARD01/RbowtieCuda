@@ -50,8 +50,10 @@ struct string_iterator
 
     typedef StringType                                          string_type;
 
-    #if __CUDACC_VER_MAJOR__ < 13
-    typedef random_access_universal_iterator_tag                iterator_category; // TODO: determine the system from the string_traits
+    #if defined(THRUST_VERSION) && THRUST_VERSION < 200000
+    typedef random_access_universal_iterator_tag iterator_category;
+    #else
+    typedef thrust::random_access_device_iterator_tag iterator_category;
     #endif
     typedef typename string_traits<StringType>::value_type      value_type;
     typedef typename string_traits<StringType>::reference       reference;
