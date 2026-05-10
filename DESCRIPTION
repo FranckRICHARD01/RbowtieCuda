@@ -1,8 +1,8 @@
 Package: RbowtieCuda
 Type: Package
 Title: An R Wrapper for nvBowtie and nvBWT, a rewritten version of Bowtie2 for cuda
-Version: 1.4.1
-Date: 2026-05-05
+Version: 1.4.3
+Date: 2026-05-08
 Authors@R: 
         c(person(given = "Jacopo", family = "Pantaleoni", role = c("aut"), 
             email = "jpantaleoni@nvidia.com"),
@@ -26,6 +26,7 @@ Suggests:
     RUnit,
     BiocGenerics
 SystemRequirements: C++20, GNU make, cmake, CUDA Toolkit(>=10), MSVC, libthrust-dev, libcub-dev, gcc, g++
+Config/Bioconductor/UnsupportedPlatforms: windows, macosx
 Archs: x64
 RoxygenNote: 7.3.2
 biocViews: Sequencing, Alignment, Preprocessing, Coverage

@@ -74,7 +74,7 @@ typedef thrust::forward_device_iterator_tag         forward_device_iterator_tag;
 typedef thrust::bidirectional_device_iterator_tag   bidirectional_device_iterator_tag;
 typedef thrust::random_access_device_iterator_tag   random_access_device_iterator_tag;
 
-#if defined(THRUST_VERSION) && THRUST_VERSION < 200800
+#if defined(THRUST_VERSION) && THRUST_VERSION < 200000
 typedef thrust::input_universal_iterator_tag           input_universal_iterator_tag;
 typedef thrust::output_universal_iterator_tag          output_universal_iterator_tag;
 typedef thrust::forward_universal_iterator_tag         forward_universal_iterator_tag;
@@ -93,7 +93,7 @@ template <>                           struct iterator_category_system<output_dev
 template <>                           struct iterator_category_system<forward_device_iterator_tag>          { typedef device_tag type; };
 template <>                           struct iterator_category_system<bidirectional_device_iterator_tag>    { typedef device_tag type; };
 template <>                           struct iterator_category_system<random_access_device_iterator_tag>    { typedef device_tag type; };
-#if defined(THRUST_VERSION) && THRUST_VERSION < 200800
+#if defined(THRUST_VERSION) && THRUST_VERSION < 200000
 template <>                           struct iterator_category_system<input_universal_iterator_tag>         { typedef device_tag type; };
 template <>                           struct iterator_category_system<output_universal_iterator_tag>        { typedef device_tag type; };
 template <>                           struct iterator_category_system<forward_universal_iterator_tag>       { typedef device_tag type; };

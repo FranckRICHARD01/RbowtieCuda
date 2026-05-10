@@ -24,7 +24,7 @@ while true; do
     case $yn in
         [Yy]* ) 
             echo "Removing old NVIDIA drivers and libraries..."
-            sudo apt-get purge -y nvidia* libnvidia*
+            sudo apt-get purge -y nvidia* libnvidia* cuda*
             sudo apt-get remove -y nvidia-*
             sudo rm -f /etc/apt/sources.list.d/*cuda*
             sudo apt-get autoremove -y && sudo apt-get autoclean -y
@@ -55,7 +55,7 @@ sudo apt install g++ freeglut3-dev build-essential libx11-dev libxmu-dev libxi-d
 
 echo "Choose an option:"
 echo "1) install the default version of cuda on your distribution "
-echo "2) install the version 12.8 of cuda (do not use if you're not sure)"
+echo "2) install the version 13.1 of cuda (do not use if you're not sure)"
 
 read -p "Your choice (1 or 2): " choice
 
@@ -66,20 +66,53 @@ case $choice in
         ;;
     2)
         # NVidia repository
-        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-ubuntu2404.pin
-        sudo mv cuda-ubuntu2404.pin /etc/apt/preferences.d/cuda-repository-pin-600
-        sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/3bf863cc.pub
-        sudo add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/ /"
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-archive-keyring.gpg
+        sudo mv cuda-archive-keyring.gpg /usr/share/keyrings/cuda-archive-keyring.gpg
+        echo "deb [signed-by=/usr/share/keyrings/cuda-archive-keyring.gpg] https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/ /" | sudo tee /etc/apt/sources.list.d/cuda-ubuntu2404-x86_64.list
         sudo apt-get update
 
         # installing CUDA
-        sudo apt install cuda-12-8 nvidia-driver-570-open libthrust-dev libcub-dev
+        RECOMMENDED_DRIVER=$(ubuntu-drivers devices | grep recommended | awk '{print $3}')
+
+        if [ -z "$" ]; then
+            echo "No recommended drivers found. Manual installation required."
+        else
+            echo "Recommended driver installation: $RECOMMENDED_DRIVER"
+            sudo apt install -y $RECOMMENDED_DRIVER
+        fi
+        sudo apt install cuda-13-1 libthrust-dev libcub-dev
         ;;
     *)
         echo "Invalid choice. Please enter 1 or 2."
         ;;
 esac
 
+# 1. Get the CUDA version (e.g., 13.1)
+CUDA_VERSION=$(nvcc --version | grep release | awk '{print $NF}' | tr -d 'V,')
+
+# 2. Check if version is >= 12.9 using sort -V (version-safe comparison)
+if [ "$(printf '%s\n' "12.9" "$CUDA_VERSION" | sort -V | head -n1)" = "12.9" ]; then
+    
+    # Define the header path dynamically based on the detected version
+    HEADER_FILE="/usr/local/cuda-${CUDA_VERSION%.*}/targets/x86_64-linux/include/crt/math_functions.h"
+
+    if [ -f "$HEADER_FILE" ]; then
+        # 3. Check if the patch is already applied to avoid duplicate 'noexcept'
+        if ! grep -q "rsqrt(double x) noexcept;" "$HEADER_FILE"; then
+            echo "Applying glibc 2.41 compatibility patch to: $HEADER_FILE"
+            
+            # Apply the sed commands with sudo
+            sudo sed -i 's/extern __DEVICE_FUNCTIONS_DECL__ __device_builtin__ double                 rsqrt(double x);/extern __DEVICE_FUNCTIONS_DECL__ __device_builtin__ double                 rsqrt(double x) noexcept;/' "$HEADER_FILE"
+            sudo sed -i 's/extern __DEVICE_FUNCTIONS_DECL__ __device_builtin__ float                  rsqrtf(float x);/extern __DEVICE_FUNCTIONS_DECL__ __device_builtin__ float                  rsqrtf(float x) noexcept;/' "$HEADER_FILE"
+            
+            echo "Patch applied successfully."
+        else
+            echo "CUDA header already patched. Skipping."
+        fi
+    else
+        echo "Warning: CUDA header not found at $HEADER_FILE"
+    fi
+fi
 
 # setup your paths
 echo ''
