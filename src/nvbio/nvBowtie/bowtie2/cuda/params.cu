@@ -144,6 +144,7 @@ namespace nvbio
                         i.first != "min-read-len" &&
                         i.first != "ungapped-mates" &&
                         i.first != "ug" &&
+                        i.first != "opposite-myers" &&
                         i.first != "nofw" &&
                         i.first != "norc" &&
                         i.first != "all" &&
@@ -229,6 +230,7 @@ namespace nvbio
                 params.top_seed = uint_option(options, "top", init ? 0u : params.top_seed);                              // explore top seed entirely
                 params.min_read_len = uint_option(options, "min-read-len", init ? 12u : params.min_read_len);            // minimum read length
                 params.ungapped_mates = bool_option(options, "ungapped-mates", "ug", init ? 0u : params.ungapped_mates); // ungapped mate alignment
+                params.opposite_myers = bool_option(options, "opposite-myers", init ? 1u : params.opposite_myers);       // Myers bit-vector opposite-mate scoring (default on since Gate A x2)
                 params.fw = !bool_option(options, "nofw", init ? false : !params.fw);                                    // fw alignment
                 params.rc = !bool_option(options, "norc", init ? false : !params.rc);                                    // rc alignment
 

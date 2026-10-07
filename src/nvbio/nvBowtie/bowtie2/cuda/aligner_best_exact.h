@@ -123,7 +123,7 @@ void Aligner::best_exact(
             hits_dptr, cnts_dptr,
             params );
     #endif
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(cudaStreamLegacy);
         nvbio::cuda::check_error("mapping kernel");
 
         timer.stop();
@@ -151,10 +151,7 @@ void Aligner::best_exact(
             thrust::fill( hits_stats_dvec.begin(), hits_stats_dvec.end(), 0u );
             bowtie2_hits_stats( read_data.size(), hits_dptr, cnts_dptr, hits_stats_dptr );
 
-            cudaDeviceSynchronize();
-            nvbio::cuda::check_error("hit stats kernel");
-
-            cudaDeviceSynchronize();
+            cudaStreamSynchronize(cudaStreamLegacy);
             nvbio::cuda::check_error("hit stats kernel");
 
             hits_stats_hvec = hits_stats_dvec;
@@ -168,7 +165,7 @@ void Aligner::best_exact(
             thrust::raw_pointer_cast( &hits_level_dvec.front() ),
             thrust::raw_pointer_cast( &cnts_level_dvec.front() ) );
 
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(cudaStreamLegacy);
         nvbio::cuda::check_error("extract-top-range kernel");
 
         best_exact_score(
@@ -192,7 +189,7 @@ void Aligner::best_exact(
             seed_queues.device(),
             best_data_dptr );
 
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(cudaStreamLegacy);
         nvbio::cuda::check_error("pruning kernel");
 
         // swap input & output queues
@@ -235,7 +232,7 @@ void Aligner::best_exact(
             context,
             params );
 
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(cudaStreamLegacy);
         nvbio::cuda::check_error("backtracking kernel");
     }
     timer.stop();
@@ -285,7 +282,7 @@ void Aligner::best_exact(
             context,
             params );
 
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(cudaStreamLegacy);
         nvbio::cuda::check_error("second-best backtracking kernel");
 
         timer.stop();
@@ -330,7 +327,7 @@ void Aligner::best_exact_score(
         thrust::fill( hits_stats_dvec.begin(), hits_stats_dvec.end(), 0u );
         bowtie2_hits_stats( read_data.size(), hits_dptr, cnts_dptr, hits_stats_dptr );
 
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(cudaStreamLegacy);
         nvbio::cuda::check_error("hit stats kernel");
 
         hits_stats_hvec = hits_stats_dvec;
@@ -425,7 +422,7 @@ void Aligner::best_exact_score(
 
             first_run = false;
 
-            cudaDeviceSynchronize();
+            cudaStreamSynchronize(cudaStreamLegacy);
             nvbio::cuda::check_error("selecting kernel");
 
             timer.stop();
@@ -466,7 +463,7 @@ void Aligner::best_exact_score(
                 seed_data_dptr,
                 params );
 
-            cudaDeviceSynchronize();
+            cudaStreamSynchronize(cudaStreamLegacy);
             nvbio::cuda::check_error("locating kernel");
 
             timer.stop();
@@ -511,7 +508,7 @@ void Aligner::best_exact_score(
                     driver_data.genome_stream(),
                     params );
 
-                cudaDeviceSynchronize();
+                cudaStreamSynchronize(cudaStreamLegacy);
                 nvbio::cuda::check_error("score kernel");
 
                 const ReduceBestExactContext reduce_context;
@@ -525,7 +522,7 @@ void Aligner::best_exact_score(
                     score_queue_dptr,
                     params );
 
-                cudaDeviceSynchronize();
+                cudaStreamSynchronize(cudaStreamLegacy);
                 nvbio::cuda::check_error("score-reduce kernel");
 
                 timer.stop();
@@ -575,7 +572,7 @@ void Aligner::best_exact_score(
 
             first_run = false;
 
-            cudaDeviceSynchronize();
+            cudaStreamSynchronize(cudaStreamLegacy);
             nvbio::cuda::check_error("select-multi kernel");
 
             timer.stop();
@@ -616,7 +613,7 @@ void Aligner::best_exact_score(
                 seed_data_dptr,
                 params );
 
-            cudaDeviceSynchronize();
+            cudaStreamSynchronize(cudaStreamLegacy);
             nvbio::cuda::check_error("locating kernel");
 
             timer.stop();
@@ -661,7 +658,7 @@ void Aligner::best_exact_score(
                     driver_data.genome_stream(),
                     params );
 
-                cudaDeviceSynchronize();
+                cudaStreamSynchronize(cudaStreamLegacy);
                 nvbio::cuda::check_error("score-multi kernel");
 
                 const ReduceBestExactContext reduce_context;
@@ -680,7 +677,7 @@ void Aligner::best_exact_score(
                     loc_queue_dptr,
                     params );
 
-                cudaDeviceSynchronize();
+                cudaStreamSynchronize(cudaStreamLegacy);
                 nvbio::cuda::check_error("score-multi-reduce kernel");
 
                 timer.stop();

@@ -722,7 +722,8 @@ void Aligner::best_approx_score(
 
         // this sync point seems very much needed: if we don't place it, we won't see
         // the right number of hits later on...
-        cudaDeviceSynchronize();
+        // (scoped to the default stream: equivalent today, and safe once extra streams exist)
+        cudaStreamSynchronize(cudaStreamLegacy);
 
         device_timer.stop();
         timer.stop();

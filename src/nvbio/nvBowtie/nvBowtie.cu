@@ -172,6 +172,7 @@ int main(int argc, char* argv[])
         log_info(stderr,"    --no-discordant                            [false]    do not allow discordant mates\n");
         log_info(stderr,"    --no-mixed                                 [false]    only report paired alignments\n");
         log_info(stderr,"    --ungapped-mates | -ug                                perform ungapped mate alignment\n");
+        log_info(stderr,"    --opposite-myers                            [true]   score opposite mates with the Myers bit-vector core (exact, faster)\n");
         log_info(stderr,"  Seeding:\n");
         log_info(stderr,"    --seed-len   | -L   int                    [22]       seed lengths\n");
         log_info(stderr,"    --seed-freq  | -i   {G|L|S},x,y                       seed interval, as x + y*func(read-len) (G=log,L=linear,S=sqrt)\n");

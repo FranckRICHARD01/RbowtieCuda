@@ -25,15 +25,63 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// NOTE: myers_opposite.h must precede every header pulling in score_opposite_inl.h:
+// aln::max_text_gaps is called with a qualified name there, so overload lookup freezes
+// at that definition point and would miss the Myers one.
+#include <nvbio/alignment/myers_opposite.h>
 #include <nvBowtie/bowtie2/cuda/score.h>
 #include <nvBowtie/bowtie2/cuda/score_opposite_impl.h>
 #include <nvBowtie/bowtie2/cuda/scoring.h>
 #include <nvBowtie/bowtie2/cuda/params.h>
 #include <nvbio/io/utils.h>
+#include <type_traits>
 
 namespace nvbio {
 namespace bowtie2 {
 namespace cuda {
+
+namespace {
+
+// tag-dispatch: only the edit-distance end-to-end aligner can be replaced by the
+// Myers bit-vector core; every other scheme keeps the legacy path untouched
+struct legacy_opposite_tag {};
+struct myers_opposite_tag {};
+
+template <typename aligner_type>
+struct opposite_selector { typedef legacy_opposite_tag tag; };
+
+template <typename algorithm_tag>
+struct opposite_selector< aln::EditDistanceAligner<aln::SEMI_GLOBAL,algorithm_tag> > {
+    typedef myers_opposite_tag tag;
+};
+
+template <typename pipeline_type, typename aligner_type>
+void run_e2e_opposite(
+    const pipeline_type&  pipeline,
+    const aligner_type&   aligner,
+    const ParamsPOD&      params,
+    legacy_opposite_tag)
+{
+    detail::opposite_score_best(pipeline, aligner, params);
+}
+
+template <typename pipeline_type, typename aligner_type>
+void run_e2e_opposite(
+    const pipeline_type&  pipeline,
+    const aligner_type&   aligner,
+    const ParamsPOD&      params,
+    myers_opposite_tag)
+{
+    if (params.opposite_myers) {
+        typedef aln::MyersOppositeAligner<aln::SEMI_GLOBAL, typename aligner_type::algorithm_tag> myers_aligner;
+        detail::opposite_score_best(pipeline, myers_aligner(), params);
+    }
+    else {
+        detail::opposite_score_best(pipeline, aligner, params);
+    }
+}
+
+} // anonymous namespace
 
 //
 // execute a batch of full-DP alignment score calculations for the opposite mates, best mapping
@@ -52,10 +100,12 @@ void gapped_opposite_score_best_t(
     }
     else
     {
-        detail::opposite_score_best(
+        typedef typename std::decay<decltype(pipeline.scoring_scheme.end_to_end_aligner())>::type e2e_aligner_type;
+        run_e2e_opposite(
             pipeline,
             pipeline.scoring_scheme.end_to_end_aligner(),
-            params );
+            params,
+            typename opposite_selector<e2e_aligner_type>::tag() );
     }
 }
 

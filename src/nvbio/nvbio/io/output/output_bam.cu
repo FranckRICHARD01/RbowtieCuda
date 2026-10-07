@@ -52,6 +52,7 @@ BamOutput::BamOutput(const char *file_name, AlignmentType alignment_type, BNT bn
     setvbuf(fp, NULL, _IOFBF, 256 * 1024);
 
     buffer_id = 0;
+    cache_warned = false;
 }
 
 BamOutput::~BamOutput()
@@ -398,7 +399,8 @@ uint32 BamOutput::process_one_alignment(AlignmentData& alignment, AlignmentData&
                 bnt.sequence_index + bnt.n_seqs,
                 mate.cigar_pos ) - bnt.sequence_index) - 1u;
 
-            alnh.next_refID = uint32(o_seq_index - seq_index);
+            // BAM stores an absolute reference id in rnext (see bam_format.h: -1 <= next_refID < n_ref)
+            alnh.next_refID = int32(o_seq_index);
             // next_pos here is equivalent to SAM's PNEXT,
             // but it's zero-based in BAM and one-based in SAM
             alnh.next_pos = int32( mate.cigar_pos - bnt.sequence_index[ o_seq_index ] );
@@ -568,6 +570,26 @@ void BamOutput::process(struct HostOutputBatchPE& batch)
     }
     iostats.n_reads += batch.count;
     iostats.output_process_timings.add( batch.count, time );
+}
+
+void BamOutput::processCacheWrites(struct HostOutputBatchSE& batch)
+{
+    if (!cache_warned)
+    {
+        cache_warned = true;
+        log_warning(stderr, "BAM output does not support --cache-writes, writing alignments directly\n");
+    }
+    process( batch );
+}
+
+void BamOutput::processCacheWrites(struct HostOutputBatchPE& batch)
+{
+    if (!cache_warned)
+    {
+        cache_warned = true;
+        log_warning(stderr, "BAM output does not support --cache-writes, writing alignments directly\n");
+    }
+    process( batch );
 }
 
 void BamOutput::write_block()

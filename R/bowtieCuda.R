@@ -267,6 +267,7 @@ nvBowtie_usage <- function() {
     # show(' --no-discordant [false] do not allow discordant mates')
     show("  --no-mixed                                 [false]    only report paired alignments")
     show("  --ungapped-mates | -ug                                perform ungapped mate alignment")
+    show("  --opposite-myers                           [true]    score opposite mates with the Myers bit-vector core (exact, faster)")
     show("Seeding:")
     show("  --seed-len   | -L   int                    [22]       seed lengths")
     show("  --seed-freq  | -i   {G|L|S},x,y                       seed interval, as x + y*func(read-len) (G=log,L=linear,S=sqrt)")
