@@ -80,6 +80,12 @@ public:
     ///
     void process(struct HostOutputBatchPE& batch);
 
+    // BAM has no text buffer to hand over to the shared write thread used by
+    // --cache-writes: writing through the inherited (empty) hook would silently
+    // drop every alignment, so write the batch directly instead.
+    void processCacheWrites(struct HostOutputBatchSE& batch);
+    void processCacheWrites(struct HostOutputBatchPE& batch);
+
     void close(void);
 
 private:
@@ -113,6 +119,9 @@ private:
     DataBuffer              data_buffers[BUFFERS];
     DataBuffer              compressed_buffers[BUFFERS];
     int32                   buffer_id;
+
+    // one-shot warning that --cache-writes cannot be honored for BAM
+    bool                    cache_warned;
 
     // our BGZF compressors
     BGZFCompressor bgzf[BUFFERS];

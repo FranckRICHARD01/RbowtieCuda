@@ -123,6 +123,7 @@ struct ParamsPOD
     uint32        max_batch_size;
     uint32        avg_read_length;
     bool          ungapped_mates;
+    bool          opposite_myers;     // score opposite mates with the Myers bit-vector core
 
     // paired-end options
     uint32        pe_policy;

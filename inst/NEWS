@@ -1,5 +1,17 @@
 CHANGES 
 -----------------------
+* 2026-10-07
+  RbowtieCuda version 1.4.4
+
+  - nvBowtie: faster paired-end opposite-mate scoring using a Myers bit-vector core, enabled by
+    default; use --opposite-myers 0 to restore the previous algorithm. Alignment output is
+    unchanged (bit-identical SAM records); the scoring stage is ~1.7x faster on GPU.
+  - CUDA architectures are auto-detected at build time (native code for the installed GPUs, with a
+    PTX fallback), replacing the previously hard-coded target.
+  - Faster host/GPU transfers through page-locked buffers and stream-scoped synchronisation.
+  - Faster BWT occurrence-table construction on CPU.
+
+  
 * 2026-05-08
   RbowtieCuda version 1.4.3
 

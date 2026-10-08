@@ -37,9 +37,58 @@
 #include <nvbio/basic/vector_view.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include <cuda_runtime.h>
+#include <mutex>
+#include <unordered_set>
 
 namespace nvbio {
 namespace nvbio_cuda {
+
+// page-lock a host memory range for the lifetime of the process, so that
+// subsequent DMA transfers to/from it run at full PCIe bandwidth. Idempotent
+// (keyed by base pointer). On failure (e.g. memlock ulimit) the error flag is
+// cleared and the buffer simply stays on the slower pageable path.
+inline void pin_host(void* ptr, uint64 bytes)
+{
+    if (ptr == NULL || bytes == 0u)
+        return;
+
+    // local statics of an inline function are shared across all translations units
+    static std::mutex g_pin_mtx;
+    static std::unordered_set<void*> g_pin_registered;
+
+    std::lock_guard<std::mutex> lock(g_pin_mtx);
+    if (g_pin_registered.count(ptr))
+        return;
+
+    cudaError_t err = cudaHostRegister(ptr, bytes, cudaHostRegisterDefault);
+    if (err == cudaSuccess)
+        g_pin_registered.insert(ptr);
+    else
+        (void)cudaGetLastError(); // clear the flag, fall back to pageable copies
+}
+
+template <typename T>
+inline void pin_host(thrust::host_vector<T>& v)
+{
+    if (!v.empty())
+        pin_host( &v[0], sizeof(T) * uint64(v.size()) );
+}
+
+// host<-device specialization: page-lock the destination before copying so the
+// transfer uses direct DMA instead of the staged pageable path
+template<typename T>
+static NVBIO_FORCEINLINE void thrust_copy_vector(thrust::host_vector<T>& target, thrust::device_vector<T>& source)
+{
+    if (target.size() != source.size())
+    {
+        target.clear();
+        target.resize(source.size());
+    }
+
+    pin_host( target );
+    thrust::copy(source.begin(), source.end(), target.begin());
+}
 
 // utility function to copy a thrust device vector to a thrust host vector
 // the sole reason for this is to eliminate warnings from thrust when using the assignment operator

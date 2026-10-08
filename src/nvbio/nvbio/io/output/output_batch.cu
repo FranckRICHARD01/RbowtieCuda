@@ -60,8 +60,8 @@ void HostOutputBatchPE::readback(const DeviceOutputBatchSE batch, const Alignmen
 // copy scoring data to host, converting to io::AlignmentResult
 void DeviceOutputBatchSE::readback_scores(thrust::host_vector<io::Alignment>& host_alignments) const
 {
-    // copy alignment data into a staging buffer
-    host_alignments = alignments;
+    // copy alignment data into a staging buffer (page-locked for full-bandwidth DMA)
+    nvbio::nvbio_cuda::thrust_copy_vector( host_alignments, alignments );
 }
 
 // copy CIGARs into host memory
@@ -80,14 +80,14 @@ void DeviceOutputBatchSE::readback_mds(nvbio::HostVectorArray<uint8>& host_mds) 
 // copy mapq back to the host
 void DeviceOutputBatchSE::readback_mapq(thrust::host_vector<uint8>& host_mapq) const
 {
-    host_mapq = mapq;
+    nvbio::nvbio_cuda::thrust_copy_vector( host_mapq, mapq );
 }
 
 // copy mapq back to the host
 void DeviceOutputBatchSE::readback_ids(thrust::host_vector<uint32>& host_ids) const
 {
     if (read_ids)
-        host_ids = *read_ids;
+        nvbio::nvbio_cuda::thrust_copy_vector( host_ids, *read_ids );
     else
         host_ids.resize(0);
 }

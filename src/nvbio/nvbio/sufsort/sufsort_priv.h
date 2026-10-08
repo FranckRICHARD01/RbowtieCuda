@@ -43,6 +43,7 @@
 #include <thrust/binary_search.h>
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/gather.h>
+#include <thrust/tuple.h>
 
 #if defined(PLATFORM_X86)
 #include <emmintrin.h>                              // SSE intrinsics

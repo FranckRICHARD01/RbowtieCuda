@@ -15,6 +15,13 @@
 #define DIM_SHARED 300
 #define WFA_BAND_LEN2_LIMIT_BAND 450
 #else
+// WFA_BAND_LEN_Y is the maximum score / edit distance the wavefront actually
+// computes (see WFA_MAX_SCORE): the loop breaks at
+// ss >= min(WFA_BAND_LEN2_LIMIT_BAND, WFA_MAX_SCORE) in wfah/wfah_inl.h.
+// WARNING: on that break no valid endpoint has been found (testEnd never hit),
+// yet create_back() still runs with the default alignment_k -> fabricated
+// alignments. Never lower these constants without first fixing that exit path
+// and re-validating against a full SAM diff.
 #define WFA_BAND_LEN_Y 60
 #define DIM_SHARED 15
 #define WFA_BAND_LEN2_LIMIT_BAND 50
