@@ -14,10 +14,20 @@ if you're having problems with the older version. Use the default version first.
 
 An additional script, called check_requirements.sh, verifies your installation and determines if everything went smoothly.
 
-The default architecture supported by nvBowtie is Pascal (sm_60). However, you can modify this parameter
-by editing src/nvbio/CMakefile.txt. Ensure that the selected architecture is compatible with the
-installed version of the CUDA software suite. Refer to the compatibility guide for NVIDIA cards here:
-(https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards). 
+Architecture handling (auto-detection + PTX fallback):
+By default nvBowtie auto-detects the GPU(s) on the build host via nvidia-smi and compiles native SASS
+for each detected compute capability, PLUS a PTX JIT fallback for the oldest architecture supported by
+the installed CUDA toolkit. The resulting fatbin therefore runs natively on the build GPU and via driver
+JIT on any other GPU at or above that floor, so a package built on one card works across varied GPUs.
+
+Floor (oldest target) by toolkit: CUDA 13.x -> sm_75 (Turing); CUDA <= 12.x -> sm_70 (Volta).
+Note: CUDA 13 removed Pascal/Maxwell/Volta, so nvcc 13 rejects sm_60/sm_70 targets outright.
+
+To override auto-detection, set CMAKE_CUDA_ARCHITECTURES when configuring src/nvbio, e.g.:
+    cmake -DCMAKE_CUDA_ARCHITECTURES="120;75-virtual" ..
+(native sm_120 SASS + compute_75 PTX JIT fallback). Keep at least one "-virtual"/PTX entry for portability.
+Refer to the NVIDIA compatibility guide for matching cards:
+(https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards).
 
 It is also necessary to install the thrust and cub libraries by typing in a terminal :
 sudo apt install libthrust-dev libcub-dev
@@ -54,3 +64,23 @@ https://visualstudio.microsoft.com/en/downloads/
 ** Note: Compilation on Windows **
 
 The package compilation process on Windows can be lengthy (up to 15 minutes).
+
+________________ Recommended runtime options _________________
+
+For paired-end FASTQ workloads, we recommend running nvBowtie with:
+
+    --cache-writes --batch-size 2048
+
+This overlaps output writing with GPU compute through a dedicated write thread.
+Measured on a mouse dataset (5M read pairs, GRCm39 index, RTX 5070, SATA SSD):
+total wall time drops from ~36 s to ~28 s (compute ~20 s + index load ~4 s + I/O).
+
+Notes:
+- Index load is ~4 s per call (bwt/rbwt/occ/ssa); the occurrence tables are built on the fly
+  (~1.3 s each). Reusing a warm OS page cache between calls keeps this low.
+- SAM output for 5M pairs is ~3.4 GB; plan disk space accordingly. Writing to tmpfs (e.g. /tmp)
+  avoids the write tax when the SAM file is consumed immediately downstream.
+- BAM output (-S out.bam) is supported and bit-exact with the SAM records, but currently slower
+  overall (~41 s vs ~28 s on the same run): BGZF compression happens inline instead of on the
+  shared write thread. Prefer SAM unless BAM size is the bottleneck.
+

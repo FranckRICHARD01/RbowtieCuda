@@ -144,6 +144,7 @@ namespace nvbio
                         i.first != "min-read-len" &&
                         i.first != "ungapped-mates" &&
                         i.first != "ug" &&
+                        i.first != "opposite-myers" &&
                         i.first != "nofw" &&
                         i.first != "norc" &&
                         i.first != "all" &&
@@ -229,6 +230,7 @@ namespace nvbio
                 params.top_seed = uint_option(options, "top", init ? 0u : params.top_seed);                              // explore top seed entirely
                 params.min_read_len = uint_option(options, "min-read-len", init ? 12u : params.min_read_len);            // minimum read length
                 params.ungapped_mates = bool_option(options, "ungapped-mates", "ug", init ? 0u : params.ungapped_mates); // ungapped mate alignment
+                params.opposite_myers = bool_option(options, "opposite-myers", init ? 1u : params.opposite_myers);       // Myers bit-vector opposite-mate scoring (default on since Gate A x2)
                 params.fw = !bool_option(options, "nofw", init ? false : !params.fw);                                    // fw alignment
                 params.rc = !bool_option(options, "norc", init ? false : !params.rc);                                    // rc alignment
 
@@ -313,6 +315,17 @@ namespace nvbio
                     if (params.scoring_mode == WfaMode)              
                     sc.wfa = local ? WfaScoringScheme<>::local() : WfaScoringScheme<>();
                 }
+
+                // Both the ED and the WFA scorers report one unit of cost per penalty --
+                // the wavefront charges one unit whatever the scheme asks (see the wfah
+                // engines) and the windows the wavefront cannot wave fall back to the
+                // edit-distance banded DP -- so the admissible-score cut must follow
+                // --max-dist in that same unit scale in both modes. Without it the WFA
+                // mode keeps the -15.0f of its ctor whatever --max-dist says, and raising
+                // --max-dist maps not one read more. An explicit --score-min, applied
+                // just below, still has the last word.
+                if (params.scoring_mode == WfaMode)
+                        sc.wfa.m_score_min = SimpleFunc( SimpleFunc::LinearFunc, -(float)params.max_dist, 0.0f );
 
                 // load scoring scheme from file
                 if (params.scoring_file != "")

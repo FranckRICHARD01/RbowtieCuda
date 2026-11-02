@@ -37,9 +37,83 @@
 #include <nvbio/basic/vector_view.h>
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
+#include <cuda_runtime.h>
+#include <mutex>
+#include <unordered_map>
 
 namespace nvbio {
 namespace nvbio_cuda {
+
+// page-lock a host memory range for the lifetime of the process, so that
+// subsequent DMA transfers to/from it run at full PCIe bandwidth. Idempotent,
+// and size-aware: a range already registered at a smaller span is dropped and
+// re-registered at the requested span. thrust host buffers grow by freeing and
+// remapping a new block, often at the same malloc address; if a base pointer
+// already in the table is reused for a larger span, the stale registration
+// would leave the tail unregistered and the next cudaMemcpyAsync() on it would
+// fail with cudaErrorInvalidValue (crashes seen in the paired-end pipeline).
+// On failure (e.g. memlock ulimit) the error flag is cleared and the buffer
+// simply stays on the slower pageable path.
+inline void pin_host(void* ptr, uint64 bytes)
+{
+    if (ptr == NULL || bytes == 0u)
+        return;
+
+    // local statics of an inline function are shared across all translations units
+    static std::mutex g_pin_mtx;
+    static std::unordered_map<void*, uint64> g_pin_registered;
+
+    std::lock_guard<std::mutex> lock(g_pin_mtx);
+    std::unordered_map<void*, uint64>::iterator it = g_pin_registered.find(ptr);
+    if (it != g_pin_registered.end() && it->second >= bytes)
+        return;
+
+    if (it != g_pin_registered.end())
+    {
+        // same base pointer, now holding a larger span: drop the stale
+        // registration before re-registering at the new size
+        (void)cudaHostUnregister(ptr);
+        (void)cudaGetLastError(); // clear the flag
+        g_pin_registered.erase(it);
+    }
+
+    cudaError_t err = cudaHostRegister(ptr, bytes, cudaHostRegisterDefault);
+    if (err == cudaErrorHostMemoryAlreadyRegistered)
+    {
+        // a stale registration from a previous life of this buffer may still
+        // cover part of the range: drop it and retry at the requested span
+        (void)cudaHostUnregister(ptr);
+        (void)cudaGetLastError(); // clear the flag
+        err = cudaHostRegister(ptr, bytes, cudaHostRegisterDefault);
+    }
+
+    if (err == cudaSuccess)
+        g_pin_registered[ptr] = bytes;
+    else
+        (void)cudaGetLastError(); // clear the flag, fall back to pageable copies
+}
+
+template <typename T>
+inline void pin_host(thrust::host_vector<T>& v)
+{
+    if (!v.empty())
+        pin_host( &v[0], sizeof(T) * uint64(v.size()) );
+}
+
+// host<-device specialization: page-lock the destination before copying so the
+// transfer uses direct DMA instead of the staged pageable path
+template<typename T>
+static NVBIO_FORCEINLINE void thrust_copy_vector(thrust::host_vector<T>& target, thrust::device_vector<T>& source)
+{
+    if (target.size() != source.size())
+    {
+        target.clear();
+        target.resize(source.size());
+    }
+
+    pin_host( target );
+    thrust::copy(source.begin(), source.end(), target.begin());
+}
 
 // utility function to copy a thrust device vector to a thrust host vector
 // the sole reason for this is to eliminate warnings from thrust when using the assignment operator

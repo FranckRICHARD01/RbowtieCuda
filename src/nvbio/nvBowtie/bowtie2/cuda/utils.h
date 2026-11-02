@@ -38,7 +38,7 @@ namespace cuda {
 inline void optional_device_synchronize()
 {
 #if DO_OPTIONAL_SYNCHRONIZE
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(cudaStreamLegacy);
 #endif
 }
 

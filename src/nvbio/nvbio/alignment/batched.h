@@ -75,6 +75,28 @@ struct DeviceStagedThreadScheduler {};
 ///
 struct DeviceWarpScheduler {};
 
+/// Select the scheduler of a batched stage from the aligner it drives : a Wfah
+/// aligner takes the WFA_MIN_BLOCKS occupancy hint (see alignment/wfa.h), any
+/// other aligner keeps exactly the scheduler the stage asks for, so the other
+/// engines' kernels stay the same instantiation.  The block dimension is the
+/// one every score stage of this pipeline uses (the WFA_BLOCKDIM of the
+/// wavefront launcher is kept in sync with it).
+///
+/// \tparam WFA_MIN_BLOCKS_T     occupancy hint for the Wfah kernels
+/// \tparam MINBLOCKS_T          the occupancy hint the stage would use anyway
+/// \tparam aligner_tag          the aligner tag of the stage's stream
+template <uint32 WFA_MIN_BLOCKS_T, uint32 MINBLOCKS_T, typename aligner_tag>
+struct WfaBlockSchedulerPick
+{
+    typedef DeviceThreadBlockScheduler<128, MINBLOCKS_T> type;
+};
+
+template <uint32 WFA_MIN_BLOCKS_T, uint32 MINBLOCKS_T>
+struct WfaBlockSchedulerPick<WFA_MIN_BLOCKS_T, MINBLOCKS_T, WfahTag>
+{
+    typedef DeviceThreadBlockScheduler<128, WFA_MIN_BLOCKS_T> type;
+};
+
 template <typename T,typename Scheduler>
 struct supports_scheduler { static const bool pred = false; };
 

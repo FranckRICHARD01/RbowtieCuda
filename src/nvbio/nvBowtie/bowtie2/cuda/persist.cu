@@ -188,9 +188,8 @@ void persist_selection(
         uint32* link_hptr       =          thrust::raw_pointer_cast( &link_hvec.front() );
         uint32* read_infos_hptr = (uint32*)thrust::raw_pointer_cast( &read_infos_hvec.front() );
 
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(cudaStreamLegacy);
         cudaMemcpy( read_infos_hptr,   read_infos_dptr,    read_count  * sizeof(uint32),    cudaMemcpyDeviceToHost );
-        cudaDeviceSynchronize();
 
         // sort the reads so as to show everything in the same order all the times
         thrust::copy(
@@ -233,9 +232,8 @@ void persist_selection(
 
         uint32* read_infos_hptr = (uint32*)thrust::raw_pointer_cast( &read_infos_hvec.front() );
 
-        cudaDeviceSynchronize();
+        cudaStreamSynchronize(cudaStreamLegacy);
         cudaMemcpy( read_infos_hptr,   read_infos_dptr,    read_count  * sizeof(uint32),    cudaMemcpyDeviceToHost );
-        cudaDeviceSynchronize();
 
         // sort the reads so as to show everything in the same order all the times
         thrust::copy(

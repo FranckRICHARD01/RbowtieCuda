@@ -43,33 +43,83 @@ namespace bowtie2 {
 namespace cuda {
 
 
+//
+// Enqueue a fully read-back host batch to the writer-thread queue.
+// The batch is deep-copied into a ring slot: the writer thread formats and
+// writes it asynchronously, while the compute thread recycles its scratch
+// buffers and the input thread recycles the read storage for this batch.
+//
+void OutputThreadSE::submit( io::HostOutputBatchSE& cpu_batch)
+{
+    std::unique_lock<std::mutex> lock( m_queue_lock );
+
+    m_cv_free.wait( lock, [this](){ return !m_free_idx.empty(); });
+
+    const uint32 idx = m_free_idx.front();
+    m_free_idx.pop_front();
+
+    QueueSlot& slot = m_slots[idx];
+
+    slot.batch  = cpu_batch;             // deep copy of the host output-batch containers
+    slot.reads  = *cpu_batch.read_data;  // deep copy of the host read storage for this batch
+    slot.batch.read_data = &slot.reads;  // bind the batch views to the slot-owned storage
+
+    m_ready_idx.push_back( idx );
+
+    lock.unlock();
+    m_cv_ready.notify_one();
+}
+
+//
+// Mark the queue closed: wakes the writer thread, which drains any remaining
+// published batches before exiting; a subsequent join() then returns.
+//
+void OutputThreadSE::close_and_drain()
+{
+    {
+        std::lock_guard<std::mutex> lock( m_queue_lock );
+        m_closed = true;
+    }
+    m_cv_ready.notify_all();
+    m_cv_free.notify_all();
+}
+
 void OutputThreadSE::run()
 {
-   log_verbose( stderr, "starting background output thread\n" );
+    log_verbose( stderr, "starting background output thread\n" );
 
-   while ( !write_thread_data )
-   {
-        std::this_thread::sleep_for(std::chrono::microseconds(1));
-   }
-
-   try
-   {
-        while (!stop_thread)
+    try
+    {
+        while (true)
         {
-            if ( write_thread_data &&  write_thread_data[0] != 0 )
+            uint32 idx = 0;
             {
-                log_debug(stderr, "      writing output file.\n");
+                std::unique_lock<std::mutex> lock( m_queue_lock );
 
-                fwrite(write_thread_data, 1, write_thread_data_size, fp);
-            
-                write_thread_data[0]=0;
-            }   
+                m_cv_ready.wait( lock, [this](){ return !m_ready_idx.empty() || m_closed; });
 
-            if (write_thread_data)
+                if ( m_ready_idx.empty() && m_closed )
+                    break;
+
+                idx = m_ready_idx.front();
+                m_ready_idx.pop_front();
+            }
+
+            QueueSlot& slot = m_slots[idx];
+
+            //
+            // The writer thread is the only one touching the output file: it
+            // formats the SAM records and writes them in batch-submission
+            // order, preserving the exact ordering of the synchronous path.
+            //
+            if ( output_file )
+                output_file->process( slot.batch );
+
             {
-                delete [] write_thread_data;
-                write_thread_data = nullptr;
-            }       
+                std::lock_guard<std::mutex> lock( m_queue_lock );
+                m_free_idx.push_back( idx );
+            }
+            m_cv_free.notify_one();
         }
 
         log_verbose( stderr, "stop background output thread\n" );
@@ -115,15 +165,6 @@ void OutputThreadSE::run()
         log_error(stderr, "caught an unknown exception!\n");
         exit(1);
     }
-}
-
-// release a batch
-//
-void OutputThreadSE::release()
-{
-    // push back to the free pool
-    ScopedLock lock( &m_free_pool_lock );
-    //m_free_pool.push( write_data );
 }
 
 

@@ -30,6 +30,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
 namespace nvbio {
 namespace io {
@@ -49,12 +50,16 @@ SamOutput::SamOutput(const char *file_name, AlignmentType alignment_type, BNT bn
     // this makes sure small fwrites do not land on disk straight away
     // (256kb was chosen based on the default stripe size for Linux mdraid RAID-5 volumes)
     setvbuf(fp, NULL, _IOFBF, 256 * 1024);   
+
+    // the buffered record sink starts empty (it is allocated on first use)
+    text_pos = 0u;
 }
 
 SamOutput::~SamOutput()
 {
     if (fp && fp != stdout)
     {
+        text_flush();
         fflush(fp);
         fclose(fp);
         fp = NULL;
@@ -199,6 +204,80 @@ void SamOutput::linebreak(char * result)
 void SamOutput::linebreak(void)
 {
     fwrite("\n", 1, 1, fp);
+}
+
+// ---------------------------------------------------------------------------
+// buffered record path helpers ; see the comment in output_sam.h.  These append
+// to a per-instance sink instead of calling stdio per field, and the record is
+// flushed as one fwrite.  Only process()/process_one_alignment() use them, and
+// they are already serialized by the output mutex, so the sink needs no other
+// guard than that mutex.
+// ---------------------------------------------------------------------------
+void SamOutput::text_reserve(uint32 n)
+{
+    if (text_pos + n <= (uint32)text_sink.size())
+        return;
+    uint32 cap = (uint32)text_sink.size();
+    cap = (cap < 64u * 1024u) ? 64u * 1024u : cap;
+    while (text_pos + n > cap)
+        cap *= 2u;
+    text_sink.resize(cap);
+}
+
+void SamOutput::text_flush()
+{
+    if (fp && text_pos)
+        fwrite(&text_sink[0], 1, text_pos, fp);
+    text_pos = 0u;
+}
+
+void SamOutput::text_flush_if_full()
+{
+    if (text_pos >= 128u * 1024u)
+        text_flush();
+}
+
+void SamOutput::append_string(const char *str, bool tab)
+{
+    const uint32 len = (uint32)strlen(str);
+    text_reserve(len + 2u);
+    if (tab)
+        text_sink[text_pos++] = '\t';
+    memcpy(&text_sink[0] + text_pos, str, len);
+    text_pos += len;
+}
+
+template<typename T>
+void SamOutput::append_int(T i, bool tab)
+{
+    char str[32];
+    const int len = itoa(str, i);
+    text_reserve((uint32)len + 2u);
+    if (tab)
+        text_sink[text_pos++] = '\t';
+    memcpy(&text_sink[0] + text_pos, str, len);
+    text_pos += len;
+}
+
+template<typename T>
+void SamOutput::append_tag(const char *name, T value)
+{
+    append_string(name);
+    append_string(":i:", false);
+    append_int(value, false);
+}
+
+void SamOutput::append_tag(const char *name, const char *value)
+{
+    append_string(name);
+    append_string(":Z:", false);
+    append_string(value, false);
+}
+
+void SamOutput::append_linebreak()
+{
+    text_reserve(2u);
+    text_sink[text_pos++] = '\n';
 }
 
 void SamOutput::output_header(void)
@@ -414,8 +493,8 @@ void SamOutput::output_alignment(char* result, const struct SamAlignment& sam_al
 // output a SAM alignment (but not tags)
 void SamOutput::output_alignment(const struct SamAlignment& sam_align)
 {
-    write_string(sam_align.qname, false);
-    write_int((uint32)sam_align.flags);
+    append_string(sam_align.qname, false);
+    append_int((uint32)sam_align.flags);
 
 //    log_verbose(stderr, "%s: ed(NM)=%d score(AS)=%d second_score(XS)=%d mm(XM)=%d gapo(XO)=%d gape(XG)=%d\n",
 //                sam_align.qname,
@@ -423,45 +502,47 @@ void SamOutput::output_alignment(const struct SamAlignment& sam_align)
     if (sam_align.flags & SAM_FLAGS_UNMAPPED)
     {
         // output * or 0 for every other required field
-        write_string("*\t0\t0\t*\t*\t0\t0");
-        write_string(sam_align.seq);
-        write_string(sam_align.qual);
+        append_string("*\t0\t0\t*\t*\t0\t0");
+        append_string(sam_align.seq);
+        append_string(sam_align.qual);
 
-        linebreak();
+        append_linebreak();
+        text_flush_if_full();
 
         return;
     }
 
-    write_string(sam_align.rname);
-    write_int(sam_align.pos);
-    write_int(sam_align.mapq);
-    write_string(sam_align.cigar);
+    append_string(sam_align.rname);
+    append_int(sam_align.pos);
+    append_int(sam_align.mapq);
+    append_string(sam_align.cigar);
 
     if (sam_align.rnext)
-        write_string(sam_align.rnext);
+        append_string(sam_align.rnext);
     else
-        write_string("*");
+        append_string("*");
 
-    write_int(sam_align.pnext);
-    write_int(sam_align.tlen);
+    append_int(sam_align.pnext);
+    append_int(sam_align.tlen);
 
-    write_string(sam_align.seq);
-    write_string(sam_align.qual);
+    append_string(sam_align.seq);
+    append_string(sam_align.qual);
 
-    write_tag("NM", sam_align.ed);
-    write_tag("AS", sam_align.score);
+    append_tag("NM", sam_align.ed);
+    append_tag("AS", sam_align.score);
     if (sam_align.second_score_valid)
-        write_tag("XS", sam_align.second_score);
+        append_tag("XS", sam_align.second_score);
 
-    write_tag("XM", sam_align.mm);
-    write_tag("XO", sam_align.gapo);
-    write_tag("XG", sam_align.gape);
+    append_tag("XM", sam_align.mm);
+    append_tag("XO", sam_align.gapo);
+    append_tag("XG", sam_align.gape);
     if (sam_align.md_string[0])
-        write_tag("MD", sam_align.md_string);
+        append_tag("MD", sam_align.md_string);
     else
-        write_tag("MD", "*");
+        append_tag("MD", "*");
 
-    linebreak();
+    append_linebreak();
+    text_flush_if_full();
 }
 
 uint32 SamOutput::process_one_alignment(const AlignmentData& alignment,
@@ -742,6 +823,7 @@ void SamOutput::processCacheWrites(struct HostOutputBatchPE& batch)
 
 void SamOutput::close(void)
 {
+    text_flush();
     fflush(fp);
     fclose(fp);
     fp = NULL;

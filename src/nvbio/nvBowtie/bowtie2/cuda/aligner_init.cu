@@ -146,14 +146,31 @@ bool Aligner::init_alloc(const uint32 BATCH_SIZE, const Params& params, const En
 
     if (params.scoring_mode == WfaMode)
     {
-        if (do_alloc)
         {
-            log_verbose(stderr, "[%u]     allocating %3.1f MB of wfa storage  (BATCH=%d)\n",
-            ID, (3.0f * (DIM_Y_SHARED + 2.0f * WFA_BAND_LEN2_Y)  + WFA_BAND_LEN2_Y) * (float)sizeof(int16) * (BATCH_SIZE + 1.0f) / (1024.0f * 1024.0f), BATCH_SIZE);
-        }
+            // One slot per live wavefront thread rather than one per read: the
+            // banded score kernel runs a persistent launch clamped to WFA_MAX_BLOCKS
+            // blocks (batched_banded_inl.h), so a thread reuses its own slot over the
+            // hits it owns and the footprint is constant whatever the batch size --
+            // and whatever the hit-queue size, which in the paired case goes over
+            // BATCH_SIZE.  Lowering WFA_MAX_BLOCKS trades wavefront occupancy for
+            // memory; it is the only thing left that scales the wavefront footprint.
+            const uint32 b = (uint32)WFA_SLOT_COUNT;
 
-        {
-            uint32 b = (BATCH_SIZE + 1);
+            if (do_alloc)
+            {
+                log_verbose(stderr, "[%u]     allocating %3.1f MB of wfa storage  (%u slots for BATCH=%d)\n",
+                ID, (3.0f * (DIM_Y_SHARED + 2.0f * WFA_BAND_LEN2_Y)  + WFA_BAND_LEN2_Y) * (float)sizeof(int16) * (float)b / (1024.0f * 1024.0f), b, BATCH_SIZE);
+
+                // the envelope the scoring stages hand to the wavefront from --max-dist :
+                // a band of that half-width around the anchor diagonal, and one wavefront
+                // step per tolerated penalty ; printed here so a run says what it bounded
+                uint32 wf_band   = (params.max_dist < (uint32)DIM_SHARED2) ? params.max_dist : (uint32)DIM_SHARED2;
+                uint32 wf_budget = (params.max_dist + 1u < (uint32)WFA_BAND_LEN2_LIMIT_BAND)
+                                       ? params.max_dist + 1u : (uint32)WFA_BAND_LEN2_LIMIT_BAND;
+                log_verbose(stderr, "[%u]     wfa wavefront envelope : band +-%u, budget %u wavefronts (--max-dist %u)\n",
+                ID, wf_band, wf_budget, params.max_dist);
+            }
+
             wfa_H_dptr = resize(do_alloc, wfa_H_dvec, DIM_Y_SHARED * b, d_allocated_bytes);
             wfa_H_lo_dptr = resize(do_alloc, wfa_H_lo_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
             wfa_H_hi_dptr = resize(do_alloc, wfa_H_hi_dvec, WFA_BAND_LEN2_Y * b, d_allocated_bytes);
@@ -215,21 +232,24 @@ bool Aligner::init_alloc(const uint32 BATCH_SIZE, const Params& params, const En
 
         const uint64 min_dp_storage = 64*1024*1024; // minimum amount of DP storage
 
+        // the io::SequenceDataDevice objects holding each batch of reads are allocated
+        // in the processing loop, after these buffers: reserve their estimated footprint
+        // (offsets + packed bps + quals + names) upfront, otherwise a large batch can
+        // exhaust device memory mid-processing (cudaErrorMemoryAllocation at mapping)
+        const uint64 reads_transient =
+            uint64( BATCH_SIZE ) * ( 2ull * params.avg_read_length + 32ull ) * (type == kPairedEnds ? 2u : 1u);
+
         if (do_alloc)
             cudaMemGetInfo(&free, &total);
-        else if (free >= d_allocated_bytes + guard_band + min_dp_storage)
-            {
-                free -= d_allocated_bytes;
-                        
-            }
+        else if (free >= d_allocated_bytes + guard_band + min_dp_storage + reads_transient)
+            free -= d_allocated_bytes;
         else
             return false;
 
-            if (params.scoring_mode == WfaMode)
-                {
-                    if (free >= d_allocated_bytes + guard_band + min_dp_storage)
-                        return false;
-                }        
+        // keep the per-batch read buffers out of the DP pool in both paths
+        if (free < reads_transient + guard_band + min_dp_storage)
+            return false;
+        free -= reads_transient;
 
         const uint32 free_words    = uint32( free / 4u );
         const uint32 min_free_words = uint32( guard_band / 4u );
@@ -276,7 +296,20 @@ bool Aligner::init(const uint32 id, const uint32 batch_size, const Params& param
             mem_stats.first / (1024*1024),
             mem_stats.second / (1024*1024) );
 
-        init_alloc( batch_size, params, type, true, &mem_stats );
+        Timer alloc_timer;
+        alloc_timer.start();
+        if (!init_alloc( batch_size, params, type, true, &mem_stats ))
+        {
+            log_error(stderr, "[%u]   allocating alignment buffers failed!\n", ID);
+            return false;
+        }
+        alloc_timer.stop();
+        log_info(stderr, "[%u]   [time] device buffer allocation: %.2f s\n", ID, alloc_timer.seconds());
+
+        size_t free_bytes, total_bytes;
+        cudaMemGetInfo(&free_bytes, &total_bytes);
+        log_verbose(stderr, "[%u]     device free after static allocation: %lu MB\n",
+            ID, free_bytes / (1024*1024) );
 
         log_stats(stderr, "[%u]   allocating alignment buffers... done\n[%u]     allocated: HOST %lu MB, DEVICE %lu MB)\n",
             ID,
@@ -380,7 +413,7 @@ void Aligner::keep_stats(const uint32 count, Stats& stats)
         nvbio::device_view( hit_deques.counts() ),
         hits_stats_dptr );
 
-    cudaDeviceSynchronize();
+    cudaStreamSynchronize(cudaStreamLegacy);
     nvbio::nvbio_cuda::check_error("hit stats kernel");
 
     nvbio::nvbio_cuda::thrust_copy_vector(hits_stats_hvec, hits_stats_dvec);

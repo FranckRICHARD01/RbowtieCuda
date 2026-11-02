@@ -52,6 +52,7 @@
 #include <nvbio/basic/atomics.h>
 #include <nvbio/basic/html.h>
 #include <nvbio/basic/version.h>
+#include <nvbio/basic/vector.h>
 #include <nvbio/fmindex/bwt.h>
 #include <nvbio/fmindex/ssa.h>
 #include <nvbio/fmindex/fmindex.h>
@@ -144,6 +145,18 @@ uint32 ComputeThreadSE::gauge_batch_size()
     return BATCH_SIZE;
 }
 
+// page-lock the host-side read streams so that the per-batch HtoD upload runs
+// at full DMA bandwidth; the local batch objects are reused across batches, so
+// their buffers keep stable addresses and registration is paid once
+static void pin_sequence_host(io::SequenceDataHost& d)
+{
+    nvbio::nvbio_cuda::pin_host( d.m_sequence_vec );
+    nvbio::nvbio_cuda::pin_host( d.m_sequence_index_vec );
+    nvbio::nvbio_cuda::pin_host( d.m_qual_vec );
+    nvbio::nvbio_cuda::pin_host( d.m_name_vec );
+    nvbio::nvbio_cuda::pin_host( d.m_name_index_vec );
+}
+
 void ComputeThreadSE::do_run()
 {
     log_visible(stderr, "[%u] nvBowtie cuda driver... started\n", thread_id);
@@ -215,8 +228,6 @@ void ComputeThreadSE::do_run()
     io::SequenceDataHost   local_read_data_host;
     io::HostOutputBatchSE  local_output_batch_host;
 
-    if (params.cache_writes)
-        output_threadSE->createCache();
 
     // loop through the batches of reads
     while (1)
@@ -257,11 +268,16 @@ void ComputeThreadSE::do_run()
         //aligner.output_file->start_batch( &local_read_data_host );
         local_output_batch_host.read_data = &local_read_data_host;
 
+        pin_sequence_host( local_read_data_host );
         io::SequenceDataDevice read_data( local_read_data_host );
-        cudaDeviceSynchronize();
+        // no device-wide sync needed: the SequenceDataDevice upload uses blocking thrust
+        // copies (same as the PE path below), and subsequent kernels are stream-ordered.
 
         timer.stop();
         stats.read_HtoD.add( read_data.size(), timer.seconds() );
+
+        cudaMemGetInfo(&free, &total);
+        log_verbose(stderr, "[%u]   device free after reads upload: %lu MB\n", thread_id, free / (1024*1024));
 
         const uint32 count = read_data.size();
         log_info(stderr, "[%u] aligning reads [%u, %u]\n", thread_id, read_begin, read_begin + count - 1u);
@@ -358,8 +374,8 @@ void ComputeThreadSE::do_run()
         log_verbose(stderr, "[%u]   %.1f K reads/s\n", thread_id, 1.0e-3f * float(n_reads) / stats.global_time);
     }
 
-    if (params.cache_writes)
-        output_threadSE->stop_thread = true;
+    // writer-queue mode: the writer thread is drained by the main thread
+    // (close_and_drain() + join() in nvBowtie.cu, after compute-thread joins).
 
     global_timer.stop();
     stats.global_time += global_timer.seconds();
@@ -627,11 +643,16 @@ void ComputeThreadPE::do_run()
         local_output_batch_host.read_data[0] = &local_read_data_host1;
         local_output_batch_host.read_data[1] = &local_read_data_host2;
 
+        pin_sequence_host( local_read_data_host1 );
+        pin_sequence_host( local_read_data_host2 );
         io::SequenceDataDevice read_data1( local_read_data_host1/*, io::ReadDataDevice::READS | io::ReadDataDevice::QUALS*/ );
         io::SequenceDataDevice read_data2( local_read_data_host2/*, io::ReadDataDevice::READS | io::ReadDataDevice::QUALS*/ );
 
         timer.stop();
         stats.read_HtoD.add( read_data1.size(), timer.seconds() );
+
+        cudaMemGetInfo(&free, &total);
+        log_verbose(stderr, "[%u]   device free after reads upload: %lu MB\n", thread_id, free / (1024*1024));
 
         const uint32 count = read_data1.size();
         log_info(stderr, "[%u] aligning reads [%u, %u]\n", thread_id, read_begin, read_begin + count - 1u);

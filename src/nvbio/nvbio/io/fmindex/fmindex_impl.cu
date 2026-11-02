@@ -32,6 +32,7 @@
 #include <nvbio/basic/exceptions.h>
 #include <nvbio/basic/dna.h>
 #include <nvbio/basic/packedstream.h>
+#include <nvbio/basic/popcount.h>
 #include <nvbio/basic/vector.h>
 #include <nvbio/fmindex/bwt.h>
 #include <nvbio/fmindex/ssa.h>
@@ -259,6 +260,143 @@ uint32* load_sa(
     return ssa;
 }
 
+// Fast occurrence table builder for the 2-bit packed BWT stream.
+//
+// Counts symbols with pop-counts over whole packed words (an occurrence block
+// spans an integer number of words), then turns the per-block local counts into
+// global counters with a chunked prefix scan, parallelized with OpenMP when
+// available. Results are bit-identical to the symbol-by-symbol
+// nvbio::build_occurrence_table<BWT_BITS,OCC_INT>.
+//
+static void build_occurrence_table_dna(
+    const uint32* bwt_words,
+    const uint32  seq_length,
+    uint32*       occ,
+    uint32        cnt[4])
+{
+    typedef PackedStream<const uint32*,uint8,FMIndexDataCore::BWT_BITS,FMIndexDataCore::BWT_BIG_ENDIAN> stream_type;
+
+    static const uint32 K          = FMIndexDataCore::OCC_INT;                  // symbols per occurrence block
+    static const uint32 SYMS_WORD  = FMIndexDataCore::BWT_SYMBOLS_PER_WORD;     // symbols per packed word
+
+    static_assert( FMIndexDataCore::BWT_BITS == 2u, "fast occurrence builder expects a 2-bit BWT" );
+    static_assert( K % SYMS_WORD == 0u, "occurrence interval must span whole packed words" );
+
+    const uint32 n_blocks   = util::divide_ri( seq_length, K );
+    const uint32 wpb        = K / SYMS_WORD;        // packed words per occurrence block
+    const uint32 full_words = seq_length / SYMS_WORD;
+
+    stream_type bwt( bwt_words );
+
+    // pass 1: local symbol counts for each occurrence block
+    #if defined(_OPENMP)
+    #pragma omp parallel for schedule(static)
+    #endif
+    for (int64 b = 0; b < int64( n_blocks ); ++b)
+    {
+        const uint32 w0 = uint32(b) * wpb;
+        const uint32 w1 = w0 + wpb;
+
+        // pop-count the words fully covered by the sequence
+        const uint32 wf   = nvbio::min( w1, full_words );
+        uint32 c0 = 0u, c1 = 0u, c2 = 0u, c3 = 0u;
+        for (uint32 w = w0; w < wf; ++w)
+        {
+            const uint32 word = bwt_words[w];
+            c0 += popc_2bit( word, 0 );
+            c1 += popc_2bit( word, 1 );
+            c2 += popc_2bit( word, 2 );
+            c3 += popc_2bit( word, 3 );
+        }
+
+        // the last block may end in the middle of a packed word: read its
+        // remaining symbols through the stream so padding is not counted.
+        const uint32 s1 = nvbio::min( w1 * SYMS_WORD, seq_length );
+        for (uint32 s = wf * SYMS_WORD; s < s1; ++s)
+        {
+            const uint8 sym = bwt[s];
+            c0 += (sym == 0u);
+            c1 += (sym == 1u);
+            c2 += (sym == 2u);
+            c3 += (sym == 3u);
+        }
+
+        occ[ b*4 + 0 ] = c0;
+        occ[ b*4 + 1 ] = c1;
+        occ[ b*4 + 2 ] = c2;
+        occ[ b*4 + 3 ] = c3;
+    }
+
+    // pass 2: exclusive prefix scan over the blocks, chunked so threads only
+    // serialize on the (tiny) table of chunk carries.
+    uint32 n_chunks = 1u;
+#if defined(_OPENMP)
+    n_chunks = uint32( omp_get_max_threads() );
+#endif
+    n_chunks = nvbio::min( n_chunks, n_blocks );
+    if (n_chunks == 0u)
+        n_chunks = 1u;
+
+    std::vector<uint64> chunk_sum(   n_chunks * 4, 0u );
+    std::vector<uint64> chunk_carry( n_chunks * 4, 0u );
+
+    #if defined(_OPENMP)
+    #pragma omp parallel for schedule(static)
+    #endif
+    for (int32 t = 0; t < int32( n_chunks ); ++t)
+    {
+        const uint64 b0 = uint64(t) * n_blocks / n_chunks;
+        const uint64 b1 = uint64(t+1) * n_blocks / n_chunks;
+        uint64 s0 = 0u, s1 = 0u, s2 = 0u, s3 = 0u;
+        for (uint64 bb = b0; bb < b1; ++bb)
+        {
+            s0 += occ[ bb*4 + 0 ];
+            s1 += occ[ bb*4 + 1 ];
+            s2 += occ[ bb*4 + 2 ];
+            s3 += occ[ bb*4 + 3 ];
+        }
+        chunk_sum[ t*4 + 0 ] = s0;
+        chunk_sum[ t*4 + 1 ] = s1;
+        chunk_sum[ t*4 + 2 ] = s2;
+        chunk_sum[ t*4 + 3 ] = s3;
+    }
+
+    uint64 total[4] = { 0u, 0u, 0u, 0u };
+    for (uint32 t = 0; t < n_chunks; ++t)
+    {
+        for (uint32 c = 0; c < 4; ++c)
+        {
+            chunk_carry[ t*4 + c ] = total[c];
+            total[c] += chunk_sum[ t*4 + c ];
+        }
+    }
+
+    #if defined(_OPENMP)
+    #pragma omp parallel for schedule(static)
+    #endif
+    for (int32 t = 0; t < int32( n_chunks ); ++t)
+    {
+        const uint64 b0 = uint64(t) * n_blocks / n_chunks;
+        const uint64 b1 = uint64(t+1) * n_blocks / n_chunks;
+        uint64 r0 = chunk_carry[ t*4 + 0 ];
+        uint64 r1 = chunk_carry[ t*4 + 1 ];
+        uint64 r2 = chunk_carry[ t*4 + 2 ];
+        uint64 r3 = chunk_carry[ t*4 + 3 ];
+        for (uint64 bb = b0; bb < b1; ++bb)
+        {
+            const uint64 l0 = occ[ bb*4 + 0 ]; occ[ bb*4 + 0 ] = uint32( r0 ); r0 += l0;
+            const uint64 l1 = occ[ bb*4 + 1 ]; occ[ bb*4 + 1 ] = uint32( r1 ); r1 += l1;
+            const uint64 l2 = occ[ bb*4 + 2 ]; occ[ bb*4 + 2 ] = uint32( r2 ); r2 += l2;
+            const uint64 l3 = occ[ bb*4 + 3 ]; occ[ bb*4 + 3 ] = uint32( r3 ); r3 += l3;
+        }
+    }
+
+    cnt[0] = uint32( total[0] );
+    cnt[1] = uint32( total[1] );
+    cnt[2] = uint32( total[2] );
+    cnt[3] = uint32( total[3] );
+}
+
 template <typename Allocator>
 uint32* build_occurrence_table(
     const uint32                            seq_length,
@@ -268,11 +406,6 @@ uint32* build_occurrence_table(
     uint32&                                 bwt_occ_words,
     uint32*                                 L2)
 {
-    typedef PackedStream<const uint32*,uint8,FMIndexDataCore::BWT_BITS,FMIndexDataCore::BWT_BIG_ENDIAN> stream_type;
-
-    // build a bwt stream
-    stream_type bwt( raw_pointer( bwt_vec ) );
-
     // compute the number of words needed to store the occurrences
     const uint32 occ_words = util::divide_ri( seq_length, FMIndexDataCore::OCC_INT ) * 4;
 
@@ -280,9 +413,9 @@ uint32* build_occurrence_table(
     nvbio::vector<host_tag,uint32> occ_vec( occ_words, 0u );
     uint32 cnt[4];
 
-    nvbio::build_occurrence_table<FMIndexDataCore::BWT_BITS,FMIndexDataCore::OCC_INT>(
-        bwt,
-        bwt + seq_length,
+    build_occurrence_table_dna(
+        raw_pointer( bwt_vec ),
+        seq_length,
         raw_pointer( occ_vec ),
         cnt );
 
@@ -367,12 +500,17 @@ int FMIndexDataHost::load(
     uint32 seq_length = 0;
     uint32 seq_words;
 
+    Timer load_timer;
+    double t_bwt = 0.0, t_occ_f = 0.0, t_rbwt = 0.0, t_occ_r = 0.0, t_ssa = 0.0;
+    load_timer.start();
+
     if (flags & FORWARD)
     {
         nvbio::vector<host_tag,uint32> bwt_vec;
 
         // read bwt
         log_info(stderr, "reading bwt... started\n");
+        Timer step_timer; step_timer.start();
         {
             VectorAllocator allocator( bwt_vec );
             if (load_bwt(
@@ -383,10 +521,12 @@ int FMIndexDataHost::load(
                 m_primary ) == NULL)
                 return 0;
         }
-        log_info(stderr, "reading bwt... done\n");
+        step_timer.stop(); t_bwt = step_timer.seconds();
+        log_info(stderr, "reading bwt... done (%.2f s)\n", t_bwt);
         log_verbose(stderr, "  length: %u\n", seq_length);
 
         log_info(stderr, "building occurrence table... started\n");
+        Timer occ_timer; occ_timer.start();
         {
             VectorAllocator allocator( m_bwt_occ_vec );
 
@@ -398,7 +538,8 @@ int FMIndexDataHost::load(
                 m_bwt_occ_words,
                 m_L2 );
         }
-        log_info(stderr, "building occurrence table... done\n");
+        occ_timer.stop(); t_occ_f = occ_timer.seconds();
+        log_info(stderr, "building occurrence table... done (%.2f s)\n", t_occ_f);
         log_info(stderr, "  size: %u words\n", m_bwt_occ_words );
     }
 
@@ -407,6 +548,7 @@ int FMIndexDataHost::load(
         nvbio::vector<host_tag,uint32> rbwt_vec;
 
         log_info(stderr, "reading rbwt... started\n");
+        Timer rstep_timer; rstep_timer.start();
         {
             VectorAllocator allocator( rbwt_vec );
             if (load_bwt(
@@ -417,10 +559,12 @@ int FMIndexDataHost::load(
                 m_rprimary ) == NULL)
                 return 0;
         }
-        log_info(stderr, "reading rbwt... done\n");
+        rstep_timer.stop(); t_rbwt = rstep_timer.seconds();
+        log_info(stderr, "reading rbwt... done (%.2f s)\n", t_rbwt);
         log_verbose(stderr, "  length: %u\n", seq_length);
 
         log_info(stderr, "building occurrence table... started\n");
+        Timer rocc_timer; rocc_timer.start();
         {
             VectorAllocator allocator( m_rbwt_occ_vec );
 
@@ -432,7 +576,8 @@ int FMIndexDataHost::load(
                 m_bwt_occ_words,
                 m_L2 );
         }
-        log_info(stderr, "building occurrence table... done\n");
+        rocc_timer.stop(); t_occ_r = rocc_timer.seconds();
+        log_info(stderr, "building occurrence table... done (%.2f s)\n", t_occ_r);
     }
 
     // record the sequence length
@@ -444,6 +589,7 @@ int FMIndexDataHost::load(
     // read ssa
     if (flags & SA)
     {
+        Timer ssa_load_timer; ssa_load_timer.start();
         if (flags & FORWARD)
         {
             VectorAllocator allocator( m_ssa_vec );
@@ -468,6 +614,7 @@ int FMIndexDataHost::load(
 
         // record the number of SA words
         m_sa_words = (seq_length + SA_INT) / SA_INT;
+        ssa_load_timer.stop(); t_ssa = ssa_load_timer.seconds();
     }
 
     // generate the count table
@@ -482,6 +629,9 @@ int FMIndexDataHost::load(
         has_sa * (has_fw + has_rev) * sizeof(uint32)*m_sa_words;
 
     log_visible(stderr, "  memory   : %.1f MB\n", float(memory_footprint)/float(1024*1024));
+    load_timer.stop();
+    log_info(stderr, "  [time] host load: bwt %.2f s + occ %.2f s + rbwt %.2f s + occ %.2f s + ssa %.2f s = %.2f s\n",
+             t_bwt, t_occ_f, t_rbwt, t_occ_r, t_ssa, load_timer.seconds());
 
     log_visible(stderr, "FMIndexData: loading... done\n");
     return 1;
@@ -775,10 +925,14 @@ FMIndexDataDevice::FMIndexDataDevice(const FMIndexData& host_data, const uint32 
         m_bwt_occ_vec.resize( m_bwt_occ_words );
         m_bwt_occ = raw_pointer( m_bwt_occ_vec );
 
+        Timer upload_timer;
+        upload_timer.start();
         thrust::copy(
             host_data.m_bwt_occ,
             host_data.m_bwt_occ + m_bwt_occ_words,
             m_bwt_occ_vec.begin() );
+        upload_timer.stop();
+        log_info(stderr, "  [time] HtoD bwt/occ: %.2f s (%.1f MB)\n", upload_timer.seconds(), sizeof(uint32)*m_bwt_occ_words/(1024.0*1024.0));
 
         m_allocated += sizeof(uint32)*( m_bwt_occ_words );
 
@@ -807,10 +961,14 @@ FMIndexDataDevice::FMIndexDataDevice(const FMIndexData& host_data, const uint32 
         m_rbwt_occ_vec.resize( m_bwt_occ_words );
         m_rbwt_occ = raw_pointer( m_rbwt_occ_vec );
 
+        Timer upload_timer;
+        upload_timer.start();
         thrust::copy(
             host_data.m_rbwt_occ,
             host_data.m_rbwt_occ + m_bwt_occ_words,
             m_rbwt_occ_vec.begin() );
+        upload_timer.stop();
+        log_info(stderr, "  [time] HtoD rbwt/occ: %.2f s (%.1f MB)\n", upload_timer.seconds(), sizeof(uint32)*m_bwt_occ_words/(1024.0*1024.0));
 
         m_allocated += sizeof(uint32)*( m_bwt_occ_words );
 
@@ -840,12 +998,18 @@ void init_ssa(
     FMIndexDataDevice::ssa_storage_type&  rssa)
 {
     log_info(stderr, "building SSA... started\n");
+    Timer ssa_timer;
+    ssa_timer.start();
     ssa.init( driver_data.partial_index() );
-    log_info(stderr, "building SSA... done\n");
+    ssa_timer.stop();
+    log_info(stderr, "building SSA... done (%.2f s)\n", ssa_timer.seconds());
 
     log_info(stderr, "building reverse SSA... started\n");
+    Timer rssa_timer;
+    rssa_timer.start();
     rssa.init( driver_data.rpartial_index() );
-    log_info(stderr, "building reverse SSA... done\n");
+    rssa_timer.stop();
+    log_info(stderr, "building reverse SSA... done (%.2f s)\n", rssa_timer.seconds());
 }
 
 ///@} // FMIndexIO
