@@ -93,8 +93,13 @@ nvBWT <- function(myinput, output, options = NULL) {
 #' Please note that this feature is still experimental; 
 #' it currently supports only end-to-end alignments and does not yet allow customization of scoring parameters. 
 #' By default, it uses the following scoring: \code{match:0, mismatch:1, gap_open:1 and gap_ext:1}.
-#' Additionally, the \code{--cache-writes} parameter optimizes disk write operations, resulting in faster alignments.
-#' This functionality requires 4GB of RAM and is limited to paired-end alignments.
+#' Additionally, the \code{--cache-writes} parameter activates the asynchronous SAM writer for
+#' single-end alignments: output records are formatted and written by a background thread while the
+#' GPU aligns the next batches, giving a large speedup on sizeable outputs (about 100 MB of extra
+#' host RAM are used by the queue). It is not recommended for paired-end alignments and is ignored
+#' for BAM output. Pair it with \code{--batch-size 64}: \code{--batch-size} caps the number of reads
+#' per batch, in thousands of reads (minimum 16, default 1024); smaller batches overlap the
+#' alignment and the writing much better than the default.
 #' @references Langmead, B., & Salzberg, S. L. (2012).
 #' Fast gapped-read alignment with Bowtie 2. Nature methods, 9(4), 357-359.
 #' @export nvBowtie
@@ -120,6 +125,22 @@ nvBWT <- function(myinput, output, options = NULL) {
 nvBowtie <- function(index, output_file, options, seq1, seq2 = NULL) {
     if (R.Version()$arch == "i386") {
         return("nvBowtie is not available for 32bit, please use 64bit R instead")
+    }
+
+    # --cache-writes selects the asynchronous single-end SAM writer.  It is a
+    # no-op for BAM output (nvBowtie warns and writes alignments directly) and
+    # triggers the legacy paired-end writer path, which is not recommended:
+    # strip the flag in those cases so the wrapper behaves as documented.
+    if (grepl("--cache-writes", options, fixed = TRUE)) {
+        if (!is.null(seq2)) {
+            options <- gsub("--cache-writes", "", options, fixed = TRUE)
+            warning("nvBowtie(): '--cache-writes' removed: not recommended ",
+                "for paired-end alignments", call. = FALSE)
+        } else if (grepl("\\.bam$", as.character(output_file))) {
+            options <- gsub("--cache-writes", "", options, fixed = TRUE)
+            message("nvBowtie(): '--cache-writes' has no effect on BAM ",
+                "output; removed")
+        }
     }
 
     index <- file.path(tools::file_path_as_absolute(dirname(index)), basename(index))
@@ -255,7 +276,8 @@ nvBowtie_usage <- function() {
     show("  --solexa-quals                             [false]    qualities are in the Solexa format")
     show("  --rg-id             string                            add the RG-ID field of the SAM output header")
     show("  --rg                string,val                        add an RG-TAG field of the SAM output header")
-    show("  --cache-writes      bool                   [false]    speed up writes on disk")
+    show("  --cache-writes      bool                   [false]    asynchronous SAM writer, single-end SAM output only (not recommended for paired-end, ignored for BAM)")
+    show("  --batch-size        int                    [1024]     maximum reads per batch, in thousands of reads (minimum 16)")
     show("Paired-End:")
     show("  --ff                                       [false]    paired mates are forward-forward")
     show("  --fr                                       [true]     paired mates are forward-reverse")

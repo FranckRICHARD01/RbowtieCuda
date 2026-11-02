@@ -195,7 +195,10 @@ void banded_score_best(
     stream.wfa_F_null_buffer = pipeline.wfa_F_null_buffer;
     stream.wfa_PointeurH_buffer = pipeline.wfa_PointeurH_buffer;
 
-    typedef aln::DeviceThreadScheduler scheduler_type;
+    // the Wfah kernels get the WFA_MIN_BLOCKS occupancy hint ; every other
+    // aligner keeps the very same scheduler as before (same instantiation)
+    typedef typename aln::WfaBlockSchedulerPick<WFA_MIN_BLOCKS, 1u, typename aligner_type::aligner_tag>::type scheduler_type;
+    //typedef aln::DeviceThreadScheduler scheduler_type;
     //typedef aln::DeviceStagedThreadScheduler scheduler_type;
 
     if (band_len == 1)

@@ -391,25 +391,13 @@ void Aligner::best_approx(
 
         timer.start();
 
-        if (params.cache_writes)
+        if (output_threadSE)
         {
-             output_file->reset_data_file();
-
-             output_file->processCacheWrites( cpu_batch );            
-
-             char *dat = output_file->get_write_thread_data();      
-                          
-             if (dat)
-             {
-                 int32 size = output_file->outfile_size();
-                 output_threadSE->write_thread_data_size = size;
-                 #pragma omp parallel for
-                 for (int32 i = 1; i < size; i++)
-                     output_threadSE->write_thread_data[i] = dat[i];
-                 
-                 output_threadSE->write_thread_data[size] = 0;
-                 output_threadSE->write_thread_data[0] = dat[0];
-             }
+            // writer-queue mode (--cache-writes, single-end): hand the batch
+            // to the writer thread; SAM formatting + file writes run on the
+            // background thread, overlapping with the next batch's GPU work.
+            // The timer covers the queue hand-off (deep copies) only.
+            output_threadSE->submit( cpu_batch );
         }
         else
         {

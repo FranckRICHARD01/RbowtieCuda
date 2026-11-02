@@ -228,8 +228,6 @@ void ComputeThreadSE::do_run()
     io::SequenceDataHost   local_read_data_host;
     io::HostOutputBatchSE  local_output_batch_host;
 
-    if (params.cache_writes)
-        output_threadSE->createCache();
 
     // loop through the batches of reads
     while (1)
@@ -376,8 +374,8 @@ void ComputeThreadSE::do_run()
         log_verbose(stderr, "[%u]   %.1f K reads/s\n", thread_id, 1.0e-3f * float(n_reads) / stats.global_time);
     }
 
-    if (params.cache_writes)
-        output_threadSE->stop_thread = true;
+    // writer-queue mode: the writer thread is drained by the main thread
+    // (close_and_drain() + join() in nvBowtie.cu, after compute-thread joins).
 
     global_timer.stop();
     stats.global_time += global_timer.seconds();

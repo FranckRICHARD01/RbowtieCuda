@@ -316,6 +316,17 @@ namespace nvbio
                     sc.wfa = local ? WfaScoringScheme<>::local() : WfaScoringScheme<>();
                 }
 
+                // Both the ED and the WFA scorers report one unit of cost per penalty --
+                // the wavefront charges one unit whatever the scheme asks (see the wfah
+                // engines) and the windows the wavefront cannot wave fall back to the
+                // edit-distance banded DP -- so the admissible-score cut must follow
+                // --max-dist in that same unit scale in both modes. Without it the WFA
+                // mode keeps the -15.0f of its ctor whatever --max-dist says, and raising
+                // --max-dist maps not one read more. An explicit --score-min, applied
+                // just below, still has the last word.
+                if (params.scoring_mode == WfaMode)
+                        sc.wfa.m_score_min = SimpleFunc( SimpleFunc::LinearFunc, -(float)params.max_dist, 0.0f );
+
                 // load scoring scheme from file
                 if (params.scoring_file != "")
                 {

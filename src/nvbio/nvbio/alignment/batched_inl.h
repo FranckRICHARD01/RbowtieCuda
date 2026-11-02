@@ -63,22 +63,36 @@ void batched_alignment_score(stream_type& stream, column_type column, const uint
     }
 
     // wfa
+    //
+    // The wavefront slabs are allocated one slot per live thread (WFA_SLOT_COUNT
+    // of them, see aligner_init.cu), whereas work_id runs over the whole job queue,
+    // which in the paired path is max_hits * BATCH_SIZE.  A thread owns one slot and
+    // reuses it across the tiles it walks, so the slabs are addressed by the thread
+    // slot ; BatchedAlignmentScore::enact keeps that slot inside the allocation by
+    // clamping its persistent launch, exactly as BatchedBandedAlignmentScore::enact
+    // does for the banded one.
 
     aln::wfa_type<int32> wfa;
 
-    wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED * work_id]);
-    wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED * work_id]);
-    wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED * work_id]);
-    wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED * thread_id]);
+    wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED * thread_id]);
+    wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED * thread_id]);
+    wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * thread_id]);
+
+    // the wavefront envelope follows --max-dist : a path that costs at most max_dist
+    // penalties cannot stray more than max_dist diagonals from the anchor, so both the
+    // band width and the step budget of the wavefront are bounded by it ; 0 (no bound
+    // given) keeps the compile-time envelope
+    wfa.heuristic.max_wf_score = stream.m_params.max_dist;
 
     // compute the end of the current DP matrix window
     const uint32 len = equal<typename aligner_type::algorithm_tag,PatternBlockingTag>() ?
@@ -417,8 +431,17 @@ void BatchedAlignmentScore<stream_type,DeviceThreadBlockScheduler<BLOCKDIM,MINBL
         uint32( stream.max_text_length() ) :
         uint32( stream.max_pattern_length() );
 
+    // The WFA aligners address their wavefront slabs by the thread slot (see
+    // batched_alignment_score above), so a launch that maps one thread per job
+    // would need as many slots as there are jobs ; run the persistent (grid-stride)
+    // launch instead, whose threads reuse their own slot across the tiles they own,
+    // and bound the number of live threads to the size of that allocation.  That
+    // keeps the footprint at WFA_SLOT_COUNT whatever the block size or the batch
+    // size is, which is what the paired path needs : its queue is max_hits * BATCH_SIZE.
+    const bool wfa_mode = stream.wfa_H_buffer != NULL && equal<typename aligner_type::aligner_tag,WfahTag>();
+
     // if the column is small, let's just use statically allocated local memory
-    if (column_size <= 1024)
+    if (column_size <= 1024 && ! wfa_mode)
     {
         const uint32 n_blocks = (stream.size() + BLOCKDIM-1) / BLOCKDIM;
 
@@ -443,10 +466,14 @@ void BatchedAlignmentScore<stream_type,DeviceThreadBlockScheduler<BLOCKDIM,MINBL
             temp = nvbio::plain_view( temp_vec );
         }
 
-        // set the queue capacity based on available memory
-        const uint32 queue_capacity = uint32( temp_size / column_storage( stream.max_pattern_length(), stream.max_text_length() ) );
+        // set the queue capacity based on available memory, and never above the
+        // number of wavefront slots a WFA aligner was given
+        const uint64 capacity = temp_size / column_storage( stream.max_pattern_length(), stream.max_text_length() );
+        const uint32 queue_capacity = wfa_mode ?
+            uint32( nvbio::min( capacity, (uint64)WFA_SLOT_COUNT ) ) :
+            uint32( capacity );
 
-        if (queue_capacity >= stream.size())
+        if (! wfa_mode && queue_capacity >= stream.size())
         {
             const uint32 n_blocks = (stream.size() + BLOCKDIM-1) / BLOCKDIM;
 
@@ -663,22 +690,33 @@ void batched_alignment_traceback(stream_type& stream, cell_type* checkpoints, ui
     }
 
     // wfa
+    //
+    // Slabs addressed by the thread slot, for the same reason as in
+    // batched_alignment_score above : one slot per live thread, whereas work_id
+    // runs over the whole queue.  BatchedAlignmentTraceback::enact keeps that
+    // slot inside the allocation by clamping its persistent launch.
 
     aln::wfa_type<int32> wfa;
 
-    wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED * work_id]);
-    wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED * work_id]);
-    wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED * work_id]);
-    wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED * thread_id]);
+    wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED * thread_id]);
+    wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED * thread_id]);
+    wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * thread_id]);
+
+    // the wavefront envelope follows --max-dist : a path that costs at most max_dist
+    // penalties cannot stray more than max_dist diagonals from the anchor, so both the
+    // band width and the step budget of the wavefront are bounded by it ; 0 (no bound
+    // given) keeps the compile-time envelope
+    wfa.heuristic.max_wf_score = stream.m_params.max_dist;
 
     // compute the end of the current DP matrix window
     const uint32 pattern_len = stream.pattern_length( work_id, &context );
@@ -861,15 +899,22 @@ void BatchedAlignmentTraceback<CHECKPOINTS,stream_type,DeviceThreadBlockSchedule
         temp = nvbio::plain_view( temp_vec );
     }
 
-    // set the queue capacity based on available memory
+    // set the queue capacity based on available memory ; a WFA aligner also
+    // bounds it by the number of wavefront slots, since those slabs are addressed
+    // by the thread slot (see batched_alignment_traceback above) and a slot is
+    // reused across the walk of a persistent launch.
     const uint32 max_pattern_len = stream.max_pattern_length();
     const uint32 max_text_len    = stream.max_text_length();
-    const uint32 queue_capacity  = uint32( temp_size / element_storage( max_pattern_len, max_text_len ) );
+    const bool wfa_mode = stream.wfa_H_buffer != NULL && equal<typename aligner_type::aligner_tag,WfahTag>();
+    const uint64 capacity        = temp_size / element_storage( max_pattern_len, max_text_len );
+    const uint32 queue_capacity  = wfa_mode ?
+        uint32( nvbio::min( capacity, (uint64)WFA_SLOT_COUNT ) ) :
+        uint32( capacity );
 
     const uint64 column_size      =     column_storage( max_pattern_len, max_text_len );
     const uint64 checkpoints_size = checkpoint_storage( max_pattern_len, max_text_len );
 
-    if (queue_capacity >= stream.size())
+    if (! wfa_mode && queue_capacity >= stream.size())
     {
         const uint32 n_blocks = (stream.size() + BLOCKDIM-1) / BLOCKDIM;
 

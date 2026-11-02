@@ -328,7 +328,17 @@ void select_multi_kernel(
     uint32 output_lane     = uint32(-1);
     uint32 n_selected_hits = 0u;
 
-#if 0
+    // -----------------------------------------------------------------------------
+    // Divergence-safe selection, same allocation scheme as rand_select_multi_kernel
+    // (which is the path that works end to end today).
+    // The version kept below under #else must stay disabled: its warp-synchronous
+    // alloc() (see utils.h, USE_WARP_SYNCHRONOUS_QUEUES) writes a __shared__ volatile
+    // broadcast from the warp's leading lane and reads it from the other lanes without
+    // any __syncwarp(), while each lane runs a different number of loop iterations.
+    // Lanes then reuse slots and the ping-pong read queue never drains, so the batch
+    // driver (compute_thread.cu 'while (1)') loops forever: that is the --no-rand hang.
+    // -----------------------------------------------------------------------------
+#if 1
     for (uint32 i = 0; i < n_multi; ++i)
     {
         // get a reference to the top element in the hit queue

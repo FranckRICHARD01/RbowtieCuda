@@ -1,5 +1,27 @@
 CHANGES 
 -----------------------
+* 2026-11-02
+  RbowtieCuda version 1.4.5
+
+  - nvBowtie: single-end SAM output is now produced by a dedicated background writer thread fed by
+    a small ring buffer, so record formatting and disk writes overlap the GPU alignment of the next
+    batches. Selected with --cache-writes (single-end SAM output). Combined with --batch-size 64 it
+    divided the wall time of a 1M-read benchmark by about 3.7 (4.96 s -> 1.34 s on 1M x 10 bp reads
+    against a 46 Mbp chromosome); --batch-size caps the reads per batch in thousands (min 16,
+    default 1024) and is now documented in nvBowtie_usage().
+  - nvBowtie: much faster SAM record emission: the writer is buffered and hands a whole block of
+    records to the disk with a single fwrite, instead of ~30 stdio calls per record.
+  - nvBowtie: WFA alignment (--wfa / --scoring wfa) is faster thanks to improved wavefront
+    kernels, and its admissible-score cutoff now follows --max-dist: raising --max-dist in WFA mode
+    now maps more reads, as it already did in edit-distance mode.
+  - nvBowtie: fixed a paired-end crash (cudaErrorInvalidValue during a host-to-device copy)
+    introduced by the page-locked host buffers of version 1.4.4: page-lock registrations are now
+    size-aware, so host buffers that grow are re-registered over their full span.
+  - The --cache-writes option is not recommended for paired-end alignments (the legacy path is
+    kept) and is ignored for BAM output, with a warning; it costs a small ring buffer (~100 MB).
+    The nvBowtie() wrapper now strips the flag itself in those two cases: a warning is issued for
+    paired-end, a message for BAM output; single-end SAM output keeps the flag and its queue mode.
+
 * 2026-10-07
   RbowtieCuda version 1.4.4
 
