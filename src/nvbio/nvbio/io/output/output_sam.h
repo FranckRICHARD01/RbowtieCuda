@@ -180,6 +180,26 @@ private:
     // output an alignment
     void output_alignment(const struct SamAlignment& aln);
 
+    // buffered text sink used by the default (non --cache-writes) record path :
+    // a whole record is built in memory and handed to the file with a single
+    // fwrite once enough records accumulated.  The emitted bytes are the very
+    // same sequence as the field-by-field path : the field order, the tabs and
+    // the line breaks come from the same calls, only the number of stdio calls
+    // per record (une ~30) goes away, which is what capped the writer around
+    // 1M records/s.
+    std::vector<char>   text_sink;
+    uint32              text_pos;
+
+    void text_reserve(uint32 n);
+    void text_flush();
+    void text_flush_if_full();
+
+    void append_string(const char *str, bool tab = true);
+    template <typename T> void append_int(T i, bool tab = true);
+    template <typename T> void append_tag(const char *name, T value);
+    void append_tag(const char *name, const char *value);
+    void append_linebreak();
+
     // output an alignment
     void output_alignment(char* result, const struct SamAlignment& aln);
 

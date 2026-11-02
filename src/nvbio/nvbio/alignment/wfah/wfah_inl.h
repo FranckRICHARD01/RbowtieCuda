@@ -1233,7 +1233,9 @@ namespace nvbio
                         if (wavefront_heuristic_cutoff(wfa, ss, s, N, M))
                             break;
 
-                        if (ss >= nvbio::min(WFA_BAND_LEN2_LIMIT_BAND, WFA_MAX_SCORE))
+                        if (ss >= (wfa.heuristic.max_wf_score > 0
+                            ? wfa.heuristic.max_wf_score
+                            : (score_type)nvbio::min(WFA_BAND_LEN2_LIMIT_BAND, WFA_MAX_SCORE)))
                         {
                             /*char ref_str[1000];
                             char read_str[1000];
@@ -1334,6 +1336,17 @@ namespace nvbio
 
                                 lo = nvbio::min(nvbio::min(H_lo_o - 1, H_lo_m), nvbio::min(E_lo + 1, F_lo - 1));
                                 hi = nvbio::max(nvbio::max(H_hi_o + 1, H_hi_m), nvbio::max(E_hi + 1, F_hi - 1));
+                                                                // the wavefront may only spread within the band envelope the stage carried ;
+                                                                // past it the next row is one the band cannot reach, and a row of more than
+                                                                // 2 * DIM_SHARED + 1 entries would spill into the neighbouring row of the
+                                                                // slab (the garbage the ~210-byte cliff showed) ; the band heuristics shrink
+                                                                // the row afterwards, but that is once it has already been written, so the
+                                                                // clamp belongs here, before the row loop
+                                                                if (wfa.heuristic.method & WFA_HEURISTIC_ADAPTIVE_BANDED_ADAPTIVE)
+                                                                {
+                                                                    lo = nvbio::max(lo, wfa.heuristic.min_k);
+                                                                    hi = nvbio::min(hi, wfa.heuristic.max_k);
+                                                                }
 
                                 pos_ss = COMPUTE_DIM_SHARED(ss, DIM_SHARED);
                                 H_Band_ptr = &wfa.H_Band.scores[pos_ss - lo];
@@ -1559,12 +1572,23 @@ namespace nvbio
 
                     // wfa
 #ifndef WFA_TESTS
-                    wavefront_heuristic_set_wfadaptive(wfa, DIM_SHARED2 * 2, DIM_SHARED2 * 2, 1);
+                        // wavefront envelope carried by the batched stages from --max-dist :
+                        // a path that costs at most max_dist penalties never strays more than
+                        // max_dist diagonals from the anchor diagonal, so the band and the step
+                        // budget both follow it ; an unset bound keeps the compiled envelope
+                        const int32 wf_max_dist = (int32)wfa.heuristic.max_wf_score;
+                        const int32 wf_band     = (wf_max_dist > 0)
+                            ? nvbio::min(wf_max_dist, (int32)DIM_SHARED2)
+                            : (int32)DIM_SHARED2;
+                        wfa.heuristic.max_wf_score = (score_type)((wf_max_dist > 0)
+                            ? nvbio::min(wf_max_dist + 1, (int32)nvbio::min(WFA_BAND_LEN2_LIMIT_BAND, WFA_MAX_SCORE))
+                            : nvbio::min(WFA_BAND_LEN2_LIMIT_BAND, WFA_MAX_SCORE));
+                    wavefront_heuristic_set_wfadaptive(wfa, wf_band * 2, wf_band * 2, 1);
                     // wavefront_heuristic_set_wfmash(wfa, 15, DIM_SHARED2 / 2, 1);
                     // wavefront_heuristic_set_xdrop(wfa, 15, 1);
                     //wavefront_heuristic_set_zdrop(wfa, 15, 3);
                     // wavefront_heuristic_set_banded_static(wfa, -DIM_SHARED2, DIM_SHARED2);
-                    wavefront_heuristic_set_banded_adaptive(wfa, -DIM_SHARED2, DIM_SHARED2, 1);
+                    wavefront_heuristic_set_banded_adaptive(wfa, -wf_band, wf_band, 1);
 #endif
 
 // initialize extra bands

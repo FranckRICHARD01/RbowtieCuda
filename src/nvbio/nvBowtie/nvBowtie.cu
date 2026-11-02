@@ -755,7 +755,7 @@ int main(int argc, char* argv[])
                                                     output_name,
                                                     paired_end ? io::PAIRED_END : io::SINGLE_END,
                                                     io::BNT(*reference_data),
-                                                    params.cache_writes ) );
+                                                    paired_end ? params.cache_writes : false ) );
 
         output_file->set_rg( rg_id.c_str(), rg_string.c_str() );
         output_file->set_program(
@@ -1141,7 +1141,10 @@ int main(int argc, char* argv[])
             
             bowtie2::cuda::OutputThreadSE output_thread(output_file->get_file_pointer());
             if (params.cache_writes)
-            {               
+            {
+                // writer-queue mode: the writer thread drives OutputFile::process
+                // on the host batches handed off by the compute thread.
+                output_thread.set_output_file( output_file.get() );
                 output_thread.create();
             }
 
@@ -1168,6 +1171,15 @@ int main(int argc, char* argv[])
             }
 
             input_thread.join();
+
+            if (params.cache_writes)
+            {
+                // writer-queue mode: close the queue, then drain the writer
+                // thread so all batches submitted by the compute threads are
+                // fully written before the output file is closed.
+                output_thread.close_and_drain();
+                output_thread.join();
+            }
 
             timer.stop();
 

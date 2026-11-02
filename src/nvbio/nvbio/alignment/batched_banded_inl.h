@@ -33,6 +33,7 @@
 #include <nvbio/basic/cuda/work_queue.h>
 #include <nvbio/basic/strided_iterator.h>
 #include <nvbio/alignment/batched_stream.h>
+#include <nvbio/alignment/alignment_base.h>
 
 namespace nvbio {
 namespace aln {
@@ -40,10 +41,15 @@ namespace aln {
 ///@addtogroup private
 ///@{
 
+// The wavefront slabs are addressed by a *slot*, not by the job id: a job id
+// runs over the whole hit queue (up to max_hits * BATCH_SIZE in the paired
+// path) whereas the allocation is bounded by the number of live threads, which
+// is what the persistent launch of the WFA kernel provides. Passing both ids
+// keeps the DP-side addressing (work_id) untouched.
 template <uint32 BAND_LEN, typename stream_type>
 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
-void batched_banded_alignment_score(const stream_type& stream, const uint32 work_id)
-{ 
+void batched_banded_alignment_score(const stream_type& stream, const uint32 work_id, const uint32 slot_id)
+{
     typedef typename stream_type::aligner_type  aligner_type;
     typedef typename stream_type::context_type  context_type;
     typedef typename stream_type::strings_type  strings_type;
@@ -56,19 +62,28 @@ void batched_banded_alignment_score(const stream_type& stream, const uint32 work
 
         aln::wfa_type<int32> wfa;
 
-        wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED * work_id]);
-        wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-        wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-        wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-        wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED  * work_id]);
-        wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-        wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-        wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-        wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED  * work_id]);
-        wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-        wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-        wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-        wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * work_id]);
+        // index-major slab : consecutive lanes of a warp walk consecutive int16 of the
+        // same wavefront row instead of 3,788-byte-apart ones ; same total element
+        // count as the slot-major layout, so the allocation size is unchanged
+        wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[slot_id], WFA_SLOT_COUNT);
+        wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * slot_id]);
+
+        // the wavefront envelope follows --max-dist : a path that costs at most max_dist
+        // penalties cannot stray more than max_dist diagonals from the anchor, so both the
+        // band width and the step budget of the wavefront are bounded by it ; 0 (no bound
+        // given) keeps the compile-time envelope of every other engine
+        wfa.heuristic.max_wf_score = stream.m_params.max_dist;
 
         // compute the end of the current DP matrix window
         const uint32 len = equal<typename aligner_type::algorithm_tag,TextBlockingTag>() ?
@@ -113,6 +128,15 @@ void batched_banded_alignment_score(const stream_type& stream, const uint32 work
     stream.output( work_id, &context );
 }
 
+// Non-persistent entry point: the job owns its slot. Kept for the host and the
+// staged schedulers, which size their queue themselves.
+template <uint32 BAND_LEN, typename stream_type>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+void batched_banded_alignment_score(const stream_type& stream, const uint32 work_id)
+{
+    batched_banded_alignment_score<BAND_LEN,stream_type>( stream, work_id, work_id );
+}
+
 template <uint32 BLOCKDIM, uint32 MINBLOCKS, uint32 BAND_LEN, typename stream_type>
 __global__ void
 __launch_bounds__(BLOCKDIM,MINBLOCKS)
@@ -123,6 +147,28 @@ batched_banded_alignment_score_kernel(const stream_type stream)
         return;
 
     batched_banded_alignment_score<BAND_LEN>( stream, tid );
+}
+
+// Persistent (grid-stride) variant of the banded score kernel. Each thread keeps
+// its own wavefront slot -- the one it allocated at slot index thread_id -- and
+// the grid is clamped to the number of slots, so the wavefront footprint stays
+// constant whatever the size of the hit queue (a job id runs over the hits,
+// which in the paired case reaches max_hits * BATCH_SIZE).
+template <uint32 BLOCKDIM, uint32 MINBLOCKS, uint32 BAND_LEN, typename stream_type>
+__global__ void
+__launch_bounds__(BLOCKDIM,MINBLOCKS)
+persistent_batched_banded_alignment_score_kernel(const stream_type stream)
+{
+    const uint32 grid_threads = gridDim.x * BLOCKDIM;
+    const uint32 thread_id    = threadIdx.x + blockIdx.x * BLOCKDIM;
+    const uint32 stream_end   = stream.size();
+
+    for (uint32 stream_begin = 0; stream_begin < stream_end; stream_begin += grid_threads)
+    {
+        const uint32 work_id = thread_id + stream_begin;
+        if (work_id < stream_end)
+            batched_banded_alignment_score<BAND_LEN,stream_type>( stream, work_id, thread_id );
+    }
 }
 
 ///@} // end of private group
@@ -195,6 +241,24 @@ template <uint32 BLOCKDIM, uint32 MINBLOCKS, uint32 BAND_LEN, typename stream_ty
 void BatchedBandedAlignmentScore<BAND_LEN,stream_type,DeviceThreadBlockScheduler<BLOCKDIM,MINBLOCKS> >::enact(stream_type stream, uint64 temp_size, uint8* temp)
 {
     const uint32 n_blocks = (stream.size() + BLOCKDIM-1) / BLOCKDIM;
+
+    // The WFA aligners keep their wavefront slabs in the buffers allocated by
+    // aligner_init.cu, one slot per live thread (WFA_SLOT_COUNT of them). A
+    // regular launch would index those slabs by the job id, which runs over the
+    // hit queue, so the footprint would have to follow the batch (and the hit
+    // count) instead: run a persistent launch clamped to the number of slots,
+    // where a thread reuses its own slot across the tiles it owns.  The slot
+    // bound below stays under WFA_SLOT_COUNT for any BLOCKDIM, which is what
+    // makes the launch and the allocation consistent by construction.
+    if (stream.wfa_H_buffer != NULL && equal<typename aligner_type::aligner_tag,WfahTag>())
+    {
+        const uint32 wfa_blocks = nvbio::min(n_blocks,
+                                    nvbio::min((uint32)WFA_MAX_BLOCKS, (uint32)WFA_SLOT_COUNT / BLOCKDIM));
+
+        cudaFuncSetCacheConfig((const void*)&persistent_batched_banded_alignment_score_kernel<BLOCKDIM,MINBLOCKS,BAND_LEN,stream_type>, cudaFuncCachePreferL1);
+        persistent_batched_banded_alignment_score_kernel<BLOCKDIM,MINBLOCKS,BAND_LEN,stream_type><<<wfa_blocks, BLOCKDIM>>>(stream);
+        return;
+    }
 
     // Definir explicitement le type du kernel
     using KernelType = void(*)(stream_type);
@@ -329,19 +393,25 @@ void batched_banded_alignment_traceback(stream_type& stream, cell_type* checkpoi
 
     aln::wfa_type<int32> wfa;
 
-    wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED  * work_id]);
-    wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED  * work_id]);
-    wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED  * work_id]);
-    wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * work_id]);
-    wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * work_id]);
+    wfa.H_Band.set_scores_data(&stream.wfa_H_buffer[DIM_Y_SHARED  * thread_id]);
+    wfa.H_Band.set_lo_data(&stream.wfa_H_lo_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.H_Band.set_hi_data(&stream.wfa_H_hi_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.H_Band.set_null_data(&stream.wfa_H_null_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.E_Band.set_scores_data(&stream.wfa_E_buffer[DIM_Y_SHARED  * thread_id]);
+    wfa.E_Band.set_lo_data(&stream.wfa_E_lo_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.E_Band.set_hi_data(&stream.wfa_E_hi_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.E_Band.set_null_data(&stream.wfa_E_null_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.F_Band.set_scores_data(&stream.wfa_F_buffer[DIM_Y_SHARED  * thread_id]);
+    wfa.F_Band.set_lo_data(&stream.wfa_F_lo_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.F_Band.set_hi_data(&stream.wfa_F_hi_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.F_Band.set_null_data(&stream.wfa_F_null_buffer[WFA_BAND_LEN2_Y * thread_id]);
+    wfa.set_pointH_data(&stream.wfa_PointeurH_buffer[WFA_BAND_LEN2_Y * thread_id]);
+
+        // the wavefront envelope follows --max-dist : a path that costs at most max_dist
+        // penalties cannot stray more than max_dist diagonals from the anchor, so both the
+        // band width and the step budget of the wavefront are bounded by it ; 0 (no bound
+        // given) keeps the compile-time envelope of every other engine
+        wfa.heuristic.max_wf_score = stream.m_params.max_dist;
 
     // compute the end of the current DP matrix window
     const uint32 len = equal<typename aligner_type::algorithm_tag,PatternBlockingTag>() ?
@@ -514,12 +584,29 @@ void BatchedBandedAlignmentTraceback<BAND_LEN,CHECKPOINTS,stream_type,DeviceThre
 
     if (queue_capacity >= stream.size())
     {
-        const uint32 n_blocks = (stream.size() + BLOCKDIM-1) / BLOCKDIM;
+        // a wavefront traceback keeps one slot per thread too : the work queue is as
+        // large as the hit queue, so a launch sized by the work items walks past the
+        // slabs ; keep the grid under the slot count and let the persistent kernel
+        // stride over the items instead, one slot per thread by construction
+        const uint32 all_blocks = (stream.size() + BLOCKDIM-1) / BLOCKDIM;
+        const bool wfa_mode = (stream.wfa_H_buffer != NULL) &&
+            equal<typename stream_type::aligner_type::aligner_tag,WfahTag>();
+        const uint32 n_blocks = wfa_mode ?
+            nvbio::min(all_blocks,
+            nvbio::min((uint32)WFA_MAX_BLOCKS, (uint32)WFA_SLOT_COUNT / BLOCKDIM)) :
+            all_blocks;
 
         cell_type* checkpoints = (cell_type*)(temp);
         uint32*    submatrices = (uint32*)   (temp + checkpoints_size * stream.size());
 
-        batched_banded_alignment_traceback_kernel<BLOCKDIM,BAND_LEN,CHECKPOINTS> <<<n_blocks, BLOCKDIM>>>(
+        if (wfa_mode)
+            persistent_banded_batched_alignment_traceback_kernel<BLOCKDIM,BAND_LEN,CHECKPOINTS,stream_type,cell_type> <<<n_blocks, BLOCKDIM>>>(
+                stream,
+                checkpoints,
+                submatrices,
+                stream.size() );
+        else
+            batched_banded_alignment_traceback_kernel<BLOCKDIM,BAND_LEN,CHECKPOINTS> <<<n_blocks, BLOCKDIM>>>(
             stream,
             checkpoints,
             submatrices,
@@ -527,10 +614,11 @@ void BatchedBandedAlignmentTraceback<BAND_LEN,CHECKPOINTS,stream_type,DeviceThre
     }
     else
     {
-        // compute the number of blocks we are going to launch
-        const uint32 n_blocks = nvbio::max( nvbio::min(
-            (uint32)nvbio_cuda::max_active_blocks( persistent_banded_batched_alignment_traceback_kernel<BLOCKDIM,BAND_LEN,CHECKPOINTS,stream_type,cell_type>, BLOCKDIM, 0u ),
-            queue_capacity / BLOCKDIM ), 1u );
+            const uint32 n_blocks = nvbio::max( nvbio::min(
+                (uint32)nvbio_cuda::max_active_blocks(
+                persistent_banded_batched_alignment_traceback_kernel<BLOCKDIM,BAND_LEN,CHECKPOINTS,stream_type,cell_type>, BLOCKDIM, 0u ),
+                nvbio::min(queue_capacity / BLOCKDIM,
+                        (uint32)WFA_MAX_BLOCKS) ), 1u );
 
         cell_type* checkpoints = (cell_type*)(temp);
         uint32*    submatrices = (uint32*)   (temp + checkpoints_size * queue_capacity);

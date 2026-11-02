@@ -35,8 +35,13 @@ of RAM on the graphics card. We therefore recommend using an Nvidia card with 8G
 Please note that this feature is still experimental; 
 it currently supports only end-to-end alignments and does not yet allow customization of scoring parameters. 
 By default, it uses the following scoring: \code{match:0, mismatch:1, gap_open:1 and gap_ext:1}.
-Additionally, the \code{--cache-writes} parameter optimizes disk write operations, resulting in faster alignments.
-This functionality requires 4GB of RAM and is limited to paired-end alignments.
+Additionally, the \code{--cache-writes} parameter activates the asynchronous SAM writer for
+single-end alignments: output records are formatted and written by a background thread while the
+GPU aligns the next batches, giving a large speedup on sizeable outputs (about 100 MB of extra
+host RAM are used by the queue). It is not recommended for paired-end alignments and is ignored
+for BAM output. Pair it with \code{--batch-size 64}: \code{--batch-size} caps the number of reads
+per batch, in thousands of reads (minimum 16, default 1024); smaller batches overlap the
+alignment and the writing much better than the default.
 }
 \examples{
 td <- tempdir()

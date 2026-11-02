@@ -150,16 +150,21 @@ struct BestAnchorScoreStream : public AlignmentStreamBase<SCORE_STREAM,AlignerTy
         context->genome_begin = g_pos > m_band_len/2 ? g_pos - m_band_len/2 : 0u;
         context->genome_end   = nvbio::min( context->genome_begin + m_band_len + a_read_len, base_type::m_pipeline.genome_length );
 
+        // the score this mate has to reach for the pair to stay interesting ; it is computed
+        // here, before the skip test below, because that test reads it and the context field
+        // holds nothing yet when the framework calls this method on a fresh context
+        const int32 min_score = nvbio::max( target_mate_score, base_type::m_pipeline.score_limit );
+
         // skip locations that we have already visited
         const uint32 mate = base_type::m_pipeline.anchor;
         const bool skip = (mate == best.m_a1.m_mate && (read_rc == best.m_a1.m_rc && g_pos == best.m_a1.m_align)) ||
                           (mate == best.m_o1.m_mate && (read_rc == best.m_o1.m_rc && g_pos == best.m_o1.m_align)) ||
                           (mate == best.m_a2.m_mate && (read_rc == best.m_a2.m_rc && g_pos == best.m_a2.m_align)) ||
                           (mate == best.m_o2.m_mate && (read_rc == best.m_o2.m_rc && g_pos == best.m_o2.m_align)) ||
-                          (context->min_score > a_optimal_score);
+                          (min_score > a_optimal_score);
 
         // setup the minimum score
-        context->min_score = skip ? Field_traits<int32>::max() : nvbio::max( target_mate_score, base_type::m_pipeline.score_limit );
+        context->min_score = skip ? Field_traits<int32>::max() : min_score;
 
         return !skip;
     }
@@ -233,7 +238,10 @@ void banded_anchor_score_best(
     stream.wfa_F_null_buffer = pipeline.wfa_F_null_buffer;
     stream.wfa_PointeurH_buffer = pipeline.wfa_PointeurH_buffer;
 
-    typedef aln::DeviceThreadScheduler scheduler_type;
+    // the Wfah kernels get the WFA_MIN_BLOCKS occupancy hint ; every other
+    // aligner keeps the very same scheduler as before (same instantiation)
+    typedef typename aln::WfaBlockSchedulerPick<WFA_MIN_BLOCKS, 1u, typename aligner_type::aligner_tag>::type scheduler_type;
+    //typedef aln::DeviceThreadScheduler scheduler_type;
     //typedef aln::DeviceStagedThreadScheduler scheduler_type;
 
     if (band_len == 1)

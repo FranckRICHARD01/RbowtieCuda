@@ -86,15 +86,44 @@ execute_process(
   ERROR_QUIET
 )
 
-if(GPU_ARCHS)
-    # Convert "8.9" en "89"
-    string(REPLACE "." "" GPU_ARCH_NUM ${GPU_ARCHS})
-    message(WARNING "Detected GPU architecture: ${GPU_ARCH_NUM}")
-    set(CMAKE_CUDA_ARCHITECTURES ${GPU_ARCH_NUM})
+# Oldest CUDA target supported by the installed toolkit (drives the PTX JIT fallback).
+# CUDA 13 removed Pascal/Volta/Maxwell; Turing sm_75 is the oldest valid target.
+if(CMAKE_CUDA_COMPILER_VERSION VERSION_GREATER_EQUAL 13.0)
+    set(NVBIO_MIN_ARCH "75")
 else()
-    # Valeur de secours par défaut
-    message(WARNING "Could not detect GPU architecture. Defaulting to sm_70.")
-    set(CMAKE_CUDA_ARCHITECTURES 70)
+    set(NVBIO_MIN_ARCH "70")
+endif()
+
+# Native arch(es) detected on this host (may be several GPUs), normalized to NN form.
+set(NVBIO_NATIVE_ARCHS "")
+if(GPU_ARCHS)
+    string(STRIP "${GPU_ARCHS}" GPU_ARCHS)
+    string(REPLACE "\n" ";" _arch_lines "${GPU_ARCHS}")
+    foreach(_a IN LISTS _arch_lines)
+        string(STRIP "${_a}" _a)
+        if(_a)
+            string(REPLACE "." "" _num "${_a}")
+            list(APPEND NVBIO_NATIVE_ARCHS "${_num}")
+        endif()
+    endforeach()
+    list(REMOVE_DUPLICATES NVBIO_NATIVE_ARCHS)
+endif()
+
+if(NVBIO_NATIVE_ARCHS)
+    # Native SASS for detected GPU(s) + PTX JIT fallback so the fatbin runs on any arch >= floor.
+    # Skip the extra PTX when a native arch already equals the floor (its own compute_XX is embedded).
+    list(FIND NVBIO_NATIVE_ARCHS "${NVBIO_MIN_ARCH}" _min_present)
+    if(_min_present LESS 0)
+        set(CMAKE_CUDA_ARCHITECTURES "${NVBIO_NATIVE_ARCHS}" "${NVBIO_MIN_ARCH}-virtual")
+        message(WARNING "CUDA arch: native=${NVBIO_NATIVE_ARCHS} + PTX JIT fallback sm_${NVBIO_MIN_ARCH}")
+    else()
+        set(CMAKE_CUDA_ARCHITECTURES "${NVBIO_NATIVE_ARCHS}")
+        message(WARNING "CUDA arch: native=${NVBIO_NATIVE_ARCHS} (floor already embedded)")
+    endif()
+else()
+    # No detectable GPU (nvidia-smi unavailable/failing): oldest supported SASS + PTX fallback.
+    set(CMAKE_CUDA_ARCHITECTURES "${NVBIO_MIN_ARCH}" "${NVBIO_MIN_ARCH}-virtual")
+    message(WARNING "Could not detect GPU architecture. Using sm_${NVBIO_MIN_ARCH} SASS + PTX JIT fallback.")
 endif()
 
 #set(CMAKE_CXX_COMPILER_ID NVHPC)
@@ -234,6 +263,8 @@ if(USING_NVHPC)
 endif()
 
 # Configuration for nvcc
+# NOTE: superseded by CMAKE_CUDA_ARCHITECTURES above. CUDA_NVCC_FLAGS is not consumed by
+# modern CMake; kept only for reference. Do NOT reintroduce sm_70 (removed in CUDA 13).
 if(NOT USING_NVHPC)
   if(GPU_ARCHS)
     # Processing for nvcc

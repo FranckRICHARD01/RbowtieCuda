@@ -35,9 +35,70 @@
 #define WFA_BAND_LEN2_CACHE (WFA_BAND_LEN_Y - 2)
 #define WFA_BAND_LEN2_LIMIT (WFA_BAND_LEN_Y - 5)
 #define DIM_Y_SHARED COMPUTE_DIM_SHARED(WFA_BAND_LEN_Y + 1, DIM_SHARED)
+
+// Length of the three per-thread copies of the current wavefront row that the
+// heuristics keep (wavefront_heuristic_wfadaptive, wavefront_heuristic_xdrop and
+// wavefront_heuristic_zdrop) ; the step head of both engines clamps every row to
+// the band envelope [heuristic.min_k, heuristic.max_k] carried from --max-dist, so
+// a row holds at most 2 * DIM_SHARED2 + 1 = 27 entries and the copies, which add one
+// diagonal guard at each end, need 29 ; 35 leaves six entries of margin. The historical
+// 100 was three such frames, 600 B of the 1,312 B of local spill the score kernels
+// reported ; the copy loops read one element past the row, so the size must stay
+// strictly above 2 * DIM_SHARED2 + 3 whatever it is set to.
+#ifndef WFA_SCRATCH_LEN
+#define WFA_SCRATCH_LEN 35
+#endif
 // #define DIM_Y_SHARED WFA_BAND_LEN2_X * WFA_BAND_LEN2_Y
 #define WFA_LAUNCH 2
 #define CORRECT_SIZE_MATRIX 1
+
+// Wavefront scratch sizing
+// -----------------------
+// The banded score stream iterates over *candidate hits* (score_best_inl.h
+// BestScoreStream::size() == pipeline.hits_queue_size), not over reads, and one
+// CUDA thread scores one hit.  Sizeing the H/E/F slabs by the batch (BATCH_SIZE
+// + 1 slots indexed by that job id) makes the wavefront the batch-size limiting
+// factor -- gauge_batch_size() then halves the batch until 12.2KB/job fits,
+// which multiplies every per-batch cost (FM-index driver steps, H2D uploads,
+// kernel launches, CIGAR flush) -- and it couples the footprint to the number
+// of hits (the paired path's queue is sized max_hits * BATCH_SIZE).
+// The batched WFA kernel therefore runs a persistent (grid-stride) launch
+// clamped to WFA_MAX_BLOCKS blocks and indexes the slabs by *thread slot*, so
+// the footprint is exactly WFA_SLOT_COUNT slabs whatever the batch size.  Keep
+// WFA_BLOCKDIM in sync with the BLOCKDIM of the score kernels.  Both the banded
+// one (batched_banded_inl.h) and the full DP one (batched_inl.h) clamp their
+// launch to WFA_SLOT_COUNT / BLOCKDIM blocks of that BLOCKDIM, which keeps the
+// footprint exactly WFA_SLOT_COUNT slabs whatever the block size or the batch
+// size is ; lowering WFA_MAX_BLOCKS only trades wavefront occupancy for memory.
+#define WFA_BLOCKDIM   128u
+#define WFA_MAX_BLOCKS 256u
+#define WFA_SLOT_COUNT (WFA_MAX_BLOCKS * WFA_BLOCKDIM)
+
+// Longest read the wavefront engine can score
+// --------------------------------------------
+// wfah_banded_inl.h (banded::wfah_alignment_score_dispatch::run) caches BAND_LEN_BAND
+// characters of text and BAND_LEN_BAND characters of pattern in *local* arrays of that
+// function (q_cache[BAND_LEN_BAND], Reference_cache<BAND_LEN_BAND>::BAND_WORDS) and
+// fills them without bounding the window against that size : handed a wider window it
+// writes past its own arrays, and the score and the sink it reports afterwards are
+// garbage.  On reads_1.fastq that is every read above ~210 bytes left unmapped, while
+// the two scorers agree below 200 bytes.
+// A window can therefore be waved only while it fits that cache, with room for the
+// text view the banding adds around the diagonal (2 * DIM_SHARED) plus slack ; above
+// WFA_WINDOW_LIMIT the score comes from the regular banded DP instead, which has no
+// length limit and costs the same unit edit distance (see banded_alignment_score).
+#define WFA_WINDOW_LIMIT (200 - 2 * DIM_SHARED - 8)
+
+// The same cache seen from the other side of the matrix.  run() caches BAND_LEN_BAND
+// characters of *text* as well, in a local array of that size, so a window whose text
+// view is wider than the cache overflows it exactly the same way ; a paired window is
+// the anchor window grown by the fragment band, which with --max-dist 15 sits on the
+// boundary, so both sides have to be tested before the window can be waved.
+#ifdef WFA_TESTS
+#define WFA_TEXT_CACHE_LEN   1000u
+#else
+#define WFA_TEXT_CACHE_LEN   200u
+#endif
 
 typedef enum
 {
@@ -49,6 +110,21 @@ typedef enum
     WFA_HEURISTIC_ZDROP = 0x0000000000000020ul,
     WFA_HEURISTIC_MASH = 0x0000000000000040ul,
 } wfa_heuristic_type;
+
+// Minimum number of blocks per SM the Wfah score kernels are asked for by their
+// __launch_bounds__ (see the WfaBlockSchedulerPick in alignment/batched.h).
+// The wavefront keeps its three bands and its two string caches in per-thread
+// local arrays -- the SHARED macro is empty outside WFA_TESTS -- and at the
+// compiled envelope it needs more live state than the register file affords :
+// with the historical one block per SM the compiler spends all 128 registers and
+// spills 1,184 B of locals per thread, which is a good part of why the wavefront
+// costs more per candidate than the banded DP on low-divergence reads.  Asking
+// for more blocks per SM caps the register count and reshuffles that spill ; the
+// best value depends on the device, hence the knob.  1 is the historical
+// configuration, bit-for-bit, and the one shipped here.
+#ifndef WFA_MIN_BLOCKS
+#define WFA_MIN_BLOCKS 1u
+#endif
 
 namespace nvbio
 {
@@ -212,14 +288,14 @@ namespace nvbio
             const score_type M,
             int16 *distances)
         {
-            const int16 *offsets = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(score, DIM_SHARED)];
+            const int16 *offsets = &wfa.H_Band.scores[wfa.H_Band.scores_stride * COMPUTE_DIM_SHARED(score, DIM_SHARED)];
             score_type k, min_distance = nvbio::max(N, M);
             const score_type lo = wfa.H_Band.get_lo(score);
 
 #pragma unroll
             for (score_type k = lo; k <= wfa.H_Band.get_hi(score); ++k)
             {
-                const score_type distance = wf_distance_end2end(offsets[k - lo], k, N, M);
+                const score_type distance = wf_distance_end2end(offsets[wfa.H_Band.scores_stride * (k - lo)], k, N, M);
                 distances[k - lo + 1] = distance;
                 min_distance = nvbio::min(min_distance, distance);
             }
@@ -236,14 +312,14 @@ namespace nvbio
             int16 *distances)
         {
             const score_type mfactor = ((float)(N + M) / 2);
-            const int16 *offsets = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(score, DIM_SHARED)];
+            const int16 *offsets = &wfa.H_Band.scores[wfa.H_Band.scores_stride * COMPUTE_DIM_SHARED(score, DIM_SHARED)];
             score_type k, min_distance = nvbio::max(N, M);
             const score_type lo = wfa.H_Band.get_lo(score);
 
 #pragma unroll
             for (score_type k = lo; k <= wfa.H_Band.get_hi(score); ++k)
             {
-                const score_type distance = wf_distance_end2end_weighted(offsets[k - lo], k, N, M, mfactor);
+                const score_type distance = wf_distance_end2end_weighted(offsets[wfa.H_Band.scores_stride * (k - lo)], k, N, M, mfactor);
                 distances[k - lo + 1] = distance;
                 min_distance = nvbio::min(min_distance, distance);
             }
@@ -293,7 +369,7 @@ namespace nvbio
 #pragma roll
                     for (score_type i = lo_reduced; i <= hi_reduced; i++)
                     {
-                        wfa.H_Band.scores[pos + (i - lo_reduced)] = wfa.H_Band.scores[pos - (lo_reduced - lo) + (i - lo_reduced)];                      
+                        wfa.H_Band.scores[wfa.H_Band.scores_stride * (pos + (i - lo_reduced))] = wfa.H_Band.scores[wfa.H_Band.scores_stride * (pos - (lo_reduced - lo) + (i - lo_reduced))];                      
                     }
                 }
                 else
@@ -301,7 +377,7 @@ namespace nvbio
 #pragma roll
                     for (score_type i = hi_reduced; i >= lo_reduced; i--)
                     {
-                        wfa.H_Band.scores[pos + (i - lo_reduced)] = wfa.H_Band.scores[pos - (lo_reduced - lo) + (i - lo_reduced)]; 
+                        wfa.H_Band.scores[wfa.H_Band.scores_stride * (pos + (i - lo_reduced))] = wfa.H_Band.scores[wfa.H_Band.scores_stride * (pos - (lo_reduced - lo) + (i - lo_reduced))]; 
                     }
                 }
             }
@@ -326,13 +402,13 @@ namespace nvbio
             if (base_hi - base_lo + 1 < min_wavefront_length)
                 return;
 
-            int16 *H_Band_ptr = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(score, DIM_SHARED)];
-            int16 distances[100]; //= &wfa.H_Band.scores[COMPUTE_DIM_SHARED(WFA_BAND_LEN2_CACHE, DIM_SHARED)];
+            int16 *H_Band_ptr = &wfa.H_Band.scores[wfa.H_Band.scores_stride * COMPUTE_DIM_SHARED(score, DIM_SHARED)];
+            int16 distances[WFA_SCRATCH_LEN]; //= &wfa.H_Band.scores[COMPUTE_DIM_SHARED(WFA_BAND_LEN2_CACHE, DIM_SHARED)];
 
 #pragma unroll
             for (score_type k = base_lo - 1; k <= base_hi + 1; ++k)
             {
-                distances[k - base_lo + 1] = H_Band_ptr[k - base_lo];
+                distances[k - base_lo + 1] = H_Band_ptr[wfa.H_Band.scores_stride * (k - base_lo)];
             }
 
             score_type min_distance;
@@ -364,14 +440,14 @@ namespace nvbio
             const score_type wf_match = wfa.heuristic.penalties_match;
             const score_type swg_match = (wf_match != 0) ? (wfa.heuristic.penalties_match) : 1;
 
-            const int16 *offsets = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(score, DIM_SHARED)];
+            const int16 *offsets = &wfa.H_Band.scores[wfa.H_Band.scores_stride * COMPUTE_DIM_SHARED(score, DIM_SHARED)];
             score_type k, cmax_sw_score = WFA_MIN1, cmax_k = 0, cmax_offset = 0;
             const score_type lo = wfa.H_Band.get_lo(score);
 
 #pragma unroll
             for (score_type k = lo; k <= wfa.H_Band.get_hi(score); ++k)
             {
-                const score_type offset = offsets[k - lo];
+                const score_type offset = offsets[wfa.H_Band.scores_stride * (k - lo)];
                 if (offset < 0)
                     continue;
                 const score_type v = offset - k;
@@ -405,14 +481,14 @@ namespace nvbio
             const score_type base_hi = wfa.H_Band.get_hi(score);
             const score_type base_lo = wfa.H_Band.get_lo(score);
 
-            int16 *offsets = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(score, DIM_SHARED)];
-            int16 sw_scores[100];// = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(WFA_BAND_LEN2_CACHE, DIM_SHARED)];
+            int16 *offsets = &wfa.H_Band.scores[wfa.H_Band.scores_stride * COMPUTE_DIM_SHARED(score, DIM_SHARED)];
+            int16 sw_scores[WFA_SCRATCH_LEN];// = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(WFA_BAND_LEN2_CACHE, DIM_SHARED)];
 
             // Use victim as temporal buffer
 #pragma unroll
             for (score_type k = base_lo - 1; k <= base_hi + 1; ++k)
             {
-                sw_scores[k - base_lo + 1] = offsets[k - base_lo];
+                sw_scores[k - base_lo + 1] = offsets[wfa.H_Band.scores_stride * (k - base_lo)];
             }
 
             // Compute SW scores
@@ -479,13 +555,13 @@ namespace nvbio
             const score_type base_hi = wfa.H_Band.get_hi(score);
             const score_type base_lo = wfa.H_Band.get_lo(score);
 
-            const int16 *H_Band_ptr = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(score, DIM_SHARED)];
-            int16 sw_scores[100];// = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(WFA_BAND_LEN2_CACHE, DIM_SHARED)];
+            const int16 *H_Band_ptr = &wfa.H_Band.scores[wfa.H_Band.scores_stride * COMPUTE_DIM_SHARED(score, DIM_SHARED)];
+            int16 sw_scores[WFA_SCRATCH_LEN];// = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(WFA_BAND_LEN2_CACHE, DIM_SHARED)];
 
 #pragma unroll
             for (score_type k = base_lo - 1; k <= base_hi + 1; ++k)
             {
-                sw_scores[k - base_lo + 1] = H_Band_ptr[k - base_lo];
+                sw_scores[k - base_lo + 1] = H_Band_ptr[wfa.H_Band.scores_stride * (k - base_lo)];
             }
 
             score_type cmax_sw_score, cmax_k, cmax_offset;
@@ -559,7 +635,7 @@ namespace nvbio
                 return; // We cannot do anything here
             // Adjust the band
             uint32 pos = COMPUTE_DIM_SHARED(score, DIM_SHARED);
-            const int16 *offsets = &wfa.H_Band.scores[pos] - lo;
+            const int16 *offsets = &wfa.H_Band.scores[wfa.H_Band.scores_stride * pos] - wfa.H_Band.scores_stride * lo;
             const score_type max_wf_length = wfa.heuristic.max_k - wfa.heuristic.min_k + 1;
             if (wf_length > max_wf_length)
             {
@@ -567,13 +643,13 @@ namespace nvbio
                 const score_type leeway = (wf_length - max_wf_length) / 2;
                 const score_type quarter = wf_length / 4;
                 const score_type dist_p0 = wf_distance_end2end(
-                    offsets[lo], lo, pattern_length, text_length);
+                    offsets[wfa.H_Band.scores_stride * lo], lo, pattern_length, text_length);
                 const score_type dist_p1 = wf_distance_end2end(
-                    offsets[lo + quarter], (score_type)(lo + quarter), pattern_length, text_length);
+                    offsets[wfa.H_Band.scores_stride * (lo + quarter)], (score_type)(lo + quarter), pattern_length, text_length);
                 const score_type dist_p2 = wf_distance_end2end(
-                    offsets[lo + 2 * quarter], (score_type)(lo + 2 * quarter), pattern_length, text_length);
+                    offsets[wfa.H_Band.scores_stride * (lo + 2 * quarter)], (score_type)(lo + 2 * quarter), pattern_length, text_length);
                 const score_type dist_p3 = wf_distance_end2end(
-                    offsets[hi], hi, pattern_length, text_length);
+                    offsets[wfa.H_Band.scores_stride * hi], hi, pattern_length, text_length);
                 // Heuristically decide where to place the band
                 score_type new_lo = lo;
                 if (dist_p0 > dist_p3)
@@ -598,7 +674,7 @@ namespace nvbio
 #pragma roll
                         for (score_type i = new_lo; i <= new_hi; i++)
                         {
-                            wfa.H_Band.scores[pos + (i - new_lo)] = wfa.H_Band.scores[pos + (new_lo - lo) + (i - new_lo)];
+                            wfa.H_Band.scores[wfa.H_Band.scores_stride * (pos + (i - new_lo))] = wfa.H_Band.scores[wfa.H_Band.scores_stride * (pos + (new_lo - lo) + (i - new_lo))];
                         }
                     }
                     else
@@ -606,7 +682,7 @@ namespace nvbio
 #pragma roll
                         for (score_type i = new_hi; i >= new_lo; i--)
                         {
-                            wfa.H_Band.scores[pos + (i - new_lo)] = wfa.H_Band.scores[pos + (new_lo - lo) + (i - new_lo)];
+                            wfa.H_Band.scores[wfa.H_Band.scores_stride * (pos + (i - new_lo))] = wfa.H_Band.scores[wfa.H_Band.scores_stride * (pos + (new_lo - lo) + (i - new_lo))];
                         }
                     }
                 }
@@ -625,7 +701,7 @@ namespace nvbio
             const score_type N,
             const score_type M)
         {
-            int16 *H_Band_ptr = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(score, DIM_SHARED)] - wfa.H_Band.get_lo(score);
+            int16 *H_Band_ptr = &wfa.H_Band.scores[wfa.H_Band.scores_stride * COMPUTE_DIM_SHARED(score, DIM_SHARED)] - wfa.H_Band.scores_stride * wfa.H_Band.get_lo(score);
 
             if (!H_Band_ptr || wfa.H_Band.get_null(score) || wfa.H_Band.get_lo(score) > wfa.H_Band.get_hi(score))
                 return false;
@@ -730,9 +806,17 @@ namespace nvbio
             struct defAlignment
             {
                 int16 *scores = nullptr;
+                int32 scores_stride = 1;
                 int16 *hi = nullptr;
                 int16 *lo = nullptr;
                 bool  *null = nullptr;
+                // stride between successive flat indices of the minor slabs ; the
+                // banded score stream binds them index-major (slot innermost) so a
+                // warp walks consecutive elements instead of a 120 B / 60 B pitch ;
+                // 1 keeps the historical slot-major layout of every other engine
+                int32 hi_stride = 1;
+                int32 lo_stride = 1;
+                int32 null_stride = 1;
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
                 defAlignment()
@@ -744,6 +828,16 @@ namespace nvbio
                     int16 *data)
                 {
                     scores = data;
+                    scores_stride = 1;
+                }
+
+                NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void
+                set_scores_data(
+                    int16 *data,
+                    int32 stride)
+                {
+                    scores = data;
+                    scores_stride = stride;
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void
@@ -754,6 +848,15 @@ namespace nvbio
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void
+                set_lo_data(
+                    int16 *data,
+                    int32 stride)
+                {
+                    lo = data;
+                    lo_stride = stride;
+                }
+
+                NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void
                 set_hi_data(
                     int16 *data)
                 {
@@ -761,10 +864,28 @@ namespace nvbio
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void
+                set_hi_data(
+                    int16 *data,
+                    int32 stride)
+                {
+                    hi = data;
+                    hi_stride = stride;
+                }
+
+                NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void
                 set_null_data(
                     bool *data)
                 {
                     null = data;
+                }
+
+                NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void
+                set_null_data(
+                    bool *data,
+                    int32 stride)
+                {
+                    null = data;
+                    null_stride = stride;
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
@@ -778,9 +899,9 @@ namespace nvbio
                                        
 
                     NVBIO_CUDA_DEBUG_ASSERT(i >= 0 && i < WFA_BAND_LEN2_Y, "get_lo() indice problem i=%d\n", i);
-                    NVBIO_CUDA_DEBUG_ASSERT(lo[i] >= -1000 && lo[i] < 1000, "get_lo() return problem  i=%i get_lo=%i\n", i, lo[i]);
+                    NVBIO_CUDA_DEBUG_ASSERT(lo[lo_stride * i] >= -1000 && lo[lo_stride * i] < 1000, "get_lo() return problem  i=%i get_lo=%i\n", i, lo[lo_stride * i]);
 
-                    return lo[i];
+                    return lo[lo_stride * i];
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
@@ -792,9 +913,9 @@ namespace nvbio
                     //    return -1;
 
                     NVBIO_CUDA_DEBUG_ASSERT(i >= 0 && i < WFA_BAND_LEN2_Y, "get_hi() indice problem i=%d\n", i);
-                    NVBIO_CUDA_DEBUG_ASSERT(hi[i] >= -1000 && hi[i] < 1000, "get_hi() return problem  i=%i get_hi=%i\n", i, hi[i]);
+                    NVBIO_CUDA_DEBUG_ASSERT(hi[hi_stride * i] >= -1000 && hi[hi_stride * i] < 1000, "get_hi() return problem  i=%i get_hi=%i\n", i, hi[hi_stride * i]);
 
-                    return hi[i];
+                    return hi[hi_stride * i];
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
@@ -807,36 +928,31 @@ namespace nvbio
 
                     NVBIO_CUDA_DEBUG_ASSERT(i >= 0 && i < WFA_BAND_LEN2_Y, "get_null() indice problem i=%d\n", i);
 
-                    return null[i];
+                    return null[null_stride * i];
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void set_lo(
                     int32 i,
                     score_type v)
                 {
-#if __CUDA_ARCH__ >= 800
-                    __stwt(&lo[i], v);
-#else
-                    lo[i] = v;
-#endif
+                    // plain cached store: the next wavefront re-reads this row from
+                    // the same thread, streaming it out (__stwt) only forces an L2
+                    // round-trip on the following iteration
+                    lo[lo_stride * i] = v;
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void set_hi(
                     int32 i,
                     score_type v)
                 {
-#if __CUDA_ARCH__ >= 800
-                    __stwt(&hi[i], v);
-#else
-                    hi[i] = v;
-#endif
+                    hi[hi_stride * i] = v;
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void set_null(
                     int32 i,
                     bool v)
                 {
-                    null[i] = v;
+                    null[null_stride * i] = v;
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
@@ -848,10 +964,10 @@ namespace nvbio
                     if (i < 0)
                         return WFA_MIN;
 
-                    if (j > hi[i] || j < lo[i])
+                    if (j > hi[hi_stride * i] || j < lo[lo_stride * i])
                         return WFA_MIN;
 
-                    int32 pos = COMPUTE_DIM_SHARED(i, DIM_SHARED) - lo[i];
+                    int32 pos = COMPUTE_DIM_SHARED(i, DIM_SHARED) - lo[lo_stride * i];
 
                     // NVBIO_CUDA_DEBUG_ASSERT(pos < WFA_BAND_LEN2_X * WFA_BAND_LEN2_Y, "get() indice problem pos < BAND_LEN2_X * BAND_LEN2_Y i=%i j=%i pos=%i ^=%d\n", i, j, pos, WFA_BAND_LEN2_X * WFA_BAND_LEN2_Y);
 
@@ -862,7 +978,7 @@ namespace nvbio
                           NVBIO_CUDA_DEBUG_ASSERT(pos < 0, "test i=%i j=%i pos=%i ^=%d\n", i, j, pos, scores[pos]);
                     }*/
 
-                    return scores[pos + j];
+                    return scores[scores_stride * (pos + j)];
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void set(
@@ -870,17 +986,15 @@ namespace nvbio
                     int32 j,
                     score_type s)
                 {
-                    int32 pos = COMPUTE_DIM_SHARED(i, DIM_SHARED) - lo[i];
+                    int32 pos = COMPUTE_DIM_SHARED(i, DIM_SHARED) - lo[lo_stride * i];
 
                     // NVBIO_CUDA_DEBUG_ASSERT(i >= 0, "set() indice problem i=%d\n", i);
                     // NVBIO_CUDA_DEBUG_ASSERT(pos >= -(i + 1), "set() indice problem pos >= 0 i=%i j=%i pos=%i\n", i, j, pos);
                     // NVBIO_CUDA_DEBUG_ASSERT(pos < DIM_Y_SHARED, "set() indice problem pos < DIM_Y_SHARED i=%i j=%i pos=%i ^=%d\n", i, j, pos, DIM_Y_SHARED);
 
-#if __CUDA_ARCH__ >= 800
-                    __stwt(&scores[pos + j], s);
-#else
-                    scores[pos + j] = s;
-#endif
+                    // plain cached store (see set_lo): the next wavefront reads this
+                    // cell back from the same thread
+                    scores[scores_stride * (pos + j)] = s;
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void incrementation(
@@ -888,40 +1002,23 @@ namespace nvbio
                     int32 j)
                 {
                     // int32 h = i;
-                    int32 pos = COMPUTE_DIM_SHARED(i, DIM_SHARED) - lo[i];
+                    int32 pos = COMPUTE_DIM_SHARED(i, DIM_SHARED) - lo[lo_stride * i];
 
                     //     NVBIO_CUDA_DEBUG_ASSERT(i >= 0, "incrementation() indice problem i >= 0, i=%d \n", i);
                     //    NVBIO_CUDA_DEBUG_ASSERT(pos + j >= -(h + 1), "incrementation() indice problem pos + j >= 0 i=%i j=%i pos=%i\n", i, j, pos);
                     //    NVBIO_CUDA_DEBUG_ASSERT(pos + j < WFA_BAND_LEN2_X * WFA_BAND_LEN2_Y, "incrementation() indice problem pos + j < BAND_LEN2_X * BAND_LEN2_Y j=%i pos=%i ^=%d\n", j, pos, WFA_BAND_LEN2_X * WFA_BAND_LEN2_Y);
 
-                    scores[pos + j]++;
+                    scores[scores_stride * (pos + j)]++;
                 }
 
                 NVBIO_FORCEINLINE NVBIO_HOST_DEVICE void
                 set_hi_lo(int32 i, bool H)
                 {
-                    if (H)
-                    {
-
-#if __CUDA_ARCH__ >= 800
-                        __stwt(&lo[i], 0);
-                        __stwt(&hi[i], 0);
-#else
-                        lo[i] = 0;
-                        hi[i] = 0;
-#endif
-                    }
-                    else
-                    {
-
-#if __CUDA_ARCH__ >= 800
-                        __stwt(&lo[i], 0);
-                        __stwt(&hi[i], 0);
-#else
-                        lo[i] = 0;
-                        hi[i] = 0;
-#endif
-                    }
+                    // the two branches were identical in the original code; keep one
+                    // plain cached store, which the next wavefront reads back
+                    (void) H;
+                    lo[lo_stride * i] = 0;
+                    hi[hi_stride * i] = 0;
                 }
             };
 
@@ -947,26 +1044,17 @@ namespace nvbio
                 score_type hi,
                 score_type lo)
             {
-#if __CUDA_ARCH__ >= 800
-                __stwt(&H_Band.lo[ss], lo);
-                __stwt(&H_Band.hi[ss], hi);
+                // plain cached stores: set_HEF_hi_lo writes the bounds that the very
+                // next wavefront reads back through get_lo/get_hi from the same thread,
+                // so streaming them out (__stwt) only costs an L2 round-trip
+                H_Band.lo[H_Band.lo_stride * ss] = lo;
+                H_Band.hi[H_Band.hi_stride * ss] = hi;
 
-                __stwt(&E_Band.lo[ss], lo);
-                __stwt(&E_Band.hi[ss], hi);
+                E_Band.lo[E_Band.lo_stride * ss] = lo;
+                E_Band.hi[E_Band.hi_stride * ss] = hi;
 
-                __stwt(&F_Band.lo[ss], lo);
-                __stwt(&F_Band.hi[ss], hi);
-#else
-
-                H_Band.lo[ss] = lo;
-                H_Band.hi[ss] = hi;
-
-                E_Band.lo[ss] = lo;
-                E_Band.hi[ss] = hi;
-
-                F_Band.lo[ss] = lo;
-                F_Band.hi[ss] = hi;
-#endif
+                F_Band.lo[F_Band.lo_stride * ss] = lo;
+                F_Band.hi[F_Band.hi_stride * ss] = hi;
             }
 
             template <typename context_type, typename ref_type, typename text_cache_type, typename scoring_type>
@@ -1035,7 +1123,7 @@ namespace nvbio
 
                 for (k = mat->get_hi(s); k >= lo; --k)
                 {
-                    uint16 offset = mat->scores[pos - lo + k];
+                    uint16 offset = mat->scores[mat->scores_stride * (pos - lo + k)];
 
                     if (offset <= length_str && (uint16)(offset - k) <= length_ref)
                         break;
@@ -1046,7 +1134,7 @@ namespace nvbio
 
                 for (k = mat->get_lo(s); k <= hi; ++k)
                 {
-                    uint16 offset = mat->scores[pos - lo + k];
+                    uint16 offset = mat->scores[mat->scores_stride * (pos - lo + k)];
 
                     if (offset <= length_str && (uint16)(offset - k) <= length_ref)
                         break;
@@ -1073,14 +1161,14 @@ namespace nvbio
                     {
                         for (score_type i = lo; i <= hi; i++)
                         {
-                            mat->scores[pos + (i - lo)] = mat->scores[pos + (lo - lo_mem) + (i - lo)];                            
+                            mat->scores[mat->scores_stride * (pos + (i - lo))] = mat->scores[mat->scores_stride * (pos + (lo - lo_mem) + (i - lo))];                            
                         }
                     }
                     else
                     {
                         for (score_type i = hi; i >= lo; i--)
                         {
-                            mat->scores[pos + (i - lo)] = mat->scores[pos + (lo - lo_mem) + (i - lo)];
+                            mat->scores[mat->scores_stride * (pos + (i - lo))] = mat->scores[mat->scores_stride * (pos + (lo - lo_mem) + (i - lo))];
                         }
                     }
                 }
@@ -1119,7 +1207,7 @@ namespace nvbio
 #pragma roll
                             for (score_type i = lo; i <= hi; i++)
                             {
-                                dst.scores[pos + (i - lo)] = dst.scores[pos + (lo - lo_mem) + (i - lo)];                 
+                                dst.scores[dst.scores_stride * (pos + (i - lo))] = dst.scores[dst.scores_stride * (pos + (lo - lo_mem) + (i - lo))];                 
                             }
                         }
                         else
@@ -1127,7 +1215,7 @@ namespace nvbio
 #pragma roll
                             for (score_type i = hi; i >= lo; i--)
                             {
-                                dst.scores[pos + (i - lo)] = dst.scores[pos + (lo - lo_mem) + (i - lo)]; 
+                                dst.scores[dst.scores_stride * (pos + (i - lo))] = dst.scores[dst.scores_stride * (pos + (lo - lo_mem) + (i - lo))]; 
                             }
                         }
                     }
@@ -1137,7 +1225,7 @@ namespace nvbio
             NVBIO_FORCEINLINE NVBIO_HOST_DEVICE static bool testEnd(
                 score_type length_ref,
                 score_type length_str,
-                defAlignment mat,
+                defAlignment& mat,
                 score_type s,
                 score_type alignment_k,
                 score_type alignment_offset,

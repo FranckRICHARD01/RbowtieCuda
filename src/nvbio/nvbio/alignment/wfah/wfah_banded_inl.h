@@ -1058,6 +1058,18 @@ namespace nvbio
                     int32 pos_gap_extend1, pos_gap_open1, pos_mismatch;
                     int32 pos_ss = 0;
 
+                    // Cost of the wavefront on which an admissible endpoint was accepted, or
+                    // -1 while none was ; its diagonal and text offset are kept next to it.
+                    wfa.heuristic.alignement_end_pos_score = -1;
+                    wfa.heuristic.alignement_end_pos_k = 0;
+                    wfa.heuristic.alignement_end_pos_offset = 0;
+
+                    // the accepted endpoint is kept on the side, as the fields above are
+                    // overwritten by the band heuristics along the way
+                    score_type end_cost = -1;
+                    score_type end_pos_k = 0;
+                    score_type end_pos_offset = 0;
+
                     // SHARED int16 H[2 * DIM_SHARED + 1];
                     // SHARED int16 I[2 * DIM_SHARED + 1];
                     // SHARED int16 D[2 * DIM_SHARED + 1];
@@ -1074,11 +1086,29 @@ namespace nvbio
                     // H[delta] = 0;
                     // D[delta] = WFA_MIN1;
                     // I[delta] = WFA_MIN1;
-                    H_Band_ptr = &wfa.H_Band.scores[COMPUTE_DIM_SHARED(0, DIM_SHARED)];
+                    H_Band_ptr = &wfa.H_Band.scores[wfa.H_Band.scores_stride * COMPUTE_DIM_SHARED(0, DIM_SHARED)];
                     /*#ifndef WFA_TESTS
                                                     __syncthreads();
                     #endif*/
                     SHARED score_type I1, I2, IM, D1, D2, DM, HM, offset;
+
+                    // the read pushed at the start of the window, with substitutions only, is a
+                    // valid alignment already, and so is the same read pushed to the far end of
+                    // the window or at its middle ; the cheapest of these bounds the cost of the
+                    // best alignment.  A wavefront result above that bound is plainly bogus : its
+                    // band clipped the real path, and the window goes to the banded DP instead
+                    score_type ham_starts = 0;
+                    score_type ham_ends = 0;
+                    score_type ham_middles = 0;
+                    const score_type mid_shift = (N - M) / 2;
+                    #pragma unroll 1
+                    for (score_type i = 0; i < M; i++)
+                    {
+                        ham_starts += (q_cache[i].x != ref[i]) ? 1 : 0;
+                        ham_ends += (q_cache[i].x != ref[(N - M) + i]) ? 1 : 0;
+                        ham_middles += (q_cache[i].x != ref[mid_shift + i]) ? 1 : 0;
+                    }
+                    const score_type cost_bound = nvbio::min(ham_starts, nvbio::min(ham_ends, ham_middles));
 
                     do
                     {
@@ -1087,7 +1117,7 @@ namespace nvbio
 #pragma unroll
                             for (k = lo; k <= hi; k++)
                             {
-                                offset = *(H_Band_ptr + k);
+                                offset = *(H_Band_ptr + wfa.H_Band.scores_stride * k);
                                 // H[k + delta];
 
                                 if (offset < 0)
@@ -1103,12 +1133,12 @@ namespace nvbio
                                     h++;
                                 }
 
-                                *(H_Band_ptr + k) = offset;
+                                *(H_Band_ptr + wfa.H_Band.scores_stride * k) = offset;
 
                                 /*#if __CUDA_ARCH__ >= 800
-                                    __stwt(&H_Band_ptr[k], offset);
+                                    __stwt(&H_Band_ptr[wfa.H_Band.scores_stride * k], offset);
                                 #else
-                                    H_Band_ptr[k] = offset;
+                                    H_Band_ptr[wfa.H_Band.scores_stride * k] = offset;
                                 #endif  */
                             }
 
@@ -1126,7 +1156,9 @@ namespace nvbio
                         if (wavefront_heuristic_cutoff(wfa, ss, s, N, M))
                             break;
 
-                        if (ss >= nvbio::min(WFA_BAND_LEN2_LIMIT_BAND, WFA_MAX_SCORE))
+                        if (ss >= (wfa.heuristic.max_wf_score > 0
+                            ? wfa.heuristic.max_wf_score
+                            : (score_type)nvbio::min(WFA_BAND_LEN2_LIMIT_BAND, WFA_MAX_SCORE)))
                         {
                             /*char ref_str[1000];
                             char read_str[1000];
@@ -1139,21 +1171,97 @@ namespace nvbio
                             break;
                         }
 
-                        if (wfa.testEnd(N, M, wfa.H_Band, ss, alignment_k, alignment_offset, true) ||
-                            wfa.testEnd(N, M, wfa.F_Band, ss, alignment_k, alignment_offset, false) ||
-                            wfa.testEnd(N, M, wfa.E_Band, ss, alignment_k, alignment_offset, false))
-                        {
-                            wfa.heuristic.alignement_end_pos_score = ss;
-                            wfa.heuristic.alignement_end_pos_k = alignment_k;
-                            wfa.heuristic.alignement_end_pos_offset = alignment_offset;
+                        // Endpoint of the alignment.  A cell is an endpoint once the pattern
+                        // (of length M) is consumed, i.e. offset >= M in this band layout, and
+                        // it is inside the window while offset - k <= N.  An end-to-end (global)
+                        // alignment additionally has to end at the far corner of the window, on
+                        // the diagonal M-N ; the semi-global alignment the gapped stages use is
+                        // free to end on any text position of the window, so any diagonal still
+                        // live is admissible.  A path ending in a gap is an endpoint as much as
+                        // one ending with a match, hence the three bands are scanned.  The cost
+                        // of the endpoint is this wavefront, penalties costing one apiece, so
+                        // the score the caller reports is its negation : no correction by the
+                        // diagonal offset applies.  A local alignment keeps its own machinery,
+                        // the wavefront only scores whole-pattern endpoints.
+                        // only the end-to-end (global) alignment has to finish at the far corner
+                        // of the window, on the diagonal M-N ; the semi-global one and the local
+                        // one (which this engine still anchors on the walk from the corner) are
+                        // free on the text endpoint, so any diagonal still live is admissible,
+                        // and the cheapest accepted one is the one that costs the least
+                        const bool whole_window = (TYPE == GLOBAL);
 
-                            break;
+                        score_type end_k = -1;
+                        score_type end_off = -1;
+
+                        // the banding already clamps offsets to at most M, so an endpoint is a
+                        // cell whose offset is exactly M ; offsets decrease as the diagonal k
+                        // grows, so a band whose first live diagonal falls short of M holds no
+                        // endpoint at all
+                        if (! wfa.H_Band.get_null(ss) && wfa.H_Band.get(ss, wfa.H_Band.get_lo(ss)) >= M)
+                        {
+                            const score_type b_lo = nvbio::max(whole_window ? alignment_k : wfa.H_Band.get_lo(ss), wfa.H_Band.get_lo(ss));
+                            const score_type b_hi = nvbio::min(whole_window ? alignment_k : wfa.H_Band.get_hi(ss), wfa.H_Band.get_hi(ss));
+
+                            #pragma unroll 1
+                            for (score_type k = b_lo; k <= b_hi; k++)
+                            {
+                                const score_type off = wfa.H_Band.get(ss, k);
+                                if (off >= M && (off - k) <= N)
+                                {
+                                    end_k = k;
+                                    end_off = off;
+                                    break;
+                                }
+                            }
                         }
 
-                        if (wfa.H_Band.get_lo(ss) <= MN &&
-                            MN <= wfa.H_Band.get_hi(ss) &&
-                            wfa.H_Band.get(ss, MN) >= M)
+                        // an alignment may end in a gap as well, on either of the two other bands
+                        if (end_k < 0 && ! wfa.E_Band.get_null(ss) && wfa.E_Band.get(ss, wfa.E_Band.get_lo(ss)) >= M)
                         {
+                            const score_type b_lo = nvbio::max(whole_window ? alignment_k : wfa.E_Band.get_lo(ss), wfa.E_Band.get_lo(ss));
+                            const score_type b_hi = nvbio::min(whole_window ? alignment_k : wfa.E_Band.get_hi(ss), wfa.E_Band.get_hi(ss));
+
+                            #pragma unroll 1
+                            for (score_type k = b_lo; k <= b_hi; k++)
+                            {
+                                const score_type off = wfa.E_Band.get(ss, k);
+                                if (off >= M && (off - k) <= N)
+                                {
+                                    end_k = k;
+                                    end_off = off;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (end_k < 0 && ! wfa.F_Band.get_null(ss) && wfa.F_Band.get(ss, wfa.F_Band.get_lo(ss)) >= M)
+                        {
+                            const score_type b_lo = nvbio::max(whole_window ? alignment_k : wfa.F_Band.get_lo(ss), wfa.F_Band.get_lo(ss));
+                            const score_type b_hi = nvbio::min(whole_window ? alignment_k : wfa.F_Band.get_hi(ss), wfa.F_Band.get_hi(ss));
+
+                            #pragma unroll 1
+                            for (score_type k = b_lo; k <= b_hi; k++)
+                            {
+                                const score_type off = wfa.F_Band.get(ss, k);
+                                if (off >= M && (off - k) <= N)
+                                {
+                                    end_k = k;
+                                    end_off = off;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (end_k >= 0)
+                        {
+                            end_cost = s;
+                            end_pos_k = end_k;
+                            end_pos_offset = end_off;
+
+                            wfa.heuristic.alignement_end_pos_score = s;
+                            wfa.heuristic.alignement_end_pos_k = end_k;
+                            wfa.heuristic.alignement_end_pos_offset = end_off;
+
                             break;
                         }
 
@@ -1193,18 +1301,18 @@ namespace nvbio
                             if (mismatch >= 0)
                             {
                                 pos_mismatch = COMPUTE_DIM_SHARED(mismatch, DIM_SHARED);
-                                H_Band_gap_mismatch_ptr = wfa.H_Band.get_null(mismatch) ? nullptr : &wfa.H_Band.scores[pos_mismatch - wfa.H_Band.get_lo(mismatch)];
+                                H_Band_gap_mismatch_ptr = wfa.H_Band.get_null(mismatch) ? nullptr : &wfa.H_Band.scores[wfa.H_Band.scores_stride * (pos_mismatch - wfa.H_Band.get_lo(mismatch))];
                             }
                             if (gap_open1 >= 0)
                             {
                                 pos_gap_open1 = COMPUTE_DIM_SHARED(gap_open1, DIM_SHARED);
-                                H_Band_gap_open1_ptr = wfa.H_Band.get_null(gap_open1) ? nullptr : &wfa.H_Band.scores[pos_gap_open1 - wfa.H_Band.get_lo(gap_open1)];
+                                H_Band_gap_open1_ptr = wfa.H_Band.get_null(gap_open1) ? nullptr : &wfa.H_Band.scores[wfa.H_Band.scores_stride * (pos_gap_open1 - wfa.H_Band.get_lo(gap_open1))];
                             }
                             if (gap_extend1 >= 0)
                             {
                                 pos_gap_extend1 = COMPUTE_DIM_SHARED(gap_extend1, DIM_SHARED);
-                                E_Band_gap_extend1_ptr = wfa.E_Band.get_null(gap_extend1) ? nullptr : &wfa.E_Band.scores[pos_gap_extend1 - wfa.E_Band.get_lo(gap_extend1)];
-                                F_Band_gap_extend1_ptr = wfa.F_Band.get_null(gap_extend1) ? nullptr : &wfa.F_Band.scores[pos_gap_extend1 - wfa.F_Band.get_lo(gap_extend1)];
+                                E_Band_gap_extend1_ptr = wfa.E_Band.get_null(gap_extend1) ? nullptr : &wfa.E_Band.scores[wfa.E_Band.scores_stride * (pos_gap_extend1 - wfa.E_Band.get_lo(gap_extend1))];
+                                F_Band_gap_extend1_ptr = wfa.F_Band.get_null(gap_extend1) ? nullptr : &wfa.F_Band.scores[wfa.F_Band.scores_stride * (pos_gap_extend1 - wfa.F_Band.get_lo(gap_extend1))];
                             }
 
                             if (H_Band_gap_mismatch_ptr || H_Band_gap_open1_ptr || E_Band_gap_extend1_ptr || F_Band_gap_extend1_ptr)
@@ -1227,44 +1335,47 @@ namespace nvbio
 
                                 lo = nvbio::min(nvbio::min(H_lo_o - 1, H_lo_m), nvbio::min(E_lo + 1, F_lo - 1));
                                 hi = nvbio::max(nvbio::max(H_hi_o + 1, H_hi_m), nvbio::max(E_hi + 1, F_hi - 1));
+                                                                // the wavefront may only spread within the band envelope the stage carried ;
+                                                                // past it the next row is one the band cannot reach, and a row of more than
+                                                                // 2 * DIM_SHARED + 1 entries would spill into the neighbouring row of the
+                                                                // slab (the garbage the ~210-byte cliff showed) ; the band heuristics shrink
+                                                                // the row afterwards, but that is once it has already been written, so the
+                                                                // clamp belongs here, before the row loop
+                                                                if (wfa.heuristic.method & WFA_HEURISTIC_ADAPTIVE_BANDED_ADAPTIVE)
+                                                                {
+                                                                    lo = nvbio::max(lo, wfa.heuristic.min_k);
+                                                                    hi = nvbio::min(hi, wfa.heuristic.max_k);
+                                                                }
 
                                 pos_ss = COMPUTE_DIM_SHARED(ss, DIM_SHARED);
-                                H_Band_ptr = &wfa.H_Band.scores[pos_ss - lo];
-                                E_Band_ptr = &wfa.E_Band.scores[pos_ss - lo];
-                                F_Band_ptr = &wfa.F_Band.scores[pos_ss - lo];
+                                H_Band_ptr = &wfa.H_Band.scores[wfa.H_Band.scores_stride * (pos_ss - lo)];
+                                E_Band_ptr = &wfa.E_Band.scores[wfa.E_Band.scores_stride * (pos_ss - lo)];
+                                F_Band_ptr = &wfa.F_Band.scores[wfa.F_Band.scores_stride * (pos_ss - lo)];
 
                                 // delta = -lo;
 #pragma unroll 1
                                 for (score_type k = lo; k <= hi; ++k)
                                 {
-                                    I1 = (E_Band_gap_extend1_ptr && k - 1 >= E_lo && k - 1 <= E_hi) ? E_Band_gap_extend1_ptr[k - 1] : WFA_MIN1;
-                                    I2 = (H_Band_gap_open1_ptr && k - 1 >= H_lo_o && k - 1 <= H_hi_o) ? H_Band_gap_open1_ptr[k - 1] : WFA_MIN1;
+                                    I1 = (E_Band_gap_extend1_ptr && k - 1 >= E_lo && k - 1 <= E_hi) ? E_Band_gap_extend1_ptr[wfa.E_Band.scores_stride * (k - 1)] : WFA_MIN1;
+                                    I2 = (H_Band_gap_open1_ptr && k - 1 >= H_lo_o && k - 1 <= H_hi_o) ? H_Band_gap_open1_ptr[wfa.H_Band.scores_stride * (k - 1)] : WFA_MIN1;
                                     IM = nvbio::max(I1, I2) + 1u;
 // I[k + delta] = IM;
-#if __CUDA_ARCH__ >= 800
-                                    __stwt(&E_Band_ptr[k], IM);
-#else
-                                    E_Band_ptr[k] = IM;
-#endif
+                                    E_Band_ptr[wfa.E_Band.scores_stride * k] = IM;
 
-                                    D1 = (F_Band_gap_extend1_ptr && k + 1 >= F_lo && k + 1 <= F_hi) ? F_Band_gap_extend1_ptr[k + 1] : WFA_MIN1;
-                                    D2 = (H_Band_gap_open1_ptr && k + 1 >= H_lo_o && k + 1 <= H_hi_o) ? H_Band_gap_open1_ptr[k + 1] : WFA_MIN1;
+                                    D1 = (F_Band_gap_extend1_ptr && k + 1 >= F_lo && k + 1 <= F_hi) ? F_Band_gap_extend1_ptr[wfa.F_Band.scores_stride * (k + 1)] : WFA_MIN1;
+                                    D2 = (H_Band_gap_open1_ptr && k + 1 >= H_lo_o && k + 1 <= H_hi_o) ? H_Band_gap_open1_ptr[wfa.H_Band.scores_stride * (k + 1)] : WFA_MIN1;
                                     DM = nvbio::max(D1, D2);
                                     // D[k + delta] = DM;
 
-#if __CUDA_ARCH__ >= 800
-                                    __stwt(&F_Band_ptr[k], DM);
-#else
-                                    F_Band_ptr[k] = DM;
-#endif
+                                    F_Band_ptr[wfa.F_Band.scores_stride * k] = DM;
 
-                                    HM = (H_Band_gap_mismatch_ptr && k >= H_lo_m && k <= H_hi_m) ? H_Band_gap_mismatch_ptr[k] : WFA_MIN1;
+                                    HM = (H_Band_gap_mismatch_ptr && k >= H_lo_m && k <= H_hi_m) ? H_Band_gap_mismatch_ptr[wfa.H_Band.scores_stride * k] : WFA_MIN1;
                                     HM = nvbio::max3(HM + 1, IM, DM);
 
                                     if ((uint16)HM > M || (uint16)(HM - k) > N)
                                         HM = WAVEFRONT_OFFSET_NULL;
 
-                                    H_Band_ptr[k] = HM;
+                                    H_Band_ptr[wfa.H_Band.scores_stride * k] = HM;
                                     // H[k + delta] = HM;
                                 }
                                 /*#ifndef WFA_TESTS
@@ -1278,18 +1389,29 @@ namespace nvbio
                         }
                     } while (true);
 
-                    // starting backtracing
+                    // a cost above the bound the shift alignments already prove is bogus : the
+                    // band clipped the real path ; let the banded DP have the last word
+                    if (end_cost > cost_bound)
+                        end_cost = -1;
 
-                    context.create_back(context, last_s, ref, q_cache, alignment_offset, alignment_k, block, M, N, V, S, G_o, G_e, zero, scoring, wfa);
+                    // starting backtracing : from the accepted endpoint, whose cost is the
+                    // wavefront it was accepted on.  No admissible endpoint inside the cost
+                    // bound means this aligner declines the window ; nothing was reported
+                    // then, and the caller sends the window to the banded DP, which runs
+                    // under no such bound.
+                    if (end_cost < 0)
+                        return -1;
 
-#ifndef WFA_TESTS
-                    last_s -= N - M;
+                    context.create_back(
+                        context,
+                        end_cost,
+                        ref,
+                        q_cache,
+                        end_pos_offset,
+                        end_pos_k,
+                        block, M, N, V, S, G_o, G_e, zero, scoring, wfa);
 
-                    if (last_s < 0)
-                        last_s = 0;
-#endif
-
-                    return last_s;
+                    return end_cost;
                     }
 
                     ///
@@ -1382,6 +1504,14 @@ namespace nvbio
                         if (text_len < pattern_len)
                             return false;                       
                         
+                        // The caches right below hold BAND_LEN_BAND characters of text and
+                        // of pattern.  Nothing else bounds the window against that size, so
+                        // a wider window has to be refused here : writing it would go past
+                        // these local arrays and the score and sink reported below would be
+                        // garbage (that is the ~210 bytes cliff).  See WFA_WINDOW_LIMIT.
+                        if ((window_end - window_begin) > BAND_LEN_BAND || text_len > BAND_LEN_BAND)
+                            return false;
+
                         typedef uchar2 text_cache_type;
                         text_cache_type q_cache[BAND_LEN_BAND];
                         typedef typename Reference_cache<BAND_LEN_BAND>::type ref_type;
@@ -1478,12 +1608,23 @@ namespace nvbio
 
                         // wfa
 #ifndef WFA_TESTS
-                        wavefront_heuristic_set_wfadaptive(wfa, DIM_SHARED2 * 2 , DIM_SHARED2 * 2, 1);
+                        // wavefront envelope carried by the batched stages from --max-dist :
+                        // a path that costs at most max_dist penalties never strays more than
+                        // max_dist diagonals from the anchor diagonal, so the band and the step
+                        // budget both follow it ; an unset bound keeps the compiled envelope
+                        const int32 wf_max_dist = (int32)wfa.heuristic.max_wf_score;
+                        const int32 wf_band     = (wf_max_dist > 0)
+                            ? nvbio::min(wf_max_dist, (int32)DIM_SHARED2)
+                            : (int32)DIM_SHARED2;
+                        wfa.heuristic.max_wf_score = (score_type)((wf_max_dist > 0)
+                            ? nvbio::min(wf_max_dist + 1, (int32)nvbio::min(WFA_BAND_LEN2_LIMIT_BAND, WFA_MAX_SCORE))
+                            : nvbio::min(WFA_BAND_LEN2_LIMIT_BAND, WFA_MAX_SCORE));
+                        wavefront_heuristic_set_wfadaptive(wfa, wf_band * 2, wf_band * 2, 1);
                         //wavefront_heuristic_set_wfmash(wfa, DIM_SHARED2, DIM_SHARED2 , 1);
                         //wavefront_heuristic_set_xdrop(wfa, 15, 1);
                         //wavefront_heuristic_set_zdrop(wfa, 15, 3);                        
                         //wavefront_heuristic_set_banded_static(wfa, -DIM_SHARED2, DIM_SHARED2);
-                        wavefront_heuristic_set_banded_adaptive(wfa, -DIM_SHARED2, DIM_SHARED2, 1);
+                        wavefront_heuristic_set_banded_adaptive(wfa, -wf_band, wf_band, 1);
 #endif
 
                         // initialize bands
@@ -1561,11 +1702,24 @@ namespace nvbio
                         // if (TYPE == GLOBAL)
                         // save_Mth<BAND_LEN>( M, H_band, N-1, sink );
 
-                        if (TYPE == GLOBAL)
-                            sink.report( -max_score, make_uint2( text_len_mem, pattern_len ) );
+                        // no admissible endpoint within the wavefront cost bound : report no
+                        // score at all, so the caller keeps the worst one, and say so ; the
+                        // caller then sends the window to the banded DP, which is not bounded.
+                        if (max_score < 0)
+                            return false;
 
-                        if (TYPE == SEMI_GLOBAL)
-                            sink.report( -max_score, make_uint2( text_len_mem, pattern_len ) );
+                        // the accepted endpoint consumed the whole pattern, which the banding
+                        // already forced to the last column (offset <= M), and its text position
+                        // is offset - k, i.e. the window position the sink has to point at ;
+                        // every mode reports it, the local and semi-global ones being free on the
+                        // text side and the global one anchored at the far corner of the window,
+                        // which the scan above already respected
+                        sink.report(
+                            -max_score,
+                            make_uint2(
+                                (uint32)nvbio::max(zero,
+                                    wfa.heuristic.alignement_end_pos_offset - wfa.heuristic.alignement_end_pos_k),
+                                pattern_len ) );
 
                         return true;
                     }
@@ -1608,28 +1762,34 @@ namespace nvbio
                 sink_type &sink,
                 wfa_type &wfa)
             {
-                if (1)
+                // The wavefront engine below only scores a window that fits its character
+                // caches (BAND_LEN_BAND in wfah_alignment_score_dispatch::run, bounded by
+                // WFA_WINDOW_LIMIT in wfa.h).  The text side of the window is bounded the same
+                // way : run() caches BAND_LEN_BAND text characters in a local array too, and a
+                // paired window is the anchor window grown by the fragment band (read + 2 * band
+                // + the reference gaps the band admits), which with --max-dist 15 lands right on
+                // the 200-character boundary.  Both sides are tested here, so a window that does
+                // not fit the cache goes to the regular banded DP of the other branch, which has
+                // no length limit and costs the very same unit edit distance (EditDistanceSWScheme
+                // : match 0, mismatch 1, gap extension 1) ; the two branches stay comparable.
+                if (pattern.length() <= (uint32)WFA_WINDOW_LIMIT && text.length() <= (uint32)WFA_TEXT_CACHE_LEN)
                 {
                     priv::banded::WfahScoringContext<BAND_LEN, TYPE> context;
 
-                    return priv::banded::wfah_alignment_score_dispatch<BAND_LEN, TYPE>::run(aligner.scheme, pattern, quals, text, 0u, pattern.length(), 0u, min_score, context, sink, wfa);
-                }
-                else
-                {
-                    /*priv::banded::GotohScoringContext<BAND_LEN, TYPE> context;
+                    if (priv::banded::wfah_alignment_score_dispatch<BAND_LEN, TYPE>::run(aligner.scheme, pattern, quals, text, 0u, pattern.length(), 0u, min_score, context, sink, wfa))
+                        return true;
 
-                    aln::SimpleGotohScheme scoring;
-                    scoring.m_match = 0;
-                    scoring.m_mismatch = -1;
-                    scoring.m_gap_open = -1;
-                    scoring.m_gap_ext = -1;
-
-                    aln::GotohAligner<TYPE, aln::SimpleGotohScheme> aligner2(scoring);
-
-                    return priv::banded::gotoh_alignment_score_dispatch<BAND_LEN, TYPE>::run(aligner2.scheme, pattern, quals, text, 0u, pattern.length(), 0u, min_score, context, sink, wfa);*/
-                    
+                    // the wavefront declined this window : it reported no score, so the banded
+                    // DP below has the last word on it, at the very same unit penalties.  It runs
+                    // in the frame the wavefront uses rather than in the one the stream asked for
+                    // : the endpoint the wavefront accepts consumes the whole pattern and lets the
+                    // text end anywhere in the window, which is the semi-global alignment, whereas
+                    // the stages that reach this entry are local and would free the pattern prefix
+                    // too -- a local answer here is the degenerate zero that every window beats,
+                    // which is what left reads with 2 edits unmapped.  The alignment type is
+                    // carried by the aligner, so only that has to change.
                     return banded_alignment_score<BAND_LEN>(
-                        make_smith_waterman_aligner<TYPE>(EditDistanceSWScheme()),
+                        make_smith_waterman_aligner<SEMI_GLOBAL>(EditDistanceSWScheme()),
                         pattern,
                         quals,
                         text,
@@ -1637,6 +1797,18 @@ namespace nvbio
                         sink,
                         wfa);
                 }
+
+                // a window that does not fit the wavefront caches never reaches the engine above
+                // ; it goes to the regular banded DP, which has no length limit and keeps the
+                // alignment type the stream asked for
+                return banded_alignment_score<BAND_LEN>(
+                    make_smith_waterman_aligner<TYPE>(EditDistanceSWScheme()),
+                    pattern,
+                    quals,
+                    text,
+                    min_score,
+                    sink,
+                    wfa);
             }          
             
 

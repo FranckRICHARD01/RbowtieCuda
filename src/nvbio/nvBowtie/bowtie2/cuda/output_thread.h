@@ -35,6 +35,10 @@
 #include <nvbio/basic/numbers.h>
 #include <stack>
 #include <deque>
+#include <mutex>
+#include <condition_variable>
+#include <nvbio/io/output/output_batch.h>
+#include <nvbio/io/output/output_file.h>
 
 namespace nvbio {
 namespace bowtie2 {
@@ -46,64 +50,74 @@ namespace cuda {
 // operations performed by the main thread.
 //
 
-struct OutputThreadSE : public Thread<OutputThreadSE> 
+//
+// Writer-thread class for single-end alignment output, patched to run as a
+// batch-queue pipeline: the compute thread hands completed host batches to
+// this thread (submit()), which formats the SAM records and writes them to
+// the output file on a background thread.
+//
+struct OutputThreadSE : public Thread<OutputThreadSE>
 {
- static const uint32 BUFFERS = 2;
+    //
+    // Ring of hand-off slots of fixed depth. Each slot owns a deep copy of
+    // the host output batch (thrust-backed containers) and of the host read
+    // storage for the batch, so that compute scratch buffers and the
+    // input-thread read pool may be recycled in-place while the writer
+    // thread formats a slot.
+    //
+    static const uint32 QUEUE_SLOTS = 3;
+
+    struct QueueSlot
+    {
+        io::HostOutputBatchSE batch;
+        io::SequenceDataHost  reads;
+
+        QueueSlot() { batch.read_data = &reads; }
+    };
 
     OutputThreadSE( FILE * file_pointer) :
-    write_thread_data(nullptr),
-    stop_thread(false),
     fp( file_pointer )
-    { } 
-    
+    {
+        output_file = NULL;
+        m_closed    = false;
+
+        for (uint32 i = 0; i < QUEUE_SLOTS; ++i)
+            m_free_idx.push_back( i );
+    }
+
     void run();
 
-    // release a batchs
     //
-    void release();
+    // Enqueue a fully read-back host batch to the writer thread: the batch
+    // is deep-copied into a free slot and published to the FIFO queue.
+    // Blocks when the ring is full (backpressure).
+    //
+    void submit( io::HostOutputBatchSE& cpu_batch);
 
-    uint32 mystrcat( char* dest, const char* src, bool init = false )
-    {
-        static uint32 p = 0;
+    //
+    // Mark the queue closed: wakes the writer thread so it exits once all
+    // published batches have been drained.
+    //
+    void close_and_drain();
 
-        if (init) { p = 0; dest[0] = 0; return 0; }
+    //
+    // Output-file object driven by the writer thread (OutputFile::process).
+    //
+    void set_output_file( io::OutputFile* output) { output_file = output; }
 
-        //if (src[0] == 0) return p;
-
-        dest += p;
-
-        while (*src) { *dest++ = *src++; p++; }
-
-        --dest;
-
-        return p;
-    }
-
-    void createCache()
-    {       
-        if (!write_thread_data)
-        {
-            log_debug(stderr, "write thread: create cache memory\n");
-            write_thread_data = new char[MAX_CHAR];
-
-            #pragma parallel for
-            for(uint32 i = 0; i < MAX_CHAR; i++) write_thread_data[i]=0;
-        }  
-    }
-
-    
-    char * write_thread_data;
-
-    uint32 write_thread_data_size;
-
-    bool stop_thread;
-
+    io::OutputFile* output_file;
 
 private:
 
-    Mutex                                m_free_pool_lock;
-    
-    FILE * fp;   
+    QueueSlot                        m_slots[QUEUE_SLOTS];
+    std::deque<uint32>               m_free_idx;
+    std::deque<uint32>               m_ready_idx;
+    std::mutex                       m_queue_lock;
+    std::condition_variable          m_cv_ready;
+    std::condition_variable          m_cv_free;
+    bool                             m_closed;
+
+    FILE * fp;
 };
 
 //

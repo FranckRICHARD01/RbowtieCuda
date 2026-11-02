@@ -206,7 +206,7 @@ struct Aligner
         return band_len;
     }
 
-    Aligner() : output_file(NULL) {}
+    Aligner() : output_file(NULL), output_threadSE(NULL) {}
 
     bool init(const uint32 id, const uint32 batch_size, const Params& params, const EndType type);
 
