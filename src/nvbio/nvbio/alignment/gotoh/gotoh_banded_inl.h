@@ -449,8 +449,11 @@ struct gotoh_alignment_score_dispatch
         text_cache_type text_cache( text_cache_storage );
 
         // load first band of text
+        // the band cache is BAND_LEN wide while the text can be far shorter ; the steady-state
+        // refill guards the load and feeds the band the 255 sentinel past the end of the text,
+        // so seed the first band the same way instead of reading past the buffer
         for (uint32 j = 0; j < BAND_LEN-1; ++j)
-            text_cache[j] = text[start+window_begin+j];
+            text_cache[j] = (start+window_begin+j < text_len) ? text[start+window_begin+j] : 255u;
 
         const score_type G_o = scoring.pattern_gap_open();
         const score_type G_e = scoring.pattern_gap_extension();

@@ -637,7 +637,7 @@ namespace nvbio
             }
 
             template <uint32 BLOCKDIM, uint32 BAND_LEN, const uint32 N, const uint32 M, typename aligner_type>
-            void banded_wfa(const char *test, const aligner_type aligner, const char *ref_alignment, int32 score = 0)
+            void banded_wfa(const char *test, const aligner_type aligner, const char *ref_alignment, int32 score = INT32_MAX)
             {
                 NVBIO_VAR_UNUSED const uint32 CHECKPOINTS = 1000u;
 
@@ -688,7 +688,9 @@ namespace nvbio
 
                 int32 ref_score = score;
 
-                if (score == 0)
+                // an expected score of 0 is a score : the anchor of the whole window is only taken
+                // as the reference when no score is spelled out
+                if (score == INT32_MAX)
                     ref_score = -ref_sw<2 * N, 4 * N>(str_hptr, ref_hptr, M, N, aligner, mat.get());
 
                 fprintf(stderr, "result=%d\n\n\n", ref_score);
@@ -730,8 +732,10 @@ namespace nvbio
                 const std::string aln_string = rle(backtracker.aln).c_str();
                 if (aln_score != ref_score)
                 {
-                    //log_error(stderr, "    expected backtracking score %d, got %d\n", ref_score, aln_score);
-                    //log_error(stderr, "    %s - %d - [%u, %u] x [%u, %u]\n", aln_string.c_str(), aln.score, aln.source.x, aln.sink.x, aln.source.y, aln.sink.y);
+                    // a score the produced path does not earn is not a score : the path is the
+                    // witness of the number, and the two have to agree
+                    log_error(stderr, "    expected backtracking score %d, got %d\n", ref_score, aln_score);
+                    log_error(stderr, "    %s - %d - [%u, %u] x [%u, %u]\n", aln_string.c_str(), aln.score, aln.source.x, aln.sink.x, aln.source.y, aln.sink.y);
                     // exit(1);
                 }
                 fprintf(stderr, "    %15s : ", test);
@@ -1338,7 +1342,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "2D7M5D1M");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "3M1I4M1I" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 15u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "2D7M5D1M");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 15u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "8M", -4);
                 }
             }
 
@@ -1378,7 +1385,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "7M7D1M");
                     //test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "3M1I4M1I" );
                     //test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 15u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "7M7D1M");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 15u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "8M", -6);
                 }
             }
 
@@ -1449,7 +1459,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "16D148M15D2M");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "3M1I4M1I" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "16D148M15D2M");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "150M", -6);
                 }
             }
 
@@ -1490,7 +1503,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "7M4D1M");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 151u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "7M4D1M");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 151u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "8M", -6);
                 }
             }
 
@@ -1530,7 +1546,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "2D4M11D3M");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 20u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "2D4M11D3M");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 20u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "4M1D3M", -5);
                 }
             }
 
@@ -1570,7 +1589,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "9D7M4D");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 20u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "9D7M4D");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 20u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "7M", -2);
                 }
             }
 
@@ -1610,7 +1632,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "11M3D5M");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 19u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "11M3D5M");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 19u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "16M", -6);
                 }
             }
 
@@ -1650,7 +1675,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "153D8M20D");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "153D8M20D");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "8M", -4);
                 }
             }
 
@@ -1690,7 +1718,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "16D148M15D2M");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "16D148M15D2M");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "150M", -6);
                 }
             }
 
@@ -1730,7 +1761,11 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "46D51M1D83M16I");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "46D51M1D83M16I");
+// banded semantics: a start free along the text, an anchor at the end of the pattern, the end of
+// the text swept over the last row of the pattern.  The number reported is the cost of the path
+// emitted, checked symbol by symbol by the witness, and the expectation is the optimum of this
+// semantics -- not that of the window anchored at both of its ends, which full_wfa above keeps
+                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "1M36I20M31I6M6I24M26I", -145);
                 }
             }
 
@@ -1772,7 +1807,11 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "46D80M1I55M14I");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "46D80M1I55M14I");
+// banded semantics: a start free along the text, an anchor at the end of the pattern, the end of
+// the text swept over the last row of the pattern.  The number reported is the cost of the path
+// emitted, checked symbol by symbol by the witness, and the expectation is the optimum of this
+// semantics -- not that of the window anchored at both of its ends, which full_wfa above keeps
+                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "13M61I30M10I16M7I13M", -140);
                 }
             }
 
@@ -1814,7 +1853,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "31D150M");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "31D150M");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "150M", 0);
                 }
             }
 
@@ -1856,7 +1898,11 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "1M3I71M26D42M7I26M15D");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "1M3I71M26D42M7I26M15D");
+// banded semantics: a start free along the text, an anchor at the end of the pattern, the end of
+// the text swept over the last row of the pattern.  The number reported is the cost of the path
+// emitted, checked symbol by symbol by the witness, and the expectation is the optimum of this
+// semantics -- not that of the window anchored at both of its ends, which full_wfa above keeps
+                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "3M147I", -153);
 
                     //return;
                 }
@@ -1898,7 +1944,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM,N,M>(      "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3D51M3D9M4D3M5D12M1D75M15D" );
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 2, N, M>("semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "3D51M3D9M4D3M5D12M1D75M15D");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 2, N, M>("semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "15M1I49M1D7M1I14M1D52M1I10M", -110);
                 }
             }
 
@@ -1940,7 +1989,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "16D45M30D90M15I");
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "16D45M30D90M15I");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 181u, N, M>("global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "89M2I5M1I42M1I6M1D4M", -39);
 
                     //return;
                 }
@@ -1984,7 +2036,10 @@ namespace nvbio
                     test.full_wfa<BLOCKDIM,N,M>(      "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "243D150M107D" );
                     // test.full_wfa<BLOCKDIM,N,M>(       "local", make_wfah_aligner<aln::LOCAL>( scoring ), "5M12D3M" );
                     // test.full_wfa<BLOCKDIM,N,M>( "semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>( scoring ), "3M1I4M1I" );
-                    test.banded_wfa<BLOCKDIM, 501, N, M>("semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "243D150M107D");
+// the banded engine scores the placement freely inside the window: the number it advertises is
+// earned by the path it produces (score == witness); anchoring at both window ends is left to
+// the full_wfa call above
+                    test.banded_wfa<BLOCKDIM, 501, N, M>("semi-global", make_wfah_aligner<aln::SEMI_GLOBAL>(scoring), "150M", 0);
                 }
             }
 

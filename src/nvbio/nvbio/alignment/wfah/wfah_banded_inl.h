@@ -1074,15 +1074,20 @@ namespace nvbio
                     // SHARED int16 I[2 * DIM_SHARED + 1];
                     // SHARED int16 D[2 * DIM_SHARED + 1];
                     
-                    wfa.H_Band.set(0, 0, 0);
-                    wfa.E_Band.set(0, 0, WFA_MIN1);
-                    wfa.F_Band.set(0, 0, WFA_MIN1);
-                    wfa.H_Band.set_null(s, false);
-                    wfa.E_Band.set_null(s, true);
-                    wfa.F_Band.set_null(s, true);
+                    // set() derives the address of the cell it writes from lo[0] (the row origin
+                    // lives in the slab), so the row-0 bounds and nulls have to be laid down first
+                    // : seeding the grain before lo[0] is known writes it at 3 - lo[0], which is
+                    // not the cell the row loop reads back (index 3) -- visible whenever the slab
+                    // is not zero-filled, as the test's new int16[WFA_BAND_LEN2_Y] is not.
                     wfa.H_Band.set_hi_lo(0, true);
                     wfa.F_Band.set_hi_lo(0, false);
                     wfa.E_Band.set_hi_lo(0, false);
+                    wfa.H_Band.set_null(s, false);
+                    wfa.E_Band.set_null(s, true);
+                    wfa.F_Band.set_null(s, true);
+                    wfa.H_Band.set(0, 0, 0);
+                    wfa.E_Band.set(0, 0, WFA_MIN1);
+                    wfa.F_Band.set(0, 0, WFA_MIN1);
                     // H[delta] = 0;
                     // D[delta] = WFA_MIN1;
                     // I[delta] = WFA_MIN1;
@@ -1341,6 +1346,16 @@ namespace nvbio
                                                                 // slab (the garbage the ~210-byte cliff showed) ; the band heuristics shrink
                                                                 // the row afterwards, but that is once it has already been written, so the
                                                                 // clamp belongs here, before the row loop
+                                                                // the housing bound is not a heuristic : COMPUTE_DIM_SHARED spaces the rows
+                                                                // 2 * DIM_SHARED + 1 apart, so a row spreading past +/- DIM_SHARED2 lands on
+                                                                // the next row's cells, whatever the stage asked for.  The band envelope may
+                                                                // only shrink that bound, never widen it, so it is applied on its own : with no
+                                                                // envelope set (the test build leaves the heuristic at WFA_HEURISTIC_NONE) lo/hi
+                                                                // spread one diagonal per wavefront, the rows cross each other from the 2*s-th
+                                                                // wavefront on, and that is what let the engine report endpoints cheaper than any
+                                                                // alignment of the two strings.
+                                                                lo = nvbio::max(lo, -score_type(DIM_SHARED2));
+                                                                hi = nvbio::min(hi,  score_type(DIM_SHARED2));
                                                                 if (wfa.heuristic.method & WFA_HEURISTIC_ADAPTIVE_BANDED_ADAPTIVE)
                                                                 {
                                                                     lo = nvbio::max(lo, wfa.heuristic.min_k);
@@ -1583,11 +1598,23 @@ namespace nvbio
 #endif
 
                         // load first band of text
+                        // the window the prefix scan picked carries a lim-character slack, so it
+                        // can reach past the end of the real text ; the characters it cannot load
+                        // are left as stack, while the wavefront walks the text all the way to N,
+                        // so such a window aligns the read against garbage and reports a cost no
+                        // alignment of these strings can reach.  Trim the text to the characters
+                        // the cache actually holds, and refuse the window when the pattern no
+                        // longer fits inside it.
+                        const score_type avail = text_len_mem - (start + window_begin + begin);
+                        if (avail < text_len)
+                            text_len = avail;
+                        if (text_len < pattern_len)
+                            return false;
+
 #pragma unroll 1
                         for (int32 j = 0; j < text_len; j++)
                         {
-                            if (start + window_begin + begin + j < text_len_mem)
-                                ref_cache[j] = text[start + window_begin + begin + j];
+                            ref_cache[j] = text[start + window_begin + begin + j];
                         }
 
 
@@ -1789,7 +1816,8 @@ namespace nvbio
                     // which is what left reads with 2 edits unmapped.  The alignment type is
                     // carried by the aligner, so only that has to change.
                     return banded_alignment_score<BAND_LEN>(
-                        make_smith_waterman_aligner<SEMI_GLOBAL>(EditDistanceSWScheme()),
+                        GotohAligner<SEMI_GLOBAL, WfahScoreScheme<scoring_type> >(
+                            WfahScoreScheme<scoring_type>(aligner.scheme)),
                         pattern,
                         quals,
                         text,
@@ -1802,7 +1830,8 @@ namespace nvbio
                 // ; it goes to the regular banded DP, which has no length limit and keeps the
                 // alignment type the stream asked for
                 return banded_alignment_score<BAND_LEN>(
-                    make_smith_waterman_aligner<TYPE>(EditDistanceSWScheme()),
+                    GotohAligner<TYPE, WfahScoreScheme<scoring_type> >(
+                        WfahScoreScheme<scoring_type>(aligner.scheme)),
                     pattern,
                     quals,
                     text,
