@@ -374,8 +374,12 @@ struct sw_alignment_score_dispatch
         text_cache_type text_cache( &text_cache_storage[0] );
 
         // load first band of text
+        // the band cache is BAND_LEN wide while the text can be far shorter (the WFA stage
+        // hands this DP windows of a handful of characters when it declines one of them) ;
+        // past the end of the text the refill below feeds the band the same 255 sentinel as
+        // the steady-state load, so seed it the same way instead of reading past the buffer
         for (uint32 j = 0; j < BAND_LEN-1; ++j)
-            text_cache[j] = text[start+window_begin+j];
+            text_cache[j] = (start+window_begin+j < text_len) ? text[start+window_begin+j] : 255u;
 
         const score_type G = scoring.deletion();
         const score_type I = scoring.insertion();

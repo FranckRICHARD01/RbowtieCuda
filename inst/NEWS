@@ -1,5 +1,37 @@
 CHANGES 
 -----------------------
+* 2026-11-03
+  RbowtieCuda version 1.4.6
+
+  - nvbio (host banded affine alignment): the score reported for a banded wavefront window is now
+    the cost of the alignment that is actually emitted. The banded engines credit a cell with the
+    wavefront it was reached on, and where the rows run out the traceback completes a tail up to
+    that credit -- a tail the wavefront never proved. Base by base, the emitted path then costs one
+    gap-open (or one mismatch) more than the number advertised. Measured on the 20 real windows of
+    nvbio-test: the 13 whose longest gap run is a single symbol were exact, and all 7 with a run of
+    two symbols or more costed more than they advertised, always in that direction. On the host the
+    window is now answered by the affine banded DP under the aligner's own penalties, and both the
+    score call and the traceback report the cost of the path the traceback emits, so a report that
+    no alignment earns cannot pass. Device code is untouched, and keeps the per-window budgets the
+    GPU needs.
+  - Known, still open upstream: the same defect sits in the direction encoding of the shared banded
+    Gotoh traceback (a direction-continuation bit is stored on the cell next to the one it
+    describes), so the device traceback and nvBowtie in banded Gotoh mode keep the one-event
+    under-credit; only the host path is repaired here.
+  - Affine gap convention made explicit: a WFA engine charges a gap of L symbols as
+    gap_open + L * gap_extension, where the nvbio DP family charges gap_open + (L-1) *
+    gap_extension. The WfahScoreScheme adaptor bridges the two (gap_open_dp = gap_open +
+    gap_extension); without it the banded DP and the wavefront disagreed by one extension per gap.
+  - nvbio-test: the banded WFA cases are self-checking. Each site now carries the expected score as
+    well as the expected CIGAR, and the test compares the score, the CIGAR and the cost of the
+    emitted path. 12 of the 15 banded sites moved to the score the banded semantics really
+    produces -- a start free along the text, anchored at the end of the pattern, the end of the text
+    swept over the last row of the pattern -- where the window anchored at both of its ends is kept
+    by the corresponding full-length WFA case.
+  - Banded kernels: a prefetch no longer reads past the bound of its row in the banded
+    Smith-Waterman and WFA kernels, and a window is no longer accepted when the text is shorter
+    than the pattern.
+
 * 2026-11-02
   RbowtieCuda version 1.4.5
 

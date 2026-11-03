@@ -182,6 +182,45 @@ struct SimpleWfahScheme
 };
 
 ///
+/// A scoring scheme adaptor turning the penalties a wavefront aligner carries into the
+/// convention of the dynamic-programming engines.
+///
+/// The wavefront engines work in costs : every penalty is a positive number, and a gap of L
+/// symbols costs gap_open + L * gap_extension, which is the accounting of the wavefront
+/// steps.  The DP engines work the other way round, maximizing a score in which a match pays
+/// and every penalty is negative, seeding their boundary rows with gap_open + L *
+/// gap_extension taken as a score.  Handing a wavefront scheme to a DP engine as it stands
+/// turns its penalties into bonuses, and the DP then maximizes a path of pure gaps.  This
+/// adaptor keeps the very same model -- a gap of L symbols costing gap_open + L *
+/// gap_extension on both sides -- with the signs the DP engines expect, so that a window the
+/// wavefront cannot wave may be handed to the banded DP of its own scoring scheme and the two
+/// branches stay comparable.
+///
+template <typename scoring_type>
+struct WfahScoreScheme
+{
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+    WfahScoreScheme(const scoring_type scheme) : m_scheme(scheme) {}
+
+    // the engines take penalties as costs, positive, and the DP engines as scores, negative
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE static int32 penalty(const int32 v) { return v < 0 ? -v : v; }
+
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 match(const uint8 q = 0)      const { return -penalty(m_scheme.match(q)); };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 mismatch(const uint8 q = 0)   const { return -penalty(m_scheme.mismatch(q)); };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 mismatch(const uint8 a, const uint8 b, const uint8 q = 0)   const { return -penalty(m_scheme.mismatch(a, b, q)); };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 substitution(const uint32 r_i, const uint32 q_j, const uint8 r, const uint8 q, const uint8 qq = 0) const { return q == r ? match(qq) : mismatch(r, q, qq); };
+    // a gap of L symbols costs gap_open + L * gap_extension in the wavefront model, and
+    // gap_open + (L-1) * gap_extension in the DP one : charging the DP the opening plus one
+    // extension restores the wavefront cost, symbol for symbol
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 pattern_gap_open()            const { return -(penalty(m_scheme.pattern_gap_open()) + penalty(m_scheme.pattern_gap_extension())); };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 pattern_gap_extension()       const { return -penalty(m_scheme.pattern_gap_extension()); };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 text_gap_open()               const { return -(penalty(m_scheme.text_gap_open()) + penalty(m_scheme.text_gap_extension())); };
+    NVBIO_FORCEINLINE NVBIO_HOST_DEVICE int32 text_gap_extension()          const { return -penalty(m_scheme.text_gap_extension()); };
+
+    scoring_type m_scheme;
+};
+
+///
 /// Calculate the maximum possible number of pattern gaps that could occur in a
 /// given score boundary
 ///

@@ -130,6 +130,39 @@ namespace nvbio
 {
     namespace aln
     {
+        // The batched score engines (alignment/batched_inl.h, alignment/batched_banded_inl.h)
+        // bound the wavefront with the run-time envelope carried by the alignment stream they
+        // are handed : the nvBowtie streams keep the --max-dist value of their AlignerParams in
+        // m_params, while the test streams of nvbio-test carry no parameters at all.  The probe
+        // below lets both of them instantiate the same engine code ; a stream with no
+        // m_params.max_dist yields 0, which every engine reads as "no run-time bound", i.e. the
+        // compile-time envelope it has always used.
+        namespace stream_max_dist_probe
+        {
+            // viable only for streams exposing m_params.max_dist
+            template <typename stream_type>
+            NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+            auto max_dist( const stream_type& stream, int ) -> decltype( stream.m_params.max_dist )
+            {
+                return stream.m_params.max_dist;
+            }
+
+            // fallback for the streams without a run-time envelope
+            template <typename stream_type>
+            NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+            uint32 max_dist( const stream_type&, long )
+            {
+                return 0u;
+            }
+        }
+
+        template <typename stream_type>
+        NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+        uint32 stream_max_dist( const stream_type& stream )
+        {
+            return stream_max_dist_probe::max_dist( stream, 0 );
+        }
+
         template <typename wfa_type, typename score_type>
         NVBIO_FORCEINLINE NVBIO_HOST_DEVICE static void wavefront_heuristic_set_wfadaptive(
             wfa_type &wfa,

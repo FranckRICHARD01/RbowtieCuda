@@ -1715,7 +1715,9 @@ namespace nvbio
                     const char op = aln[aln_len - a - 1];
 
                     if (op == 'S')
+                    {
                         ++j;
+                    }
                     else if (op == 'I')
                     {
                         // apply a gap-open or gap-extension penalty according to whether it's the first insertion or not
@@ -1735,12 +1737,15 @@ namespace nvbio
                     else if (op == 'M')
                     {
                         // add a match or mismatch score
-                        score += (str[j] == ref[k]) ? scoring.match() : scoring.mismatch();
+                        if (str[j] == ref[k]) score += scoring.match();
+                        else score += scoring.mismatch();
 
                         // move diagonally
                         ++j;
                         ++k;
                     }
+                    else
+                        ;  // not a path symbol: the walk left the alignment
 
                     // store new state
                     state = op;
