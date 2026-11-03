@@ -30,6 +30,7 @@
 #include <nvbio/basic/types.h>
 #include <nvbio/basic/thrust_view.h>
 #include <nvbio/alignment/utils.h>
+#include <nvbio/alignment/wfa.h>              // for stream_max_dist(), the run-time wavefront envelope
 #include <nvbio/basic/cuda/work_queue.h>
 #include <nvbio/basic/strided_iterator.h>
 #include <nvbio/alignment/batched_stream.h>
@@ -83,7 +84,7 @@ void batched_banded_alignment_score(const stream_type& stream, const uint32 work
         // penalties cannot stray more than max_dist diagonals from the anchor, so both the
         // band width and the step budget of the wavefront are bounded by it ; 0 (no bound
         // given) keeps the compile-time envelope of every other engine
-        wfa.heuristic.max_wf_score = stream.m_params.max_dist;
+        wfa.heuristic.max_wf_score = nvbio::aln::stream_max_dist( stream );
 
         // compute the end of the current DP matrix window
         const uint32 len = equal<typename aligner_type::algorithm_tag,TextBlockingTag>() ?
@@ -411,7 +412,7 @@ void batched_banded_alignment_traceback(stream_type& stream, cell_type* checkpoi
         // penalties cannot stray more than max_dist diagonals from the anchor, so both the
         // band width and the step budget of the wavefront are bounded by it ; 0 (no bound
         // given) keeps the compile-time envelope of every other engine
-        wfa.heuristic.max_wf_score = stream.m_params.max_dist;
+        wfa.heuristic.max_wf_score = nvbio::aln::stream_max_dist( stream );
 
     // compute the end of the current DP matrix window
     const uint32 len = equal<typename aligner_type::algorithm_tag,PatternBlockingTag>() ?

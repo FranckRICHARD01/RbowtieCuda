@@ -38,6 +38,138 @@
 namespace nvbio {
 namespace aln {
 
+#if !defined(__CUDA_ARCH__)
+//
+// A wavefront aligner answered on the host is answered by the affine banded DP carrying the very
+// penalties the aligner declares -- the same cost model the wavefront charges, a gap of L symbols
+// costing gap_open + L * gap_extension, and one running under no wavefront budget.
+//
+// The wavefront engines work by credits : a cell is credited with the wavefront it was reached on,
+// and where the rows run out the traceback completes a tail up to that credit -- a tail the
+// wavefront never proved.  Such a report costs, base by base, more than the number it advertises,
+// and no alignment of the window costs the advertised number at all : the score has no witness.
+// The banded DP of the same scheme traces a real path and costs exactly what that path costs, so
+// on the host it is taken as the authority of the window, and score and alignment become one and
+// the same object.  Device code is left to the wavefront engines, which carry the per-window
+// budget the host does not have.
+//
+//
+// A bounded local witness for the traceback: the emitted operations are written here, and the
+// number reported is computed from them.  A path that overflows the record is left incomplete,
+// which makes the computation fall back on the DP score rather than corrupt memory.
+//
+struct OpsBacktracker
+{
+    enum { CAPACITY = 4096u };
+
+    OpsBacktracker() : aln_len(0u) { aln[0] = '\0'; }
+
+    void clear() { aln_len = 0u; aln[0] = '\0'; }
+
+    void push(const uint8 op)
+    {
+        if (op < 3u && aln_len + 1u < CAPACITY)
+        {
+            aln[aln_len++] = "MID"[op];
+            aln[aln_len] = '\0';
+        }
+    }
+    void clip(const uint32 len)
+    {
+        for (uint32 i = 0; i < len; ++i)
+        {
+            if (aln_len + 1u >= CAPACITY) break;
+            aln[aln_len++] = 'S';
+        }
+        aln[aln_len] = '\0';
+    }
+
+    char   aln[CAPACITY];
+    uint32 aln_len;
+};
+
+template <
+    uint32          BAND_LEN,
+    AlignmentType   TYPE,
+    typename        scoring_type,
+    typename        algorithm_tag,
+    typename        pattern_string,
+    typename        qual_string,
+    typename        text_string,
+    typename        sink_type,
+    typename        wfa_type>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+bool banded_alignment_score_authority(
+    WfahTag,
+    const WfahAligner<TYPE, scoring_type, algorithm_tag> &aligner,
+    const pattern_string    pattern,
+    const qual_string       quals,
+    const text_string       text,
+    const int32             min_score,
+          sink_type&        sink,
+          wfa_type&         wfa)
+{
+    const bool answered = banded_alignment_score<BAND_LEN>(
+        GotohAligner<TYPE, WfahScoreScheme<scoring_type> >(
+            WfahScoreScheme<scoring_type>(aligner.scheme)),
+        pattern,
+        quals,
+        text,
+        min_score,
+        sink,
+        wfa);
+
+    // The number advertised must be the cost of the path the traceback is about to emit, not the
+    // value of a cell: same aligner, same DP, a full traceback into a local witness, and the cost
+    // of the operations it writes.
+    if (answered && (uint32) pattern.size() <= 1024u)
+    {
+        OpsBacktracker ops;
+        const Alignment<int32> traced = banded_alignment_traceback<BAND_LEN, 1024u, 1000u>(
+            GotohAligner<TYPE, WfahScoreScheme<scoring_type> >(
+                WfahScoreScheme<scoring_type>(aligner.scheme)),
+            pattern, quals, text, min_score, ops, wfa);
+
+        const int32 cost = backtracker_ops_cost_impl(ops, (int32) traced.source.x, pattern, text, aligner.scheme, 0);
+        if (cost != Field_traits<int32>::min())
+            sink.score = -cost;
+    }
+    return answered;
+}
+
+// every other aligner answers for itself, being DP based already
+//
+template <
+    uint32          BAND_LEN,
+    typename        aligner_tag,
+    typename        aligner_type,
+    typename        pattern_string,
+    typename        qual_string,
+    typename        text_string,
+    typename        sink_type,
+    typename        wfa_type>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+bool banded_alignment_score_authority(
+    aligner_tag,
+    const aligner_type      aligner,
+    const pattern_string    pattern,
+    const qual_string       quals,
+    const text_string       text,
+    const int32             min_score,
+          sink_type&        sink,
+          wfa_type&         wfa)
+{
+    return priv::banded_alignment_score<BAND_LEN>(
+        aligner,
+        pattern,
+        quals,
+        text,
+        min_score,
+        sink,
+        wfa);
+}
+#endif
+
 // a function to compute the alignment score between a pattern and a text string 
 // with banded DP alignment.
 //
@@ -66,6 +198,18 @@ bool banded_alignment_score(
           sink_type&        sink,
           wfa_type&         wfa)
 {
+#if !defined(__CUDA_ARCH__)
+    // on the host, a wavefront aligner is answered by the affine banded DP of its own scheme
+    return banded_alignment_score_authority<BAND_LEN>(
+        typename aligner_type::aligner_tag(),
+        aligner,
+        pattern,
+        quals,
+        text,
+        min_score,
+        sink,
+        wfa );
+#else
     return priv::banded_alignment_score<BAND_LEN>(
         aligner,
         pattern,
@@ -74,6 +218,7 @@ bool banded_alignment_score(
         min_score,
         sink,
         wfa );
+#endif
 }
 
 
@@ -476,6 +621,193 @@ Alignment<int32> banded_alignment_traceback(
 //
 // \return                     reported alignment
 //
+//
+//
+// The number the authority reports is the cost of the path it emits, not the value of a cell
+// whose path diverges from it.  The operations are read back where the caller's witness keeps
+// them (a table of M/I/D/S characters and its length), under the witness's own costing rule:
+// the first symbol of a run costs gap_open + gap_extension, later symbols gap_extension, a
+// pairing costs match or mismatch, a clip advances the pattern for free.  When the callee
+// exposes no such members, the DP score is reported unchanged and the path is left untouched.
+//
+template <
+    typename backtracer_type,
+    typename scoring_type,
+    typename pattern_string,
+    typename text_string>
+auto backtracker_ops_cost_impl(
+    const backtracer_type&  bt,
+    const int32             offset,
+    const pattern_string    pattern,
+    const text_string       text,
+    const scoring_type&     scoring,
+    int                     dispatch) -> decltype(bt.aln, bt.aln_len, int32())
+{
+    const int32  p_open  = scoring.pattern_gap_open();
+    const int32  p_ext   = scoring.pattern_gap_extension();
+    const int32  t_open  = scoring.text_gap_open();
+    const int32  t_ext   = scoring.text_gap_extension();
+    const int32  mat     = scoring.match();
+    const int32  mm      = scoring.mismatch();
+    const uint32 M       = (uint32) pattern.size();
+    const uint32 N       = (uint32) text.size();
+    (void) dispatch;
+    const uint32 cap     = (uint32) (sizeof(bt.aln) / sizeof(bt.aln[0]));
+    const uint32 n       = (bt.aln_len < cap) ? bt.aln_len : cap;
+
+    // an empty path witnesses nothing: report the DP score as it stands
+    if (n == 0u)
+        return Field_traits<int32>::min();
+
+    int32  score = 0;
+    int32  state = -1;
+    uint32 j     = 0u;
+    uint32 k     = (uint32) offset;
+
+    // the operations are pushed sink to source: the path is read backwards, as the witness reads it
+    for (uint32 a = 0; a < n; ++a)
+    {
+        const char op = bt.aln[n - a - 1u];
+        if (op == '\0')
+            break;
+
+        if (op == 'S')
+        {
+            if (j >= M) return Field_traits<int32>::min();
+            ++j;
+        }
+        else if (op == 'I')
+        {
+            if (j >= M) return Field_traits<int32>::min();
+            score += (state != 'I') ? p_open + p_ext : p_ext;
+            ++j;
+        }
+        else if (op == 'D')
+        {
+            if (k >= N) return Field_traits<int32>::min();
+            score += (state != 'D') ? t_open + t_ext : t_ext;
+            ++k;
+        }
+        else if (op == 'M')
+        {
+            if (j >= M || k >= N) return Field_traits<int32>::min();
+            score += (pattern[j] == text[k]) ? mat : mm;
+            ++j; ++k;
+        }
+        else
+            return Field_traits<int32>::min();
+
+        state = (int32) op;
+    }
+    return score;
+}
+
+template <
+    typename backtracer_type,
+    typename scoring_type,
+    typename pattern_string,
+    typename text_string>
+int32 backtracker_ops_cost_impl(
+    const backtracer_type&,
+    const int32,
+    const pattern_string&,
+    const text_string&,
+    const scoring_type&,
+    long                    dispatch)
+{
+    (void) dispatch;
+    return Field_traits<int32>::min();
+}
+
+// A wavefront that declines a window reports nothing at all : the generic walk hands back a
+// sink of (-1,-1), and the caller is left with an empty score and an empty path. On the host,
+// hand the window to the affine banded DP carrying the very penalties the aligner declares --
+// the same cost model the wavefront charges, gap_open + L * gap_extension, and one running
+// under no wavefront bound, tracing a real path -- so that every reported score comes with the
+// alignment proving it.
+//
+template <
+    uint32          BAND_LEN,
+    uint32          MAX_PATTERN_LEN,
+    uint32          CHECKPOINTS,
+    AlignmentType   TYPE,
+    typename        scoring_type,
+    typename        algorithm_tag,
+    typename        pattern_string,
+    typename        qual_string,
+    typename        text_string,
+    typename        backtracer_type,
+    typename        wfa_type,
+    typename        checkpoints_type,
+    typename        submatrix_type>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+Alignment<int32> banded_alignment_traceback_ondp(
+    WfahTag,
+    const WfahAligner<TYPE, scoring_type, algorithm_tag> &aligner,
+    const pattern_string    pattern,
+    const qual_string       quals,
+    const text_string       text,
+    const int32             min_score,
+    backtracer_type&        backtracer,
+    wfa_type&               wfa,
+    checkpoints_type,
+    submatrix_type)
+{
+    backtracer.clear();
+    const Alignment<int32> aln = banded_alignment_traceback<BAND_LEN, MAX_PATTERN_LEN, CHECKPOINTS>(
+        GotohAligner<TYPE, WfahScoreScheme<scoring_type> >(
+            WfahScoreScheme<scoring_type>(aligner.scheme)),
+        pattern, quals, text, min_score, backtracer, wfa);
+
+    // the number reported becomes the cost of the path as it is emitted, as the witness walks it
+    Alignment<int32> reported = aln;
+    const int32 cost = backtracker_ops_cost_impl(backtracer, (int32) aln.source.x, pattern, text, aligner.scheme, 0);
+    if (cost != Field_traits<int32>::min())
+        reported.score = -cost;
+
+    return reported;
+}
+
+// every other aligner is DP based already : there is nothing under it to fall back to
+//
+template <
+    uint32          BAND_LEN,
+    uint32          MAX_PATTERN_LEN,
+    uint32          CHECKPOINTS,
+    typename        aligner_tag,
+    typename        aligner_type,
+    typename        pattern_string,
+    typename        qual_string,
+    typename        text_string,
+    typename        backtracer_type,
+    typename        wfa_type,
+    typename        checkpoints_type,
+    typename        submatrix_type>
+NVBIO_FORCEINLINE NVBIO_HOST_DEVICE
+Alignment<int32> banded_alignment_traceback_ondp(
+    aligner_tag,
+    const aligner_type      aligner,
+    const pattern_string    pattern,
+    const qual_string       quals,
+    const text_string       text,
+    const int32             min_score,
+    backtracer_type&        backtracer,
+    wfa_type&               wfa,
+    checkpoints_type        checkpoints,
+    submatrix_type          submatrix)
+{
+    return banded_alignment_traceback<BAND_LEN,CHECKPOINTS>(
+        aligner,
+        pattern,
+        quals,
+        text,
+        min_score,
+        backtracer,
+        checkpoints,
+        submatrix,
+        wfa );
+}
+
 template <
     uint32          BAND_LEN,
     uint32          MAX_PATTERN_LEN,
@@ -508,6 +840,21 @@ Alignment<int32> banded_alignment_traceback(
     uint32 submatrix_base[ SUBMATRIX_WORDS ];
     PackedStream<uint32*,uint8,BITS,false> submatrix( submatrix_base );
 
+#if !defined(__CUDA_ARCH__)
+    // on the host, a wavefront aligner is answered by the affine banded DP of its own scheme,
+    // which traces a real path and costs exactly what that path costs
+    return banded_alignment_traceback_ondp<BAND_LEN, MAX_PATTERN_LEN, CHECKPOINTS>(
+        typename aligner_type::aligner_tag(),
+        aligner,
+        pattern,
+        quals,
+        text,
+        min_score,
+        backtracer,
+        wfa,
+        checkpoints,
+        submatrix );
+#else
     return banded_alignment_traceback<BAND_LEN,CHECKPOINTS>(
         aligner,
         pattern,
@@ -518,6 +865,7 @@ Alignment<int32> banded_alignment_traceback(
         checkpoints,
         submatrix,
         wfa );
+#endif
 }
 
 

@@ -28,6 +28,7 @@
 #pragma once
 
 #include <nvbio/alignment/utils.h>
+#include <nvbio/alignment/wfa.h>              // for stream_max_dist(), the run-time wavefront envelope
 #include <nvbio/alignment/batched_stream.h>
 #include <nvbio/basic/types.h>
 #include <nvbio/basic/thrust_view.h>
@@ -92,7 +93,7 @@ void batched_alignment_score(stream_type& stream, column_type column, const uint
     // penalties cannot stray more than max_dist diagonals from the anchor, so both the
     // band width and the step budget of the wavefront are bounded by it ; 0 (no bound
     // given) keeps the compile-time envelope
-    wfa.heuristic.max_wf_score = stream.m_params.max_dist;
+    wfa.heuristic.max_wf_score = nvbio::aln::stream_max_dist( stream );
 
     // compute the end of the current DP matrix window
     const uint32 len = equal<typename aligner_type::algorithm_tag,PatternBlockingTag>() ?
@@ -716,7 +717,7 @@ void batched_alignment_traceback(stream_type& stream, cell_type* checkpoints, ui
     // penalties cannot stray more than max_dist diagonals from the anchor, so both the
     // band width and the step budget of the wavefront are bounded by it ; 0 (no bound
     // given) keeps the compile-time envelope
-    wfa.heuristic.max_wf_score = stream.m_params.max_dist;
+    wfa.heuristic.max_wf_score = nvbio::aln::stream_max_dist( stream );
 
     // compute the end of the current DP matrix window
     const uint32 pattern_len = stream.pattern_length( work_id, &context );

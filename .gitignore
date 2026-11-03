@@ -1,3 +1,6 @@
-.vscode/c_cpp_properties.json
-.vscode/settings.json
-.vscode/launch.json
+# arbre de compilation et outillage de mise au point : a ne jamais committer
+.wfa_debug/
+build/
+src/nvbio/build/
+src/nvbio/build_deb/
+.Rd2pdf*/
