@@ -1,28 +1,37 @@
 #!/usr/bin/env bash
+#
+# Build-time environment diagnostic, called by src/nvbio/CMakeLists.txt.
+#
+# CONTRACT with CMake (see issue #4): this script must exit non-zero ONLY for
+# things that genuinely block COMPILATION:
+#   - no CUDA compiler (nvcc)
+#   - missing build packages (cmake, libthrust-dev, libcub-dev)
+# A missing, failing or GPU-less driver is a RUN-TIME requirement only.
+# Build-only hosts (CI runners, r-universe, GitHub Actions, cluster login
+# nodes, container builds) legitimately have no GPU: CMake then falls back to
+# the oldest supported SASS + PTX JIT. Never exit non-zero for GPU/driver
+# problems, and always end with an explicit `exit 0`.
 
-if ! command -v dpkg &>/dev/null; then
-    echo "Error: 'dpkg' not found. Version comparisons may be unreliable." >&2
-fi
+# The GPU/driver section must not abort the script: report and continue.
+set +e
+
+hard_error=0
 
 if command -v dpkg &>/dev/null; then
     for pkg in libthrust-dev libcub-dev cmake; do
-        if dpkg -l | grep -q "^ii  $pkg "; then
+        if dpkg -l "$pkg" 2>/dev/null | awk '$1 == "ii" {found=1} END {exit !found}'; then
             echo "$pkg is installed"
         else
             echo "$pkg is missing; install with: sudo apt install $pkg"
-
-            exit 1
+            hard_error=1
         fi
     done
 else
-    echo "Cannot verify packages: dpkg unavailable."
+    echo "Cannot verify packages: dpkg unavailable (non-Debian system?). Skipping those checks."
 fi
 
 nvcc_path=$(command -v nvcc 2>/dev/null)
 [ -z "$nvcc_path" ] && [ -x "/usr/local/cuda/bin/nvcc" ] && nvcc_path=/usr/local/cuda/bin/nvcc
-
-nvidia_smi_path=$(command -v nvidia-smi 2>/dev/null)
-[ -z "$nvidia_smi_path" ] && [ -x "/usr/bin/nvidia-smi" ] && nvidia_smi_path=/usr/bin/nvidia-smi
 
 if [ -z "$nvcc_path" ]; then
     echo "CUDA not found; please run installer."
@@ -32,16 +41,27 @@ fi
 full_cuda_ver=$("$nvcc_path" --version | grep release | awk '{print $NF}' | tr -d 'V,')
 cuda_short=$(echo "$full_cuda_ver" | cut -d. -f1,2)
 
-if [ -z "$full_cuda_ver" ] || [ -z "$nvidia_smi_path" ]; then
-    echo "There does not appear to be an Nvidia driver installed. Try the command sudo 'apt install nvidia-driver-XXX' where XXX is a version number compatible with cuda '$cuda_short'."
-    exit 1
+# --- GPU / driver section: purely informational -----------------------------
+nvidia_smi_path=$(command -v nvidia-smi 2>/dev/null)
+[ -z "$nvidia_smi_path" ] && [ -x "/usr/bin/nvidia-smi" ] && nvidia_smi_path=/usr/bin/nvidia-smi
+
+driver_cuda_ver=""
+gpu_state="none"
+
+if [ -z "$nvidia_smi_path" ]; then
+    echo "Warning: no NVIDIA driver/nvidia-smi found. Building anyway; a GPU is required at run time."
+else
+    "$nvidia_smi_path" -L >/dev/null 2>&1
+    gpu_status=$?
+    if [ "$gpu_status" -ne 0 ]; then
+        echo "nvidia-smi failed (exit $gpu_status): no usable GPU on this host (build-only is fine)."
+        echo "A GPU is required at run time only; CMake will use the oldest supported SASS + PTX JIT fallback."
+    else
+        gpu_state="usable"
+        # The 'CUDA Version:' banner lives in the full table, not in -L.
+        driver_cuda_ver=$("$nvidia_smi_path" 2>/dev/null | grep -oP 'CUDA Version: \K[0-9]+\.[0-9]+' | head -n1)
+    fi
 fi
-
-driver_cuda_ver=$("$nvidia_smi_path" | grep -oP 'CUDA Version: \K[0-9]+\.[0-9]+')
-
-echo
-echo "Detected CUDA compiler version: '$cuda_short'"
-echo "Driver supports up to CUDA:        '$driver_cuda_ver'"
 
 ver_cmp() {
     if command -v dpkg &>/dev/null; then
@@ -51,10 +71,20 @@ ver_cmp() {
         BEGIN{exit !(cmp(a,b) '"$2"' 0)}'
 }
 
-if ver_cmp "$cuda_short" gt "$driver_cuda_ver"; then
+echo
+echo "Detected CUDA compiler version: '$cuda_short'"
+echo "Driver supports up to CUDA:        '$driver_cuda_ver'"
+
+if [ -z "$driver_cuda_ver" ]; then
+    if [ -z "$nvidia_smi_path" ]; then
+        echo "No NVIDIA driver detected: the driver/toolkit pairing cannot be checked here."
+        echo "If you install one, pick a driver at least as new as CUDA '$cuda_short' (sudo apt install nvidia-driver-XXX)."
+    else
+        echo "Could not read the driver CUDA version (no usable GPU on this host): skipping that comparison."
+    fi
+elif ver_cmp "$cuda_short" gt "$driver_cuda_ver"; then
     echo "*** Incompatibility: compiler $cuda_short vs driver $driver_cuda_ver ***"
-    echo "*** Please downgrade CUDA or update NVIDIA driver ***"
-    #exit 1
+    echo "*** Please downgrade CUDA or update NVIDIA driver (this blocks RUN time, not the build) ***"
 else
     echo "Compiler '$cuda_short' is compatible with driver"
 fi
@@ -62,6 +92,9 @@ fi
 full_gcc_ver=$(gcc --version | head -n1 | awk '{print $3}')
 gcc_short=$(echo "$full_gcc_ver" | cut -d. -f1,2)
 
+# Max host GCC officially supported per CUDA toolkit. Unlisted CUDA versions
+# (newer toolkits) are settled by the compile probe in src/nvbio/CMakeLists.txt
+# instead of being guessed here.
 declare -A cuda_gcc_map=(
     ["13.2"]="15.9" ["13.1"]="15.9" ["13.0"]="15.9" ["12.8"]="14.9" ["12.9"]="14.9"
     ["12.4"]="13.2" ["12.5"]="13.2" ["12.6"]="13.2" ["12.7"]="13.2"
@@ -80,11 +113,13 @@ if [ -n "$expected_gcc" ]; then
         echo "GCC '$gcc_short' is compatible"
     else
         echo "*** Incompatibility: CUDA '$cuda_short' needs GCC ≤ '$expected_gcc', found '$gcc_short' ***"
+        echo "nvcc still builds if it is given a supported host compiler (g++-NN);"
+        echo "src/nvbio/CMakeLists.txt probes this and picks one automatically."
         maj=${expected_gcc%%.*}; ((maj--))
-        echo "Install GCC $maj or lower"
+        echo "To do it by hand: install GCC $maj or lower and configure with"
+        echo "  cmake -DCMAKE_CUDA_HOST_COMPILER=\$(command -v g++-$maj) .."
         if [ -f /etc/debian_version ]; then
             echo "On Debian/Ubuntu: sudo apt install gcc-$maj g++-$maj"
-            echo "Use update-alternatives to switch versions"
         elif [ -f /etc/redhat-release ]; then
             echo "On RHEL/CentOS/Fedora: sudo dnf install gcc-$maj g++-$maj"
         elif [ -f /etc/arch-release ]; then
@@ -94,11 +129,19 @@ if [ -n "$expected_gcc" ]; then
         fi
     fi
 else
-    echo "No GCC compatibility entry for CUDA $cuda_short"
+    echo "No compatibility entry for CUDA '$cuda_short': trusting the compile probe at configure time."
 fi
 
 echo
 echo "nvcc path:       $nvcc_path"
-echo "nvidia-smi path: $nvidia_smi_path"
-echo 
-"$nvidia_smi_path"
+echo "nvidia-smi path: ${nvidia_smi_path:-<not found>}"
+echo "GPU usable now:  $gpu_state (only needed at run time)"
+
+if [ "$hard_error" -ne 0 ]; then
+    echo
+    echo "*** Missing build dependency (see above): compilation cannot proceed. ***"
+    exit 1
+fi
+
+echo "Build environment OK."
+exit 0
