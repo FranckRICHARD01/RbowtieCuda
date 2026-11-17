@@ -10,6 +10,14 @@ vignette: >
 ---
 
 ```{r setup, include=FALSE}
+# Building this package needs no GPU, but every example below runs nvBowtie /
+# nvBWT / nvbio_tests, which do. On a build-only host (r-universe, CI runner,
+# cluster login node, container) or on a shared builder whose GPU is already
+# fully allocated by another job, those calls cannot work: skip the GPU chunks
+# instead of failing the whole build. Tune GPU_FREE_MB if you want a different
+# floor for "this GPU is free enough to demo on".
+GPU_FREE_MB <- 2048
+can_use_gpu <- isTRUE(RbowtieCuda:::has_gpu(min_free_mb = GPU_FREE_MB))
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -25,7 +33,7 @@ In addition to its core components, NVBIO includes a suite of applications built
 
 nvBowtie is designed to fully exploit the massive parallelism of modern GPUs, delivering significantly higher alignment throughput without compromising accuracy, or achieving even greater accuracy in the same amount of time. For example, its performance was compared to Bowtie2 using an Illumina HiSeq 2000 dataset (the first 10 million reads of ERR161544) and an IonProton dataset, applying both end-to-end and local alignment methods. The results demonstrate an impressive 99.98% agreement at high MAPQ scores. For comparison, Bowtie2 tests were performed using 20 CPU threads with default alignment settings.
 
-```{r fig.cap="benchmark", fig.alt = "benchmark."}
+```{r fig.cap="benchmark", fig.alt = "benchmark.", eval = TRUE}
 knitr::include_graphics("benchmark-nvbowtie-speedup.png")
 ```
 
@@ -58,8 +66,22 @@ BiocManager::install("RbowtieCuda")
 
 As with any other R package, you need to load RbowtieCuda each time before using it, like this:
 
-```{r loading}
+```{r loading, eval = TRUE}
 library(RbowtieCuda)
+```
+
+```{r gpu-availability, eval = TRUE, echo = FALSE}
+if (!can_use_gpu) {
+  cat(
+    "\n**Note:** no usable NVIDIA GPU was detected on the machine that built\n",
+    "this document (or the GPU present has less than ", GPU_FREE_MB,
+    " MB of free device memory).\n",
+    "Building and checking RbowtieCuda does not require a GPU, but the\n",
+    "examples below do, so their code is shown without being evaluated.\n",
+    "Run them on a machine with a GPU to see the output.\n",
+    sep = ""
+  )
+}
 ```
 
 ### nvBWT : Building BWT Indices for Reference FASTA Files
@@ -68,7 +90,7 @@ nvBWT is an application developed as part of the NVBIO library, designed to perf
 
 #### Example:
 
-```{r idad}
+```{r idad, eval = can_use_gpu}
 td <- tempdir()
 fa_file <- system.file(package="RbowtieCuda", "extdata", "bt2", "refs", "lambda_virus.fa")
 nvBWT(myinput=fa_file, output=file.path(td, "index"), options="")
@@ -117,7 +139,7 @@ Additionally, the ```--cache-writes``` parameter activates the asynchronous SAM 
 
 Reads_1 and Reads_2 represent raw paired-end read files in FASTQ format. Using a nvBWT index, these reads are mapped to the reference genome by invoking nvBowtie. The resulting alignments are stored in a BAM file, with its file path specified by the output parameter.
 
-```{r bt2bd1}
+```{r bt2bd1, eval = can_use_gpu}
 read_1 <- system.file(package="RbowtieCuda", "extdata", "bt2", "reads", "reads_1.fastq")
 read_2 <- system.file(package="RbowtieCuda", "extdata", "bt2", "reads", "reads_2.fastq")
 nvBowtie(file.path(td, "index"), file.path(td, "my_result.bam"), options="", seq1=read_1, seq2=read_2)
@@ -145,25 +167,25 @@ indexBam("results.bam")
 
 You can customize the alignment process by adjusting the available options, enabling you to optimize performance and accuracy according to your specific needs:
 
-```{r bt2usage}
+```{r bt2usage, eval = TRUE}
 nvBowtie_usage()
 ```
 
 You can execute unit tests for the program using the following commands or tools, ensuring its functionality and correctness:
 
-```{r bt2tests}
+```{r bt2tests, eval = can_use_gpu}
 nvbio_tests()
 ```
 
 And you can obtain version information by executing the following command:
 
-```{r bt2version}
+```{r bt2version, eval = TRUE}
 nvBowtie_version()
 ```
 
 ## Session Information
 
-```{r sessioninfo}
+```{r sessioninfo, eval = TRUE}
 sessionInfo()
 ```
 
@@ -173,6 +195,71 @@ sessionInfo()
 We would like to thank Ismael Galve Roperh for his assistance.
 
 Dedicated to the memory of Lilit Tabirian.
+
+## News
+
+* 2026-11-17
+  RbowtieCuda version 1.5.7
+
+  - nvbio (host banded affine alignment): the score reported for a banded wavefront window is now the cost of the alignment that is actually emitted. The banded engines credit a cell with the wavefront it was reached on, and where the rows run out the traceback completes a tail up to that credit -- a tail the wavefront never proved. Base by base, the emitted path then costs one gap-open (or one mismatch) more than the number advertised. Measured on the 20 real windows of    nvbio-test: the 13 whose longest gap run is a single symbol were exact, and all 7 with a run of two symbols or more costed more than they advertised, always in that direction. On the host the    window is now answered by the affine banded DP under the aligner's own penalties, and both the score call and the traceback report the cost of the path the traceback emits, so a report that    no alignment earns cannot pass. Device code is untouched, and keeps the per-window budgets the GPU needs.
+  - Known, still open upstream: the same defect sits in the direction encoding of the shared banded Gotoh traceback (a direction-continuation bit is stored on the cell next to the one it describes), so the device traceback and nvBowtie in banded Gotoh mode keep the one-event under-credit; only the host path is repaired here.
+  - Affine gap convention made explicit: a WFA engine charges a gap of L symbols as gap_open + L * gap_extension, where the nvbio DP family charges gap_open + (L-1) * gap_extension. The WfahScoreScheme adaptor bridges the two (gap_open_dp = gap_open + gap_extension); without it the banded DP and the wavefront disagreed by one extension per gap.
+  - nvbio-test: the banded WFA cases are self-checking. Each site now carries the expected score as   well as the expected CIGAR, and the test compares the score, the CIGAR and the cost of the emitted path. 12 of the 15 banded sites moved to the score the banded semantics really produces -- a start free along the text, anchored at the end of the pattern, the end of the text swept over the last row of the pattern -- where the window anchored at both of its ends is kept by the corresponding full-length WFA case.
+  - Banded kernels: a prefetch no longer reads past the bound of its row in the banded Smith-Waterman and WFA kernels, and a window is no longer accepted when the text is shorter than the pattern.
+
+
+* 2026-11-02
+  RbowtieCuda version 1.4.5
+
+  - nvBowtie: single-end SAM output is now produced by a dedicated background writer thread fed by a small ring buffer, so record formatting and disk writes overlap the GPU alignment of the next    batches. Selected with --cache-writes (single-end SAM output). Combined with --batch-size 64 it divided the wall time of a 1M-read benchmark by about 3.7 (4.96 s -> 1.34 s on 1M x 10 bp reads   against a 46 Mbp chromosome); 
+  --batch-size caps the reads per batch in thousands (min 16,    default 1024) and is now documented in nvBowtie_usage().
+  - nvBowtie: much faster SAM record emission: the writer is buffered and hands a whole block of records to the disk with a single fwrite, instead of ~30 stdio calls per record.
+  - nvBowtie: WFA alignment (--wfa / --scoring wfa) is faster thanks to improved wavefront kernels, and its admissible-score cutoff now follows --max-dist: raising --max-dist in WFA mode    now maps more reads, as it already did in edit-distance mode.
+  - nvBowtie: fixed a paired-end crash (cudaErrorInvalidValue during a host-to-device copy)introduced by the page-locked host buffers of version 1.4.4: page-lock registrations are now size-aware, so host buffers that grow are re-registered over their full span.
+  - The --cache-writes option is not recommended for paired-end alignments (the legacy path is kept) and is ignored for BAM output, with a warning; it costs a small ring buffer (~100 MB).
+    The nvBowtie() wrapper now strips the flag itself in those two cases: a warning is issued for paired-end, a message for BAM output; single-end SAM output keeps the flag and its queue mode.
+
+
+
+* 2026-10-07
+  RbowtieCuda version 1.4.4
+
+  - nvBowtie: faster paired-end opposite-mate scoring using a Myers bit-vector core, enabled by default; use --opposite-myers 0 to restore the previous algorithm. Alignment output is unchanged (bit-identical SAM records); the scoring stage is ~1.7x faster on GPU.
+  - CUDA architectures are auto-detected at build time (native code for the installed GPUs, with a PTX fallback), replacing the previously hard-coded target.
+  - Faster host/GPU transfers through page-locked buffers and stream-scoped synchronisation.
+  - Faster BWT occurrence-table construction on CPU.
+
+  
+* 2026-05-08
+  RbowtieCuda version 1.4.3
+
+  - Fix for an issue with the Thrust library
+
+* 2026-04-10
+  RbowtieCuda version 1.0.11
+
+  - Installation modifications
+
+
+* 2025-10-12
+  RbowtieCuda version 1.0.10
+  - Installation modifications
+
+
+* 2025-09-25
+  RbowtieCuda version 1.0.9
+  - nvBowtie, nvBWT and nvbio_test propagate their error messages to the R interface
+  - Improved diagnostic messages during package installation
+  - Improved program stability
+  - Faster startup
+  - Compatible with CUDA 13.0
+  - The program needs 16 GB of RAM to be compiled (with Sys.setenv(MAKEFLAGS="-j8"))
+
+
+* 2025-04-17
+  RbowtieCuda version 1.0.1
+
+  - The package is available on Bioconductor
 
 
 ## Credits

@@ -58,6 +58,70 @@ if(NOT DEFINED CMAKE_CUDA_COMPILER)
     endif()
 endif()
 
+# ---------------------------------------------------------------------------
+# CUDA host compiler probe
+#
+# nvcc accepts only a bounded range of host (g++) versions: a recent distro
+# (e.g. Ubuntu 26.04 with GCC 15) combined with a CUDA 12.4 toolkit makes
+# CMake's own CUDA compiler identification fail before any of our code runs.
+# Instead of guessing version tables, compile one tiny .cu with nvcc; if the
+# default host compiler is rejected, use the newest installed g++-NN that nvcc
+# accepts. This runs BEFORE project() because that is where identification
+# happens, and it never overrides a choice made by the user or the builder.
+# ---------------------------------------------------------------------------
+if(UNIX AND NOT APPLE AND NOT DEFINED CMAKE_CUDA_HOST_COMPILER AND NOT DEFINED ENV{CMAKE_CUDA_HOST_COMPILER}
+   AND NOT CMAKE_CUDA_COMPILER MATCHES "nvc\\+\\+$")
+    set(_nvbio_probe_dir "${CMAKE_CURRENT_BINARY_DIR}/_nvbio_host_probe")
+    file(MAKE_DIRECTORY "${_nvbio_probe_dir}")
+    file(WRITE "${_nvbio_probe_dir}/host_probe.cu"
+         "#include <cuda_runtime.h>\n__global__ void nvbio_host_probe() {}\n")
+
+    # nvcc's own default first, then every g++-NN installed on the host, newest first.
+    set(_nvbio_host_candidates "nvcc-default")
+    foreach(_nvbio_gcc_ver RANGE 22 9 -1)
+        find_program(_nvbio_gpp_candidate NAMES "g++-${_nvbio_gcc_ver}")
+        if(_nvbio_gpp_candidate)
+            list(APPEND _nvbio_host_candidates "${_nvbio_gpp_candidate}")
+        endif()
+    endforeach()
+
+    set(_nvbio_host_ok "")
+    set(_nvbio_probe_log "")
+    foreach(_nvbio_host IN LISTS _nvbio_host_candidates)
+        if(_nvbio_host STREQUAL "nvcc-default")
+            execute_process(
+                COMMAND "${CMAKE_CUDA_COMPILER}" -c "${_nvbio_probe_dir}/host_probe.cu" -o "${_nvbio_probe_dir}/host_probe.o"
+                RESULT_VARIABLE _nvbio_probe_rc OUTPUT_VARIABLE _nvbio_probe_out ERROR_VARIABLE _nvbio_probe_err
+                TIMEOUT 900)
+        else()
+            execute_process(
+                COMMAND "${CMAKE_CUDA_COMPILER}" -ccbin "${_nvbio_host}" -c "${_nvbio_probe_dir}/host_probe.cu" -o "${_nvbio_probe_dir}/host_probe.o"
+                RESULT_VARIABLE _nvbio_probe_rc OUTPUT_VARIABLE _nvbio_probe_out ERROR_VARIABLE _nvbio_probe_err
+                TIMEOUT 900)
+        endif()
+        string(STRIP "${_nvbio_probe_err}" _nvbio_probe_err)
+        string(APPEND _nvbio_probe_log "\n  host compiler '${_nvbio_host}' -> exit ${_nvbio_probe_rc}${_nvbio_probe_err}")
+        if(_nvbio_probe_rc EQUAL 0)
+            set(_nvbio_host_ok "${_nvbio_host}")
+            break()
+        endif()
+    endforeach()
+
+    if(_nvbio_host_ok AND NOT _nvbio_host_ok STREQUAL "nvcc-default")
+        set(CMAKE_CUDA_HOST_COMPILER "${_nvbio_host_ok}" CACHE FILEPATH "Host compiler for nvcc, chosen by the nvbio configure probe" FORCE)
+        message(WARNING
+          "nvcc rejected the default host compiler; compiling device code with ${_nvbio_host_ok} "
+          "(CMAKE_CUDA_HOST_COMPILER). The C++ compiler picked for the host code may differ from it: "
+          "if a link or ABI mismatch appears, configure with -DCMAKE_CXX_COMPILER=${_nvbio_host_ok} as well.")
+    elseif(NOT _nvbio_host_ok)
+        message(WARNING
+          "nvcc failed to compile a trivial .cu with every host compiler tried "
+          "(nvcc: ${CMAKE_CUDA_COMPILER}).${_nvbio_probe_log}\n"
+          "Keeping nvcc's default; a CUDA compiler identification error below is the expected consequence.")
+    endif()
+    file(REMOVE_RECURSE "${_nvbio_probe_dir}")
+endif()
+
 project(nvBio LANGUAGES CXX CUDA)
 
 execute_process(
@@ -78,13 +142,36 @@ endif()
 #set(CMAKE_CUDA_COMPILER /opt/nvidia/hpc_sdk/Linux_x86_64/25.1/cuda/12.6/bin/nvcc)
 #set(CMAKE_CUDA_COMPILER /usr/local/cuda-12.9/bin/nvcc)
 
-# Automatic GPU architecture detection
+# Automatic GPU architecture detection.
+# nvidia-smi also writes its complaints to stdout ("NVIDIA-SMI has failed
+# because it couldn't communicate with the NVIDIA driver", "Failed to
+# initialize NVML: Unknown Error"), so its answer must be validated line by
+# line. On a GPU-less build host that text used to flow straight into
+# CMAKE_CUDA_ARCHITECTURES ("Unknown CUDA architecture specifier ..."), which
+# is the second half of issue #4: fixing only check_requirements.sh is not
+# enough to configure on a build-only machine.
 execute_process(
   COMMAND nvidia-smi --query-gpu=compute_cap --format=csv,noheader
-  OUTPUT_VARIABLE GPU_ARCHS
-  OUTPUT_STRIP_TRAILING_WHITESPACE
+  OUTPUT_VARIABLE NVBIO_SMICAP_OUTPUT
+  RESULT_VARIABLE NVBIO_SMICAP_RESULT
   ERROR_QUIET
+  OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+
+# A genuine answer is one "N.N" per GPU; anything else is diagnostic text.
+set(GPU_ARCHS "")
+if(NVBIO_SMICAP_RESULT EQUAL 0 AND NVBIO_SMICAP_OUTPUT)
+    string(REPLACE "\n" ";" NVBIO_SMICAP_LINES "${NVBIO_SMICAP_OUTPUT}")
+    foreach(_a IN LISTS NVBIO_SMICAP_LINES)
+        string(STRIP "${_a}" _a)
+        if(_a MATCHES "^[0-9]+\\.[0-9]+$")
+            list(APPEND GPU_ARCHS "${_a}")
+        endif()
+    endforeach()
+    if(GPU_ARCHS)
+        list(REMOVE_DUPLICATES GPU_ARCHS)
+    endif()
+endif()
 
 # Oldest CUDA target supported by the installed toolkit (drives the PTX JIT fallback).
 # CUDA 13 removed Pascal/Volta/Maxwell; Turing sm_75 is the oldest valid target.
@@ -96,18 +183,10 @@ endif()
 
 # Native arch(es) detected on this host (may be several GPUs), normalized to NN form.
 set(NVBIO_NATIVE_ARCHS "")
-if(GPU_ARCHS)
-    string(STRIP "${GPU_ARCHS}" GPU_ARCHS)
-    string(REPLACE "\n" ";" _arch_lines "${GPU_ARCHS}")
-    foreach(_a IN LISTS _arch_lines)
-        string(STRIP "${_a}" _a)
-        if(_a)
-            string(REPLACE "." "" _num "${_a}")
-            list(APPEND NVBIO_NATIVE_ARCHS "${_num}")
-        endif()
-    endforeach()
-    list(REMOVE_DUPLICATES NVBIO_NATIVE_ARCHS)
-endif()
+foreach(_a IN LISTS GPU_ARCHS)
+    string(REPLACE "." "" _num "${_a}")
+    list(APPEND NVBIO_NATIVE_ARCHS "${_num}")
+endforeach()
 
 if(NVBIO_NATIVE_ARCHS)
     # Native SASS for detected GPU(s) + PTX JIT fallback so the fatbin runs on any arch >= floor.

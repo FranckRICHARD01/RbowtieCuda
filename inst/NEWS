@@ -1,7 +1,7 @@
 CHANGES 
 -----------------------
-* 2026-11-03
-  RbowtieCuda version 1.4.6
+* 2026-11-17
+  RbowtieCuda version 1.5.7
 
   - nvbio (host banded affine alignment): the score reported for a banded wavefront window is now
     the cost of the alignment that is actually emitted. The banded engines credit a cell with the

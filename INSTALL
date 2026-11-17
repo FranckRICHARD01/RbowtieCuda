@@ -32,6 +32,42 @@ Refer to the NVIDIA compatibility guide for matching cards:
 It is also necessary to install the thrust and cub libraries by typing in a terminal :
 sudo apt install libthrust-dev libcub-dev
 
+No GPU needed to build, one needed to run:
+Compiling and checking the package work on a machine without any GPU (CI runner, r-universe, cluster
+login node, container). configure only fails when something that genuinely blocks compilation is
+missing (nvcc, libthrust-dev, libcub-dev, cmake); driver and device problems are reported as
+information. When nvidia-smi cannot report a compute capability, configure falls back to the oldest
+architecture the installed toolkit supports (sm_75 with CUDA 13, sm_70 with CUDA 12) plus a PTX JIT
+fallback, which is also what you want for a package built on a GPU-less host.
+Running nvBowtie / nvBWT / nvbio_tests does require a GPU: the vignette and the unit tests detect
+that and skip those parts when no usable device is visible (or when the visible device has less than
+2 GB of free device memory, as happens on shared GPU builders).
+
+Host compiler (nvcc vs g++):
+nvcc and the system C++ compiler have to agree on a supported version. If the default host compiler
+is rejected -- typical case: CUDA 12.4 from the distribution against GCC 15 on a recent Ubuntu --
+configure probes g++-22 down to g++-9 and sets CMAKE_CUDA_HOST_COMPILER to the first one that compiles
+a trivial .cu, then reports the choice in the build log. Force it with:
+    cmake -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/g++-13 ..
+and, if the link step then complains about a mismatch, pass the same compiler for the host code:
+    cmake -DCMAKE_CXX_COMPILER=/usr/bin/g++-13 -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/g++-13 ..
+
+Build memory and parallelism:
+The CUDA translation units are the memory-hungry part of the build: each nvcc job peaks at a few GB of
+host RAM on the thrust/cub-heavy files, so a runner with 16 GB and 8 concurrent nvcc processes gets
+OOM-killed. src/Makefile derives its job count as
+    min(nproc, MemAvailable / NVBIO_MEM_PER_JOB_KB, job count requested by the caller)
+which keeps a 16 GB / 4 vCPU runner alive while still honouring an explicit -j as a ceiling.
+MAKEFLAGS is never assigned, so the builder's own parallelism and jobserver are respected. Knobs:
+    NVBIO_MEM_PER_JOB_KB=3000000   host RAM budgeted per nvcc job, in kB (default 3 GB)
+    NVBIO_JOBS=8                   force the number of parallel jobs
+    R CMD INSTALL --no-configure ...  /  make -j4   normal ways to lower parallelism
+3 GB per job is a conservative estimate, not a measurement. To calibrate it on your own machine, build
+the single heaviest translation unit and read its peak RSS:
+    cd src/nvbio/build
+    /usr/bin/time -v make nvBowtie/CMakeFiles/nvBowtie.dir/bowtie2/cuda/aligner_best_approx_paired_wfa.cu.o
+    -> "Maximum resident set size (kbytes)"
+
 _____________________ Windows __________________
 
 ** Cuda installation on Windows **
