@@ -38,9 +38,11 @@ Available options:
 }
 }
 \examples{
+\dontshow{if (RbowtieCuda:::gpu_example_gate("light")) withAutoprint(\{ # examplesIf}
 td <- tempdir()
 fa_file <- system.file(package='RbowtieCuda', 'extdata', 'bt2', 'refs', 'lambda_virus.fa')
 nvBWT(myinput=fa_file, output=file.path(td, 'index'), options='')
+\dontshow{\}) # examplesIf}
 }
 \references{
 Langmead, B., & Salzberg, S. L. (2012).

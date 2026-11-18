@@ -44,6 +44,7 @@ per batch, in thousands of reads (minimum 16, default 1024); smaller batches ove
 alignment and the writing much better than the default.
 }
 \examples{
+\dontshow{if (RbowtieCuda:::gpu_example_gate("light")) withAutoprint(\{ # examplesIf}
 td <- tempdir()
 
 ## Building index
@@ -59,6 +60,7 @@ nvBowtie(file.path(td, 'index'), file.path(td, 'my_result.sam'), options='--rf',
 
 ## Bam file created with single-end file
 nvBowtie(file.path(td, 'index'), file.path(td, 'my_result.bam'), options='', seq1=read_1)
+\dontshow{\}) # examplesIf}
 }
 \references{
 Langmead, B., & Salzberg, S. L. (2012).

@@ -30,7 +30,7 @@ globalVariables(".")
 #' @references Langmead, B., & Salzberg, S. L. (2012).
 #' Fast gapped-read alignment with Bowtie 2. Nature methods, 9(4), 357-359.
 #' @export nvBWT
-#' @examples
+#' @examplesIf RbowtieCuda:::gpu_example_gate("light")
 #' td <- tempdir()
 #' fa_file <- system.file(package='RbowtieCuda', 'extdata', 'bt2', 'refs', 'lambda_virus.fa')
 #' nvBWT(myinput=fa_file, output=file.path(td, 'index'), options='')
@@ -103,7 +103,7 @@ nvBWT <- function(myinput, output, options = NULL) {
 #' @references Langmead, B., & Salzberg, S. L. (2012).
 #' Fast gapped-read alignment with Bowtie 2. Nature methods, 9(4), 357-359.
 #' @export nvBowtie
-#' @examples
+#' @examplesIf RbowtieCuda:::gpu_example_gate("light")
 #' td <- tempdir()
 #'
 #' ## Building index
@@ -197,7 +197,7 @@ nvBowtie <- function(index, output_file, options, seq1, seq2 = NULL) {
 #' @author Franck RICHARD
 #' @return The return value is the string "nvbio test passed." when there is not any mistakes.
 #' @export nvbio_tests
-#' @examples
+#' @examplesIf RbowtieCuda:::gpu_example_gate("tests")
 #' nvbio_tests()
 
 nvbio_tests <- function() {

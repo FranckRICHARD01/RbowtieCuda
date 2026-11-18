@@ -14,9 +14,10 @@ vignette: >
 # nvBWT / nvbio_tests, which do. On a build-only host (r-universe, CI runner,
 # cluster login node, container) or on a shared builder whose GPU is already
 # fully allocated by another job, those calls cannot work: skip the GPU chunks
-# instead of failing the whole build. Tune GPU_FREE_MB if you want a different
-# floor for "this GPU is free enough to demo on".
-GPU_FREE_MB <- 2048
+# instead of failing the whole build. The floor is the one the Rd examples of
+# nvBWT()/nvBowtie() use, so the vignette and the examples agree; it can be
+# raised with options(RbowtieCuda.minFreeMemMB = ...).
+GPU_FREE_MB <- RbowtieCuda:::gpu_min_free_mb("light")
 can_use_gpu <- isTRUE(RbowtieCuda:::has_gpu(min_free_mb = GPU_FREE_MB))
 knitr::opts_chunk$set(echo = TRUE)
 ```
