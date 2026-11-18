@@ -1,7 +1,46 @@
 CHANGES 
 -----------------------
+* 2026-11-18
+  RbowtieCuda version 1.5.8
+
+  (1.5.1 to 1.5.7 were rebuild bumps on Bioconductor devel; the changes below are what they carried.)
+
+  - Building on a machine without a GPU: configure no longer stops because no device can be
+    reached. A missing nvcc, libthrust-dev, libcub-dev or cmake still fails the build, but driver
+    and device problems are reported as information, and when nvidia-smi cannot report a compute
+    capability configure falls back to the oldest architecture the installed toolkit supports
+    (sm_75 with CUDA 13, sm_70 with CUDA 12) plus a PTX JIT entry. Auto-detected architectures are
+    compiled as native SASS alongside that PTX fallback, so a package built on one card still runs
+    on another: Bioconductor's builders got native sm_89 plus compute_75 PTX, and the binaries then
+    ran on a card other than the one they were built on.
+  - Host compiler: nvcc and the system C++ compiler have to agree on a supported version, which a
+    recent distribution routinely breaks (CUDA 12.4 from the distribution against GCC 15).
+    configure now probes g++-22 down to g++-9, keeps the first one that compiles a trivial .cu,
+    sets CMAKE_CUDA_HOST_COMPILER to it and states the choice in the build log.
+  - Build memory and parallelism: the nvbio build no longer starts as many jobs as there are
+    cores. src/Makefile derives min(nproc, MemAvailable / NVBIO_MEM_PER_JOB_KB, caller's -j) and
+    never assigns MAKEFLAGS, so the builder's own parallelism and jobserver are respected. On a
+    16 GB runner that is the difference between surviving the thrust/cub-heavy translation units
+    and being OOM-killed at -j 8. Knobs: NVBIO_MEM_PER_JOB_KB (host RAM budgeted per nvcc job,
+    default 3 GB -- a conservative estimate, not a measurement) and NVBIO_JOBS.
+  - Running needs a GPU, and it now says so. The Rd examples of nvBWT(), nvBowtie() and
+    nvbio_tests(), the unit test and the vignette check for a usable device -- and for enough free
+    device memory -- before starting, and print why they skipped. Bioconductor's GPU builders share
+    their card with other tenants: amarone reported 45369 of 46068 MiB already allocated, where
+    nvBWT died at context creation with "cuda-memory-check: out of memory" (that check is only a
+    check_error() placed just after cudaMemGetInfo, so the sticky error came from the context) and
+    nvbio_tests ended in "cudaErrorMemoryAllocation: out of memory" after a 1 MB cudaMalloc that
+    had taken 139 ms. biocgpu, with an idle card, passed INSTALL, BUILD and CHECK unchanged, which
+    is what points at the tenant rather than at this package. The floors -- 2048 MB for nvBWT()
+    and nvBowtie() on the bundled lambda phage data, 4096 MB for nvbio_tests, which cudaMallocs up
+    to 1 GB in alloc_test and then runs its alignment test -- live in R/gpu.R with margin; they are
+    heuristics and reserve nothing, and options(RbowtieCuda.minFreeMemMB = 8192) overrides them.
+  - inst/scripts/check_requirements.sh now answers what a build host actually has and what its
+    absence implies: toolkit, host compiler compatibility, driver, device, and the architecture
+    that would be selected on that machine.
+
 * 2026-11-17
-  RbowtieCuda version 1.5.7
+  RbowtieCuda version 1.5.0
 
   - nvbio (host banded affine alignment): the score reported for a banded wavefront window is now
     the cost of the alignment that is actually emitted. The banded engines credit a cell with the

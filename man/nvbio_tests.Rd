@@ -13,7 +13,9 @@ The return value is the string "nvbio test passed." when there is not any mistak
 Calling nvbio_tests() performs alignment tests
 }
 \examples{
+\dontshow{if (RbowtieCuda:::gpu_example_gate("tests")) withAutoprint(\{ # examplesIf}
 nvbio_tests()
+\dontshow{\}) # examplesIf}
 }
 \author{
 Franck RICHARD

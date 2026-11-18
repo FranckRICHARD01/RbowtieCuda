@@ -39,9 +39,16 @@ missing (nvcc, libthrust-dev, libcub-dev, cmake); driver and device problems are
 information. When nvidia-smi cannot report a compute capability, configure falls back to the oldest
 architecture the installed toolkit supports (sm_75 with CUDA 13, sm_70 with CUDA 12) plus a PTX JIT
 fallback, which is also what you want for a package built on a GPU-less host.
-Running nvBowtie / nvBWT / nvbio_tests does require a GPU: the vignette and the unit tests detect
-that and skip those parts when no usable device is visible (or when the visible device has less than
-2 GB of free device memory, as happens on shared GPU builders).
+Running nvBowtie / nvBWT / nvbio_tests does require a GPU. The vignette, the Rd examples and the unit
+test all check for a usable device first and skip -- printing how much device memory they found --
+instead of failing the check when the card is missing or too full for the run:
+    vignette, and the nvBWT() / nvBowtie() examples     require 2048 MB of free device memory
+    nvbio_tests(), unit test and its example            require 4096 MB of free device memory
+The floors live in R/gpu.R (gpu_min_free_mb) and are heuristics, not measured peaks: a CUDA context
+alone takes a few hundred MB, and nvbio-test cudaMallocs up to 1 GB before running its alignment test.
+On a shared builder another tenant can still claim the memory while a run is in progress, so these
+floors remove the common false failure, they do not reserve memory. Override them without reinstalling:
+    options(RbowtieCuda.minFreeMemMB = 8192)
 
 Host compiler (nvcc vs g++):
 nvcc and the system C++ compiler have to agree on a supported version. If the default host compiler
